@@ -1,0 +1,15 @@
+# dependencies
+node_modules/
+
+# production
+dist/
+
+# misc
+.DS_Store
+*.log
+
+# eslint cache
+.eslintcache
+
+# cache
+.cache/

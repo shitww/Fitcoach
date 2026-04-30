@@ -1,0 +1,113 @@
+// This is your Prisma schema file
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// Muscle group options: chest, back, legs, shoulders, arms
+
+// 用户模型
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  password  String
+  age       Int?
+  gender    String?
+  location  String?
+  bio       String?
+  avatar    String?  // 头像URL
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // 关联
+  workouts       Workout[]
+  trainingPlans  TrainingPlan[]
+  exercises      Exercise[]
+}
+
+// 训练记录模型
+model Workout {
+  id           String   @id @default(cuid())
+  userId       String
+  date         DateTime
+  duration     Int?     // 训练时长（分钟）
+  notes        String?  // 训练备注
+  totalVolume  Float    // 总训练量
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // 关联
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workoutSets WorkoutSet[]
+}
+
+// 单组训练记录模型
+model WorkoutSet {
+  id            String   @id @default(cuid())
+  workoutId     String
+  exercise      String   // 动作名称
+  muscleGroup   String?  // 肌群
+  type          String   // S=正式组, W=热身组
+  setNumber     Int      // 第几组
+  weight        Float    // 重量（kg）
+  reps          Int      // 次数
+  rir            Int?     // 剩余次数
+  isPR          Boolean  @default(false) // 是否为个人最佳记录
+  createdAt     DateTime @default(now())
+
+  // 关联
+  workout Workout @relation(fields: [workoutId], references: [id], onDelete: Cascade)
+}
+
+// 训练计划模型
+model TrainingPlan {
+  id        String   @id @default(cuid())
+  userId    String
+  name      String   // 计划名称，如 "增肌三分化"
+  goal      String   // muscle/strength/fat
+  frequency Int      // 每周训练次数
+  level     String   // beginner/intermediate
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  days  PlanDay[]
+}
+
+model PlanDay {
+  id        String @id @default(cuid())
+  planId    String
+  dayIndex  Int    // 0=周一, 1=周二...
+  dayName   String // 如 "胸部+三头", "背部+二头"
+  exercises String  // JSON数组: ["卧推", "深蹲", ...]
+  createdAt DateTime @default(now())
+
+  plan TrainingPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+}
+
+// 动作库模型
+model Exercise {
+  id              String   @id @default(cuid())
+  name            String   // 动作名称
+  muscleGroup     String   // 主练肌群：chest/back/shoulders/arms/legs
+  category        String   // 分类：力量/有氧/拉伸
+  description     String?  // 动作描述
+  instructions    String?  // 执行步骤
+  equipment       String?  // 器械需求
+  difficulty      String?  // 难度：简单/中等/困难
+  tips            String?  // 训练建议（JSON数组）
+  commonMistakes  String?  // 常见错误（JSON数组）
+  userId          String?  // null=系统动作，所有人可见；有值=用户私有动作
+  isCustom        Boolean  @default(false) // 区分系统动作和用户动作
+  createdAt       DateTime @default(now())
+  
+  // 关联
+  user            User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
