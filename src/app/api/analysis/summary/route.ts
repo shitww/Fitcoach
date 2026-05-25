@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getDbUserId } from '@/lib/get-db-user';
 import { logger } from '@/lib/logger';
+import { getPeriodDateRange } from '@/lib/date-range';
 
 export async function GET(request: NextRequest) {
   try {
@@ -11,27 +12,19 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url);
-    const period = searchParams.get('period') || 'week';
+    const period = searchParams.get('period') || 'month';
+    const customStart = searchParams.get('start') ?? undefined;
+    const customEnd = searchParams.get('end') ?? undefined;
+    const { start: startDate, end: endDate } = getPeriodDateRange(period, customStart, customEnd);
 
-    const allWorkouts = await prisma.workout.findMany({
-      where: { userId },
-      include: { workoutSets: true }
-    });
-
-    const uniqueDays = new Set(
-      allWorkouts.map(w => w.date.toISOString().split('T')[0])
-    );
-
-    let startDate = new Date();
-    if (period === 'week') {
-      startDate.setDate(startDate.getDate() - 7);
-    } else if (period === 'month') {
-      startDate.setMonth(startDate.getMonth() - 1);
-    } else {
-      startDate.setFullYear(startDate.getFullYear() - 1);
-    }
-
-    const periodWorkouts = allWorkouts.filter(w => w.date >= startDate);
+    // 并行查询：周期内数据 + 全局计数 + 唯一训练天数
+    const [periodWorkouts, allCount] = await Promise.all([
+      prisma.workout.findMany({
+        where: { userId, date: { gte: startDate, lte: endDate } },
+        include: { workoutSets: true },
+      }),
+      prisma.workout.count({ where: { userId } }),
+    ]);
 
     const totalWorkouts = periodWorkouts.length;
     let totalVolume = 0;
@@ -39,36 +32,61 @@ export async function GET(request: NextRequest) {
 
     periodWorkouts.forEach(w => {
       w.workoutSets.forEach(set => {
-        totalVolume += set.weight * set.reps;
-        totalSets++;
+        // 只计入正式组（type !== 'W'），排除热身组
+        if (set.type !== 'W') {
+          totalVolume += set.weight * set.reps;
+          totalSets++;
+        }
       });
     });
 
     const avgDuration = totalWorkouts > 0
-      ? Math.round(periodWorkouts.reduce((sum, w) => sum + (w.duration || 0), 0) / totalWorkouts)
+      ? Math.round(periodWorkouts.reduce((sum, w) => sum + (w.duration || 0), 0) / totalWorkouts / 60)
       : 0;
 
+    // 全局训练量：使用周期内数据若 period=year 已覆盖大部分，否则单独查询
     let allTotalVolume = 0;
     let allTotalSets = 0;
-    allWorkouts.forEach(w => {
-      w.workoutSets.forEach(set => {
-        allTotalVolume += set.weight * set.reps;
-        allTotalSets++;
+
+    if (period === 'year') {
+      // year 期间的数据已经足够覆盖绝大部分
+      allTotalVolume = totalVolume;
+      allTotalSets = totalSets;
+    } else {
+      // 只查一年内的全局数据，限制查询范围避免无限膨胀
+      const oneYearAgo = new Date();
+      oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+      const allWorkouts = await prisma.workout.findMany({
+        where: { userId, date: { gte: oneYearAgo } },
+        include: { workoutSets: true },
       });
-    });
+      allWorkouts.forEach(w => {
+        w.workoutSets.forEach(set => {
+          if (set.type !== 'W') {
+            allTotalVolume += set.weight * set.reps;
+            allTotalSets++;
+          }
+        });
+      });
+    }
+
+    // Count unique training days within the selected period
+    const uniqueDays = new Set(
+      periodWorkouts.map(w => w.date.toISOString().split('T')[0])
+    );
 
     return NextResponse.json({
       totalWorkouts,
       totalVolume: Math.round(totalVolume),
       totalSets,
       avgDuration,
-      totalCount: allWorkouts.length,
+      totalCount: allCount,
       trainingDays: uniqueDays.size,
       allTotalVolume: Math.round(allTotalVolume),
       allTotalSets,
     });
   } catch (error) {
     logger.error('Error:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json({ error: '获取摘要失败，请稍后重试' }, { status: 500 });
   }
 }

@@ -1,17 +1,16 @@
 "use client";
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { ArrowLeft, TrendingUp, AlertCircle } from 'lucide-react';
 import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer
+  LineChart, Line, XAxis, YAxis, CartesianGrid,
+  Tooltip, Legend, ResponsiveContainer
 } from 'recharts';
 import { logger } from '@/lib/logger';
+import { SkeletonChart, SkeletonStatGrid } from '@/components/Skeleton';
+import { EmptyState } from '@/components/EmptyState';
+import { AmbientGlow } from "@/components/AmbientGlow";
 
 interface TrendData {
   date: string;
@@ -21,38 +20,30 @@ interface TrendData {
 }
 
 export default function StrengthTrendsPage() {
+  const router = useRouter();
   const [selectedExercise, setSelectedExercise] = useState('卧推');
   const [timeRange, setTimeRange] = useState('3个月');
   const [trendData, setTrendData] = useState<TrendData[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
 
-  useEffect(() => {
-    fetchTrends();
-  }, [selectedExercise, timeRange]);
+  useEffect(() => { fetchTrends(); }, [selectedExercise, timeRange]);
 
   const fetchTrends = async () => {
+    setLoading(true);
+    setError(false);
     try {
       const months = timeRange === '1个月' ? 1 : timeRange === '3个月' ? 3 : timeRange === '6个月' ? 6 : 12;
       const response = await fetch(`/api/analysis/trends?exercise=${selectedExercise}&months=${months}`, {
-        credentials: "include"
+        credentials: 'include'
       });
-      if (response.ok) {
-        const data = await response.json();
-        setTrendData(data.data);
-      } else {
-        // 模拟数据
-        setTrendData([
-          { date: '2026-01-01', volume: 2500, maxWeight: 70, estimated1RM: 85 },
-          { date: '2026-01-15', volume: 2800, maxWeight: 72, estimated1RM: 87 },
-          { date: '2026-02-01', volume: 3000, maxWeight: 75, estimated1RM: 90 },
-          { date: '2026-02-15', volume: 3200, maxWeight: 78, estimated1RM: 93 },
-          { date: '2026-03-01', volume: 3500, maxWeight: 80, estimated1RM: 95 },
-          { date: '2026-03-15', volume: 3800, maxWeight: 82, estimated1RM: 98 },
-          { date: '2026-04-01', volume: 4000, maxWeight: 85, estimated1RM: 100 },
-        ]);
-      }
-    } catch (error) {
-      logger.error('获取趋势数据失败:', error);
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const data = await response.json();
+      setTrendData(data.data || []);
+    } catch (err) {
+      logger.error('获取趋势数据失败:', err);
+      setError(true);
+      setTrendData([]);
     } finally {
       setLoading(false);
     }
@@ -61,87 +52,112 @@ export default function StrengthTrendsPage() {
   const exercises = ['卧推', '深蹲', '硬拉', '肩上推举', '引体向上'];
   const timeRanges = ['1个月', '3个月', '6个月', '1年'];
 
+  const latest = trendData[trendData.length - 1];
+
   return (
-    <div className="min-h-screen bg-gray-900 text-white p-6">
-      <div className="max-w-4xl mx-auto">
-        <h1 className="text-3xl font-bold text-emerald-400 mb-8">力量趋势</h1>
+    <div className="min-h-screen bg-background text-foreground">
+      <AmbientGlow />
+      <div className="relative max-w-2xl mx-auto px-4 py-6 pb-20">
 
-        <div className="bg-gray-800 rounded-lg p-6 mb-6">
-          <div className="flex flex-wrap gap-4 mb-6">
-            <div>
-              <label className="block text-gray-400 mb-2">选择动作</label>
-              <select
-                value={selectedExercise}
-                onChange={(e) => setSelectedExercise(e.target.value)}
-                className="bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-              >
-                {exercises.map(exercise => (
-                  <option key={exercise} value={exercise}>{exercise}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-gray-400 mb-2">时间范围</label>
-              <select
-                value={timeRange}
-                onChange={(e) => setTimeRange(e.target.value)}
-                className="bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-              >
-                {timeRanges.map(range => (
-                  <option key={range} value={range}>{range}</option>
-                ))}
-              </select>
-            </div>
+        <header className="flex items-center gap-3 mb-6">
+          <button onClick={() => router.back()}
+            className="p-2 rounded-xl transition-all hover:bg-white/5"
+            style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
+            <ArrowLeft className="w-5 h-5" />
+          </button>
+          <div>
+            <h1 className="text-xl font-black">力量趋势</h1>
+            <p className="text-xs" style={{ color: 'rgba(255,255,255,0.35)' }}>单个动作 1RM 及最大重量趋势</p>
           </div>
+        </header>
 
-          <div className="h-96">
-            {loading ? (
-              <div className="h-full flex items-center justify-center">加载中...</div>
-            ) : (
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart
-                  data={trendData}
-                  margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" stroke="#444" />
-                  <XAxis dataKey="date" stroke="#aaa" />
-                  <YAxis stroke="#aaa" />
+        <div className="flex flex-wrap gap-3 mb-6">
+          <div className="flex gap-2">
+            {exercises.map(ex => (
+              <button key={ex} onClick={() => setSelectedExercise(ex)}
+                className="px-3 py-1.5 rounded-xl text-xs font-bold transition-all"
+                style={{
+                  background: selectedExercise === ex ? 'var(--accent)' : 'var(--surface)',
+                  color: selectedExercise === ex ? '#000' : 'rgba(255,255,255,0.5)',
+                  border: '1px solid var(--border)'
+                }}>
+                {ex}
+              </button>
+            ))}
+          </div>
+          <div className="flex gap-2">
+            {timeRanges.map(r => (
+              <button key={r} onClick={() => setTimeRange(r)}
+                className="px-3 py-1.5 rounded-xl text-xs font-bold transition-all"
+                style={{
+                  background: timeRange === r ? '#A855F7' : 'var(--surface)',
+                  color: timeRange === r ? '#fff' : 'rgba(255,255,255,0.5)',
+                  border: '1px solid var(--border)'
+                }}>
+                {r}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {loading ? (
+          <>
+            <SkeletonStatGrid cols={2} className="mb-4" />
+            <SkeletonChart />
+          </>
+        ) : error ? (
+          <EmptyState
+            icon={<AlertCircle className="w-8 h-8" />}
+            title="加载失败"
+            description="请检查网络后重试"
+            action={{ label: '重新加载', onClick: fetchTrends }}
+          />
+        ) : trendData.length === 0 ? (
+          <EmptyState
+            icon={<TrendingUp className="w-8 h-8" />}
+            title="暂无数据"
+            description={`未找到「${selectedExercise}」在过去 ${timeRange}的训练记录`}
+          />
+        ) : (
+          <>
+            <div className="grid grid-cols-2 gap-3 mb-4">
+              <div className="rounded-2xl p-4" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
+                <p className="text-xs mb-1" style={{ color: 'rgba(255,255,255,0.35)' }}>当前估算 1RM</p>
+                <p className="text-2xl font-black" style={{ color: 'var(--accent)' }}>
+                  {latest?.estimated1RM.toFixed(1) ?? 0}kg
+                </p>
+              </div>
+              <div className="rounded-2xl p-4" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
+                <p className="text-xs mb-1" style={{ color: 'rgba(255,255,255,0.35)' }}>最大重量</p>
+                <p className="text-2xl font-black" style={{ color: '#A855F7' }}>
+                  {latest?.maxWeight ?? 0}kg
+                </p>
+              </div>
+            </div>
+
+            <div className="rounded-2xl p-4" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
+              <div className="flex items-center gap-2 mb-4">
+                <TrendingUp className="w-4 h-4" style={{ color: 'var(--accent)' }} />
+                <span className="text-sm font-semibold">{selectedExercise} 力量趋势</span>
+              </div>
+              <ResponsiveContainer width="100%" height={220}>
+                <LineChart data={trendData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
+                  <XAxis dataKey="date" stroke="rgba(255,255,255,0.25)" tick={{ fontSize: 10 }} />
+                  <YAxis stroke="rgba(255,255,255,0.25)" tick={{ fontSize: 11 }} />
                   <Tooltip
-                    contentStyle={{ backgroundColor: '#333', border: '1px solid #555' }}
+                    contentStyle={{ background: '#111', border: '1px solid #333', borderRadius: 12 }}
                     labelStyle={{ color: '#fff' }}
+                    itemStyle={{ color: 'rgba(255,255,255,0.7)' }}
                   />
-                  <Legend />
-                  <Line
-                    type="monotone"
-                    dataKey="estimated1RM"
-                    name="1RM 估算值"
-                    stroke="#10b981"
-                    strokeWidth={2}
-                    activeDot={{ r: 8 }}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="maxWeight"
-                    name="最大重量"
-                    stroke="#3b82f6"
-                    strokeWidth={2}
-                  />
+                  <Legend wrapperStyle={{ fontSize: 12 }} />
+                  <Line type="monotone" dataKey="estimated1RM" name="1RM 估算" stroke="var(--accent)" strokeWidth={2} dot={{ r: 3 }} />
+                  <Line type="monotone" dataKey="maxWeight" name="最大重量" stroke="#A855F7" strokeWidth={2} dot={{ r: 3 }} />
                 </LineChart>
               </ResponsiveContainer>
-            )}
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="bg-gray-800 rounded-lg p-6">
-            <div className="text-gray-400 mb-2">当前 1RM</div>
-            <div className="text-3xl font-bold">{trendData.length > 0 ? trendData[trendData.length - 1].estimated1RM.toFixed(1) : 0}kg</div>
-          </div>
-          <div className="bg-gray-800 rounded-lg p-6">
-            <div className="text-gray-400 mb-2">最大重量</div>
-            <div className="text-3xl font-bold">{trendData.length > 0 ? trendData[trendData.length - 1].maxWeight : 0}kg</div>
-          </div>
-        </div>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

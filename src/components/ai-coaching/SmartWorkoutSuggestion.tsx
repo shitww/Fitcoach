@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowRight, Dumbbell, Zap } from 'lucide-react';
+import { ArrowRight, Dumbbell, Zap, Sparkles } from 'lucide-react';
+import { useWorkoutTimer } from '@/stores/workoutTimer';
 import { useRouter } from 'next/navigation';
 import { logger } from '@/lib/logger';
 
@@ -9,16 +10,26 @@ interface Exercise {
   muscleGroup: string;
 }
 
+interface ExercisePlan {
+  name: string;
+  sets: number;
+  reps: string;
+  tip: string;
+}
+
 interface WorkoutSuggestion {
   muscleFocus: string;
   exercises: Exercise[];
   recommendationReason: string;
+  aiPlan?: ExercisePlan[];
 }
 
 export const SmartWorkoutSuggestion: React.FC = () => {
   const [suggestion, setSuggestion] = useState<WorkoutSuggestion | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const router = useRouter();
+  const { isTrainingActive, isPaused } = useWorkoutTimer();
+  const hasActiveSession = isTrainingActive || isPaused;
 
   // Fetch workout suggestion from API
   useEffect(() => {
@@ -50,26 +61,22 @@ export const SmartWorkoutSuggestion: React.FC = () => {
 
   // Handle start workout button click
   const handleStartWorkout = () => {
-    if (suggestion) {
-      // Create a new workout session with the suggested exercises
-      const exerciseNames = suggestion.exercises.map(ex => ex.name).join(',');
-      router.push(`/workout?exercises=${encodeURIComponent(exerciseNames)}&focus=${encodeURIComponent(suggestion.muscleFocus)}`);
-    }
+    router.push(hasActiveSession ? '/workout' : '/intent');
   };
 
   if (loading) {
     return (
-      <div className="bg-zinc-900 rounded-lg shadow-lg p-6">
+      <div className="rounded-2xl p-6" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
         <div className="animate-pulse">
-          <div className="h-8 bg-zinc-800 rounded w-1/2 mb-4"></div>
-          <div className="h-4 bg-zinc-800 rounded w-3/4 mb-2"></div>
-          <div className="h-4 bg-zinc-800 rounded w-1/2 mb-4"></div>
+          <div className="h-8 bg-secondary rounded w-1/2 mb-4"></div>
+          <div className="h-4 bg-secondary rounded w-3/4 mb-2"></div>
+          <div className="h-4 bg-secondary rounded w-1/2 mb-4"></div>
           <div className="space-y-2 mb-6">
             {[1, 2, 3, 4].map(i => (
-              <div key={i} className="h-8 bg-zinc-800 rounded"></div>
+              <div key={i} className="h-8 bg-secondary rounded"></div>
             ))}
           </div>
-          <div className="h-12 bg-zinc-800 rounded"></div>
+          <div className="h-12 bg-secondary rounded"></div>
         </div>
       </div>
     );
@@ -77,66 +84,82 @@ export const SmartWorkoutSuggestion: React.FC = () => {
 
   if (!suggestion) {
     return (
-      <div className="bg-zinc-900 rounded-lg shadow-lg p-6">
-        <div className="text-center py-8">
-          <Dumbbell className="w-12 h-12 text-zinc-700 mx-auto mb-4" />
-          <p className="text-zinc-400">无法生成训练建议</p>
+      <div className="rounded-2xl p-5" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
+        <div className="text-center py-6">
+          <Dumbbell className="w-10 h-10 mx-auto mb-3" style={{ color: 'var(--text-faint)' }} />
+          <p className="text-sm" style={{ color: 'var(--text-low)' }}>暂无训练建议，多记录几次训练后自动生成</p>
         </div>
       </div>
     );
   }
 
-  const isRestDay = suggestion.muscleFocus === 'Rest Day';
+  const isRestDay = suggestion.muscleFocus === 'Rest Day' || suggestion.muscleFocus === '休息日';
 
   return (
-    <div className="bg-zinc-900 rounded-lg shadow-lg p-6">
+    <div className="rounded-2xl p-5" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-xl font-bold text-white flex items-center">
-          <Zap className="mr-2 text-lime-400" size={20} />
+        <h2 className="text-base font-bold flex items-center gap-2" style={{ color: 'var(--foreground)' }}>
+          <Zap style={{ color: 'var(--accent)' }} size={18} />
           {isRestDay ? '今日建议' : '今日推荐训练'}
         </h2>
-        <div className="px-3 py-1 rounded-full text-sm font-medium" style={{ background: isRestDay ? 'rgba(255,204,0,0.1)' : 'rgba(204,255,0,0.1)', color: isRestDay ? '#FFCC00' : '#CCFF00' }}>
-          {suggestion.muscleFocus}
+        <div className="px-3 py-1 rounded-full text-xs font-semibold" style={{ background: isRestDay ? 'rgba(255,204,0,0.1)' : 'var(--accent-dim)', color: isRestDay ? '#FFCC00' : 'var(--accent)' }}>
+          {suggestion.muscleFocus === 'Rest Day' ? '休息日' : suggestion.muscleFocus}
         </div>
       </div>
 
-      <p className="text-zinc-400 text-sm mb-6 whitespace-pre-line">
+      <p className="text-sm mb-5 whitespace-pre-line" style={{ color: 'var(--text-low)' }}>
         {suggestion.recommendationReason}
       </p>
 
       {!isRestDay && (
         <>
-          <div className="space-y-3 mb-8">
-            {suggestion.exercises.map((exercise, index) => (
-              <div key={exercise.id} className="flex items-center gap-3 p-3 rounded-lg bg-zinc-800/50">
-                <div className="w-8 h-8 rounded-full flex items-center justify-center font-medium text-sm" style={{ background: 'rgba(204,255,0,0.1)', color: '#CCFF00' }}>
-                  {index + 1}
+          <div className="space-y-2 mb-6">
+            {suggestion.exercises.map((exercise, index) => {
+              const plan = suggestion.aiPlan?.find(p => p.name === exercise.name) || suggestion.aiPlan?.[index];
+              return (
+                <div key={exercise.id} className="p-3 rounded-xl" style={{ background: 'var(--surface-2)' }}>
+                  <div className="flex items-center gap-3 mb-1.5">
+                    <div className="w-7 h-7 rounded-full flex items-center justify-center font-bold text-xs shrink-0" style={{ background: 'var(--accent-dim)', color: 'var(--accent)' }}>
+                      {index + 1}
+                    </div>
+                    <span className="font-semibold text-sm flex-1" style={{ color: 'var(--foreground)' }}>{exercise.name}</span>
+                    {plan && (
+                      <span className="text-xs font-bold shrink-0" style={{ color: 'var(--accent)' }}>
+                        {plan.sets}组 × {plan.reps}次
+                      </span>
+                    )}
+                  </div>
+                  {plan?.tip && (
+                    <div className="flex items-start gap-1.5 pl-10">
+                      <Sparkles className="w-3 h-3 shrink-0 mt-0.5" style={{ color: '#A855F7' }} />
+                      <span className="text-xs" style={{ color: 'var(--text-low)' }}>{plan.tip}</span>
+                    </div>
+                  )}
                 </div>
-                <span className="text-white">{exercise.name}</span>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           <button
             onClick={handleStartWorkout}
             className="w-full py-3 rounded-lg font-bold text-black flex items-center justify-center gap-2 transition-all group"
             style={{
-              background: 'linear-gradient(135deg, #CCFF00 0%, #b3e600 100%)',
-              boxShadow: '0 0 20px rgba(204,255,0,0.2)'
+              background: 'linear-gradient(135deg, var(--accent) 0%, var(--accent-dim) 100%)',
+              boxShadow: '0 0 20px var(--accent-glow)'
             }}
           >
-            开始训练
+            {hasActiveSession ? '继续训练' : '开始训练'}
             <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
           </button>
         </>
       )}
 
       {isRestDay && (
-        <div className="text-center py-8">
-          <div className="w-16 h-16 rounded-full bg-zinc-800 flex items-center justify-center mx-auto mb-4">
-            <span className="text-2xl font-bold text-zinc-400">💤</span>
+        <div className="text-center py-6">
+          <div className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-3" style={{ background: 'var(--surface-2)' }}>
+            <span className="text-2xl">💤</span>
           </div>
-          <p className="text-zinc-400">让身体充分恢复，为下一次训练做好准备！</p>
+          <p className="text-sm" style={{ color: 'var(--text-low)' }}>让身体充分恢复，为下一次训练做好准备！</p>
         </div>
       )}
     </div>

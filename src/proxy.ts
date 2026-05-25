@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getToken } from 'next-auth/jwt'
 
-const protectedPaths = ['/workout', '/history', '/analytics', '/profile', '/settings', '/plans']
+const protectedPaths = ['/workout', '/history', '/analytics', '/profile', '/settings', '/plans', '/diet', '/goals', '/summary', '/exercises']
 const authPaths = ['/auth/signin', '/auth/signup']
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
 
-  // 获取 token
   const token = await getToken({
     req: request,
     secret: process.env.NEXTAUTH_SECRET || process.env.AUTH_SECRET
@@ -39,6 +38,10 @@ export const config = {
     '/profile/:path*',
     '/settings/:path*',
     '/plans/:path*',
-    '/auth/:path*'
+    '/diet/:path*',
+    '/goals/:path*',
+    '/summary/:path*',
+    '/exercises/:path*',
+    '/auth/:path*',
   ]
 }

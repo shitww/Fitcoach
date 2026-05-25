@@ -4,6 +4,7 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { Mail, Lock, User, Loader2, ArrowLeft } from "lucide-react"
+import { AmbientGlow } from "@/components/AmbientGlow"
 
 export default function SignUpPage() {
   const router = useRouter()
@@ -36,12 +37,10 @@ export default function SignUpPage() {
   }
 
   return (
-    <div className="min-h-screen bg-black flex items-center justify-center p-4">
+    <div className="min-h-screen bg-background flex items-center justify-center p-4">
 
       {/* Ambient */}
-      <div className="fixed inset-0 pointer-events-none" style={{
-        background: 'radial-gradient(ellipse 80% 60% at 50% 30%, rgba(204,255,0,0.05) 0%, transparent 60%)'
-      }} />
+      <AmbientGlow />
 
       <div className="relative w-full max-w-md">
 
@@ -49,7 +48,7 @@ export default function SignUpPage() {
         <div className="flex flex-col items-center mb-8">
           <svg width="120" height="56" viewBox="0 0 120 56" fill="none" xmlns="http://www.w3.org/2000/svg">
             <text x="0" y="44" fontFamily="'Space Grotesk', sans-serif" fontSize="48" fontWeight="900"
-              fill="#CCFF00" style={{ filter: 'drop-shadow(0 0 8px rgba(204,255,0,0.6))' }}>
+              fill="var(--accent)" style={{ filter: 'drop-shadow(0 0 8px var(--accent-glow))' }}>
               <tspan>X</tspan><tspan fill="#FFFFFF" letterSpacing="0.05em" fontWeight="800" fontSize="40">FIT</tspan><tspan>X</tspan>
             </text>
           </svg>
@@ -69,7 +68,7 @@ export default function SignUpPage() {
                 <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5" style={{ color: 'rgba(255,255,255,0.2)' }} />
                 <input type="text" value={name} onChange={(e) => setName(e.target.value)}
                   placeholder="你的名字" required
-                  className="w-full pl-10 pr-4 py-3 rounded-xl text-white text-sm"
+                  className="w-full pl-10 pr-4 py-3 rounded-xl text-foreground text-sm"
                   style={{ background: '#111', border: '1px solid #1e1e1e' }}
                 />
               </div>
@@ -81,7 +80,7 @@ export default function SignUpPage() {
                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5" style={{ color: 'rgba(255,255,255,0.2)' }} />
                 <input type="email" value={email} onChange={(e) => setEmail(e.target.value)}
                   placeholder="your@email.com" required
-                  className="w-full pl-10 pr-4 py-3 rounded-xl text-white text-sm"
+                  className="w-full pl-10 pr-4 py-3 rounded-xl text-foreground text-sm"
                   style={{ background: '#111', border: '1px solid #1e1e1e' }}
                 />
               </div>
@@ -93,7 +92,7 @@ export default function SignUpPage() {
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5" style={{ color: 'rgba(255,255,255,0.2)' }} />
                 <input type="password" value={password} onChange={(e) => setPassword(e.target.value)}
                   placeholder="至少6位" required
-                  className="w-full pl-10 pr-4 py-3 rounded-xl text-white text-sm"
+                  className="w-full pl-10 pr-4 py-3 rounded-xl text-foreground text-sm"
                   style={{ background: '#111', border: '1px solid #1e1e1e' }}
                 />
               </div>
@@ -105,28 +104,28 @@ export default function SignUpPage() {
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5" style={{ color: 'rgba(255,255,255,0.2)' }} />
                 <input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)}
                   placeholder="再次输入密码" required
-                  className="w-full pl-10 pr-4 py-3 rounded-xl text-white text-sm"
+                  className="w-full pl-10 pr-4 py-3 rounded-xl text-foreground text-sm"
                   style={{ background: '#111', border: '1px solid #1e1e1e' }}
                 />
               </div>
             </div>
 
             {error && (
-              <div className="p-3 rounded-xl" style={{ background: 'rgba(255,59,92,0.08)', border: '1px solid rgba(255,59,92,0.2)' }}>
-                <p className="text-sm" style={{ color: '#FF3B5C' }}>{error}</p>
+              <div className="p-3 rounded-xl" style={{ background: 'var(--error-bg)', border: '1px solid var(--error-border)' }}>
+                <p className="text-sm" style={{ color: 'var(--error-text)' }}>{error}</p>
               </div>
             )}
 
             <button type="submit" disabled={loading}
               className="w-full py-3.5 rounded-xl font-bold text-base text-black transition-all flex items-center justify-center gap-2"
-              style={{ background: '#CCFF00', boxShadow: '0 0 20px rgba(204,255,0,0.2)' }}>
-              {loading ? <><Loader2 className="w-5 h-5 animate-spin" />注册中...</> : "注册"}
+              style={{ background: 'var(--accent)', boxShadow: '0 0 20px var(--accent-glow)' }}>
+              {loading ? <><Loader2 className="w-5 h-5 animate-spin" />注册中…</> : "注册"}
             </button>
           </form>
 
           <p className="text-center mt-6" style={{ color: 'rgba(255,255,255,0.35)' }}>
             已有账号？{" "}
-            <Link href="/auth/signin" className="font-bold" style={{ color: '#CCFF00' }}>立即登录</Link>
+            <Link href="/auth/signin" className="font-bold" style={{ color: 'var(--accent)' }}>立即登录</Link>
           </p>
         </div>
 

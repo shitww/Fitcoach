@@ -1,6 +1,3 @@
-// This is your Prisma schema file
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -10,104 +7,273 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// Muscle group options: chest, back, legs, shoulders, arms
+model Exercise {
+  id             String        @id @default(cuid())
+  name           String        @unique
+  muscleGroup    String
+  category       String
+  description    String?
+  instructions   String?
+  equipment      String?
+  difficulty     String?
+  tips           String?
+  commonMistakes String?
+  userId         String?
+  isCustom       Boolean       @default(false)
+  createdAt      DateTime      @default(now())
+  alias          String?
+  User           User?         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workoutSets    WorkoutSet[]
 
-// 用户模型
-model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  name      String?
-  password  String
-  age       Int?
-  gender    String?
-  location  String?
-  bio       String?
-  avatar    String?  // 头像URL
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // 关联
-  workouts       Workout[]
-  trainingPlans  TrainingPlan[]
-  exercises      Exercise[]
+  @@index([name])
+  @@index([muscleGroup])
+  @@index([userId])
 }
 
-// 训练记录模型
-model Workout {
-  id           String   @id @default(cuid())
-  userId       String
-  date         DateTime
-  duration     Int?     // 训练时长（分钟）
-  notes        String?  // 训练备注
-  totalVolume  Float    // 总训练量
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-
-  // 关联
-  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  workoutSets WorkoutSet[]
-}
-
-// 单组训练记录模型
-model WorkoutSet {
-  id            String   @id @default(cuid())
-  workoutId     String
-  exercise      String   // 动作名称
-  muscleGroup   String?  // 肌群
-  type          String   // S=正式组, W=热身组
-  setNumber     Int      // 第几组
-  weight        Float    // 重量（kg）
-  reps          Int      // 次数
-  rir            Int?     // 剩余次数
-  isPR          Boolean  @default(false) // 是否为个人最佳记录
-  createdAt     DateTime @default(now())
-
-  // 关联
-  workout Workout @relation(fields: [workoutId], references: [id], onDelete: Cascade)
-}
-
-// 训练计划模型
-model TrainingPlan {
+model Feedback {
   id        String   @id @default(cuid())
   userId    String
-  name      String   // 计划名称，如 "增肌三分化"
-  goal      String   // muscle/strength/fat
-  frequency Int      // 每周训练次数
-  level     String   // beginner/intermediate
+  workoutId String
+  type      String   @default("summary")
+  content   String
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  user  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  days  PlanDay[]
+  Workout   Workout  @relation(fields: [workoutId], references: [id], onDelete: Cascade)
+  User      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model PlanDay {
-  id        String @id @default(cuid())
-  planId    String
-  dayIndex  Int    // 0=周一, 1=周二...
-  dayName   String // 如 "胸部+三头", "背部+二头"
-  exercises String  // JSON数组: ["卧推", "深蹲", ...]
-  createdAt DateTime @default(now())
-
-  plan TrainingPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  id           String       @id @default(cuid())
+  planId       String
+  dayIndex     Int
+  dayName      String
+  exercises    String
+  createdAt    DateTime     @default(now())
+  TrainingPlan TrainingPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
 }
 
-// 动作库模型
-model Exercise {
-  id              String   @id @default(cuid())
-  name            String   // 动作名称
-  muscleGroup     String   // 主练肌群：chest/back/shoulders/arms/legs
-  category        String   // 分类：力量/有氧/拉伸
-  description     String?  // 动作描述
-  instructions    String?  // 执行步骤
-  equipment       String?  // 器械需求
-  difficulty      String?  // 难度：简单/中等/困难
-  tips            String?  // 训练建议（JSON数组）
-  commonMistakes  String?  // 常见错误（JSON数组）
-  userId          String?  // null=系统动作，所有人可见；有值=用户私有动作
-  isCustom        Boolean  @default(false) // 区分系统动作和用户动作
-  createdAt       DateTime @default(now())
-  
-  // 关联
-  user            User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+model TrainingPlan {
+  id        String    @id @default(cuid())
+  userId    String
+  name      String
+  goal      String
+  frequency Int
+  level     String
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  days      PlanDay[]
+  User      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model User {
+  id           String         @id @default(cuid())
+  email        String         @unique
+  name         String?
+  password     String
+  age          Int?
+  gender       String?
+  location     String?
+  bio          String?
+  avatar       String?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  Exercise     Exercise[]
+  Feedback     Feedback[]
+  TrainingPlan TrainingPlan[]
+  Workout      Workout[]
+  Food         Food[]
+  FoodLog      FoodLog[]
+  MealPlan     MealPlan[]
+  CarbCycle    CarbCycle[]
+  BodyData     BodyData[]
+  WaterLog     WaterLog[]
+  UserSettings UserSettings?
+}
+
+model Workout {
+  id          String       @id @default(cuid())
+  userId      String
+  date        DateTime
+  duration    Int?
+  notes       String?
+  metadata    String?      // JSON: AI-parsed structured data for free/cardio records
+  totalVolume Float
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  Feedback    Feedback[]
+  User        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workoutSets WorkoutSet[]
+
+  @@index([userId, date])
+}
+
+model WorkoutSet {
+  id          String    @id @default(cuid())
+  workoutId   String
+  exercise    String    // 动作名称（deprecated → 迁移后用 exerciseId）
+  exerciseId  String?   // FK → Exercise.id
+  muscleGroup String?
+  type        String
+  setNumber   Int
+  weight      Float
+  reps        Int
+  rir         Int?
+  isFailure   Boolean   @default(false)
+  isPR        Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  workout     Workout   @relation(fields: [workoutId], references: [id], onDelete: Cascade)
+  exerciseRel Exercise? @relation(fields: [exerciseId], references: [id])
+
+  @@index([exercise])
+  @@index([exerciseId])
+  @@index([muscleGroup])
+  @@index([workoutId])
+}
+
+model Food {
+  id          String    @id @default(cuid())
+  name        String
+  nameEn      String?
+  brand       String?
+  barcode     String?   @unique
+  category    String?
+  servingUnit String    @default("g")
+  calories    Float
+  protein     Float
+  carbs       Float
+  fat         Float
+  fiber       Float?
+  sugar       Float?
+  sodium      Float?
+  source      String    @default("custom")
+  isCustom    Boolean   @default(false)
+  userId      String?
+  createdAt   DateTime  @default(now())
+  foodLogs    FoodLog[]
+  User        User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([name])
+  @@index([barcode])
+  @@index([userId])
+  @@index([category])
+}
+
+model FoodLog {
+  id        String    @id @default(cuid())
+  userId    String
+  foodId    String
+  mealType  String    @default("other")
+  serving   Float
+  servingG  Float
+  calories  Float
+  protein   Float
+  carbs     Float
+  fat       Float
+  date      DateTime
+  createdAt DateTime  @default(now())
+  User      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  food      Food      @relation(fields: [foodId], references: [id], onDelete: Cascade)
+
+  @@index([userId, date])
+  @@index([foodId])
+}
+
+model MealPlan {
+  id        String        @id @default(cuid())
+  userId    String
+  name      String
+  goal      String
+  dailyCal  Float
+  proteinP  Float
+  carbsP    Float
+  fatP      Float
+  isActive  Boolean       @default(false)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  days      MealPlanDay[]
+  carbCycles CarbCycle[]
+  User      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([goal])
+}
+
+model MealPlanDay {
+  id             String   @id @default(cuid())
+  planId         String
+  dayIndex       Int
+  dayLabel       String
+  targetCal      Float
+  targetProtein  Float
+  targetCarbs    Float
+  targetFat      Float
+  meals          String
+  createdAt      DateTime @default(now())
+  plan           MealPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  @@index([planId])
+}
+
+model CarbCycle {
+  id         String   @id @default(cuid())
+  userId     String
+  planId     String
+  dayOfWeek  Int
+  cycleType  String
+  carbFactor Float
+  createdAt  DateTime @default(now())
+  User       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan       MealPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, dayOfWeek])
+  @@index([planId])
+}
+
+model BodyData {
+  id        String   @id @default(cuid())
+  userId    String
+  date      DateTime
+  weight    Float?
+  bodyFat   Float?
+  chest     Float?
+  waist     Float?
+  hip       Float?
+  armLeft   Float?
+  armRight  Float?
+  thighLeft Float?
+  thighRight Float?
+  neck      Float?
+  notes     String?
+  createdAt DateTime @default(now())
+  User      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
+  @@index([userId, date])
+}
+
+model WaterLog {
+  id        String   @id @default(cuid())
+  userId    String
+  amount    Int
+  date      DateTime
+  createdAt DateTime @default(now())
+  User      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, date])
+}
+
+model UserSettings {
+  id             String   @id @default(cuid())
+  userId         String   @unique
+  height         Float?
+  tdee           Float?
+  activity       String?
+  goal           String?
+  waterGoal      Int      @default(2500)
+  targetCalories Float?  @default(2000)
+  targetProtein  Float?  @default(60)
+  targetCarbs    Float?  @default(250)
+  targetFat      Float?  @default(65)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  User           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

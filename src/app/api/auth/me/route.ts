@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { logger } from '@/lib/logger';
+import { getDbUserId } from '@/lib/get-db-user';
 
 export async function GET(request: NextRequest) {
   try {
@@ -10,9 +11,13 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ user: null });
     }
 
-    // 从数据库获取完整的用户信息
+    const userId = await getDbUserId();
+    if (!userId) {
+      return NextResponse.json({ user: null });
+    }
+
     const dbUser = await prisma.user.findUnique({
-      where: { id: session.user.id },
+      where: { id: userId },
       select: {
         id: true,
         email: true,
@@ -35,8 +40,8 @@ export async function GET(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   try {
-    const session = await auth();
-    if (!session?.user) {
+    const userId = await getDbUserId();
+    if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -44,9 +49,16 @@ export async function PUT(request: NextRequest) {
     logger.info('收到的更新数据:', body);
     const { name, email, age, gender, bio, avatar } = body;
 
-    const updateData: any = {};
+    const updateData: Record<string, unknown> = {};
     if (name !== undefined) updateData.name = name || null;
-    if (email !== undefined) updateData.email = email || null;
+    if (email !== undefined) {
+      const trimmed =
+        typeof email === 'string' ? email.trim() : String(email ?? '').trim();
+      if (!trimmed) {
+        return NextResponse.json({ error: '邮箱不能为空' }, { status: 400 });
+      }
+      updateData.email = trimmed;
+    }
     if (age !== undefined) updateData.age = age ? parseInt(String(age)) : null;
     if (gender !== undefined) updateData.gender = gender || null;
     if (bio !== undefined) updateData.bio = bio || null;
@@ -56,7 +68,7 @@ export async function PUT(request: NextRequest) {
 
     const updatedUser = await prisma.user.update({
       where: {
-        id: session.user.id
+        id: userId
       },
       data: updateData
     });

@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { getDbUserId } from '@/lib/get-db-user';
 import { logger } from '@/lib/logger';
+
+import { completeJSON } from '@/lib/ai/orchestrator';
+
+const SUGGESTION_SYSTEM = '你是专业私人健身教练AI。根据用户真实训练历史数据，给出个性化、具体、有实用价值的今日训练推荐。结合用户的肌群训练频率、上次训练内容、恢复时间等因素。只输出严格JSON，不含任何多余文字。';
 
 interface Exercise {
   id: string;
@@ -9,55 +13,50 @@ interface Exercise {
   muscleGroup: string;
 }
 
+interface ExercisePlan {
+  name: string;
+  sets: number;
+  reps: string;
+  tip: string;
+}
+
 interface WorkoutSuggestion {
   muscleFocus: string;
   exercises: Exercise[];
   recommendationReason: string;
+  aiPlan?: ExercisePlan[];
 }
+
+const workoutSetsInclude = {
+  include: {
+    exerciseRel: { select: { muscleGroup: true } },
+  },
+} as const;
 
 const getRecentSessions = async (userId: string, n: number = 3) => {
   return await prisma.workout.findMany({
-    where: {
-      userId,
-    },
+    where: { userId },
     include: {
-      workoutSets: true,
+      workoutSets: workoutSetsInclude,
     },
-    orderBy: {
-      date: 'desc',
-    },
+    orderBy: { date: 'desc' },
     take: n,
   });
 };
 
+/** 从训练记录中提取各肌群训练频次。优先使用 FK exerciseRel，兜底 set.muscleGroup */
 const extractMuscleGroups = (sessions: any[]): Record<string, number> => {
   const muscleFrequency: Record<string, number> = {
-    chest: 0,
-    back: 0,
-    legs: 0,
-    shoulders: 0,
-    arms: 0
+    chest: 0, back: 0, legs: 0, shoulders: 0, arms: 0,
   };
 
   sessions.forEach(session => {
     session.workoutSets.forEach((set: any) => {
-      let muscleGroup: string | undefined;
-
-      if (set.muscleGroup) {
+      // 优先: FK exerciseRel → Exercise.muscleGroup（最准确）
+      let muscleGroup = set.exerciseRel?.muscleGroup?.toLowerCase();
+      // 兜底: WorkoutSet.muscleGroup（训练时写入）
+      if (!muscleGroup && set.muscleGroup) {
         muscleGroup = set.muscleGroup.toLowerCase();
-      } else {
-        const exerciseName = set.exercise.toLowerCase();
-        if (exerciseName.includes('chest') || exerciseName.includes('bench')) {
-          muscleGroup = 'chest';
-        } else if (exerciseName.includes('back') || exerciseName.includes('row')) {
-          muscleGroup = 'back';
-        } else if (exerciseName.includes('leg') || exerciseName.includes('squat')) {
-          muscleGroup = 'legs';
-        } else if (exerciseName.includes('shoulder') || exerciseName.includes('press')) {
-          muscleGroup = 'shoulders';
-        } else if (exerciseName.includes('arm') || exerciseName.includes('curl') || exerciseName.includes('tricep')) {
-          muscleGroup = 'arms';
-        }
       }
 
       if (muscleGroup && muscleFrequency[muscleGroup] !== undefined) {
@@ -96,44 +95,44 @@ const generateWorkoutPlan = async (muscleGroup: string): Promise<Exercise[]> => 
   if (exercises.length < 4) {
     const defaultExercises: Exercise[] = {
       chest: [
-        { id: '1', name: 'Barbell Bench Press', muscleGroup: 'chest' },
-        { id: '2', name: 'Incline Dumbbell Press', muscleGroup: 'chest' },
-        { id: '3', name: 'Chest Fly', muscleGroup: 'chest' },
-        { id: '4', name: 'Push-ups', muscleGroup: 'chest' },
-        { id: '5', name: 'Cable Crossover', muscleGroup: 'chest' },
-        { id: '6', name: 'Dumbbell Pullover', muscleGroup: 'chest' },
+        { id: '1', name: '杠铃卧推', muscleGroup: 'chest' },
+        { id: '2', name: '上斜哑铃卧推', muscleGroup: 'chest' },
+        { id: '3', name: '哑铃飞鸟', muscleGroup: 'chest' },
+        { id: '4', name: '俯卧撑', muscleGroup: 'chest' },
+        { id: '5', name: '绳索夹胸', muscleGroup: 'chest' },
+        { id: '6', name: '哑铃仰卧臂屈伸', muscleGroup: 'chest' },
       ],
       back: [
-        { id: '1', name: 'Lat Pulldown', muscleGroup: 'back' },
-        { id: '2', name: 'Barbell Row', muscleGroup: 'back' },
-        { id: '3', name: 'Seated Row', muscleGroup: 'back' },
-        { id: '4', name: 'Deadlift', muscleGroup: 'back' },
-        { id: '5', name: 'Pull-ups', muscleGroup: 'back' },
-        { id: '6', name: 'Dumbbell Row', muscleGroup: 'back' },
+        { id: '1', name: '高位下拉', muscleGroup: 'back' },
+        { id: '2', name: '杠铃划船', muscleGroup: 'back' },
+        { id: '3', name: '坐姿划船', muscleGroup: 'back' },
+        { id: '4', name: '硬拉', muscleGroup: 'back' },
+        { id: '5', name: '引体向上', muscleGroup: 'back' },
+        { id: '6', name: '哑铃划船', muscleGroup: 'back' },
       ],
       legs: [
-        { id: '1', name: 'Squat', muscleGroup: 'legs' },
-        { id: '2', name: 'Deadlift', muscleGroup: 'legs' },
-        { id: '3', name: 'Leg Press', muscleGroup: 'legs' },
-        { id: '4', name: 'Leg Curl', muscleGroup: 'legs' },
-        { id: '5', name: 'Calf Raise', muscleGroup: 'legs' },
-        { id: '6', name: 'Lunges', muscleGroup: 'legs' },
+        { id: '1', name: '杠铃深蹲', muscleGroup: 'legs' },
+        { id: '2', name: '硬拉', muscleGroup: 'legs' },
+        { id: '3', name: '腿举', muscleGroup: 'legs' },
+        { id: '4', name: '腿弯举', muscleGroup: 'legs' },
+        { id: '5', name: '提踵', muscleGroup: 'legs' },
+        { id: '6', name: '弓步蹲', muscleGroup: 'legs' },
       ],
       shoulders: [
-        { id: '1', name: 'Overhead Press', muscleGroup: 'shoulders' },
-        { id: '2', name: 'Lateral Raise', muscleGroup: 'shoulders' },
-        { id: '3', name: 'Front Raise', muscleGroup: 'shoulders' },
-        { id: '4', name: 'Face Pull', muscleGroup: 'shoulders' },
-        { id: '5', name: 'Rear Delt Fly', muscleGroup: 'shoulders' },
-        { id: '6', name: 'Shrug', muscleGroup: 'shoulders' },
+        { id: '1', name: '肩推', muscleGroup: 'shoulders' },
+        { id: '2', name: '侧平举', muscleGroup: 'shoulders' },
+        { id: '3', name: '前平举', muscleGroup: 'shoulders' },
+        { id: '4', name: '面拉', muscleGroup: 'shoulders' },
+        { id: '5', name: '俯身飞鸟', muscleGroup: 'shoulders' },
+        { id: '6', name: '耸肩', muscleGroup: 'shoulders' },
       ],
       arms: [
-        { id: '1', name: 'Bicep Curl', muscleGroup: 'arms' },
-        { id: '2', name: 'Tricep Extension', muscleGroup: 'arms' },
-        { id: '3', name: 'Hammer Curl', muscleGroup: 'arms' },
-        { id: '4', name: 'Tricep Pushdown', muscleGroup: 'arms' },
-        { id: '5', name: 'Preacher Curl', muscleGroup: 'arms' },
-        { id: '6', name: 'Dip', muscleGroup: 'arms' },
+        { id: '1', name: '二头弯举', muscleGroup: 'arms' },
+        { id: '2', name: '三头臂屈伸', muscleGroup: 'arms' },
+        { id: '3', name: '锤式弯举', muscleGroup: 'arms' },
+        { id: '4', name: '绳索下压', muscleGroup: 'arms' },
+        { id: '5', name: '牧师弯举', muscleGroup: 'arms' },
+        { id: '6', name: '双杠臂屈伸', muscleGroup: 'arms' },
       ],
     }[muscleGroup] || [];
 
@@ -142,20 +141,17 @@ const generateWorkoutPlan = async (muscleGroup: string): Promise<Exercise[]> => 
 
   return exercises.map(ex => ({
     id: ex.id,
-    name: ex.name,
+    name: ex.alias || ex.name,
     muscleGroup: ex.muscleGroup.toLowerCase(),
   }));
 };
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await auth();
-
-    if (!session || !session.user?.id) {
+    const userId = await getDbUserId();
+    if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-
-    const userId = session.user.id;
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -170,7 +166,7 @@ export async function GET(request: NextRequest) {
         },
       },
       include: {
-        workoutSets: true,
+        workoutSets: workoutSetsInclude,
       },
       orderBy: {
         date: 'desc',
@@ -196,51 +192,94 @@ export async function GET(request: NextRequest) {
     });
 
     const fatigueScore = Math.round((recentVolume * 0.5) + todayVolume);
-
-    if (fatigueScore >= 10000) {
-      const suggestion: WorkoutSuggestion = {
-        muscleFocus: 'Rest Day',
-        exercises: [],
-        recommendationReason: `当前疲劳指数较高（${fatigueScore}）。建议充分休息后再进行训练，以达到最佳训练效果。`,
-      };
-      return NextResponse.json(suggestion);
-    }
-
     const recentSessions = await getRecentSessions(userId);
 
-    if (recentSessions.length > 0) {
-      const lastWorkout = recentSessions[0];
-      const lastWorkoutTime = new Date(lastWorkout.date).getTime();
-      const now = Date.now();
-      const hoursSinceLastWorkout = (now - lastWorkoutTime) / (1000 * 60 * 60);
+    const muscleGroupCN: Record<string, string> = {
+      chest: '胸部', back: '背部', legs: '腿部', shoulders: '肩部', arms: '手臂',
+    };
 
-      if (hoursSinceLastWorkout < 24) {
-        const suggestion: WorkoutSuggestion = {
-          muscleFocus: 'Rest Day',
-          exercises: [],
-          recommendationReason: `你训练后仅过了 ${Math.round(hoursSinceLastWorkout)} 小时。充分休息对肌肉恢复很重要！`,
-        };
-        return NextResponse.json(suggestion);
-      }
-    }
+    // Build full history context for Qwen
+    const isNewUser = recentSessions.length === 0;
+    const hoursSinceLast = recentSessions.length > 0
+      ? (Date.now() - new Date(recentSessions[0].date).getTime()) / 3600000
+      : null;
+    const needsRest = fatigueScore >= 10000 || (hoursSinceLast !== null && hoursSinceLast < 24);
+
+    const historyLines = recentSessions.map((w, i) => {
+      const dateStr = new Date(w.date).toLocaleDateString('zh-CN', { month: 'numeric', day: 'numeric' });
+      const sets = w.workoutSets.slice(0, 12);
+      const exMap: Record<string, { maxW: number; reps: number }> = {};
+      sets.forEach((s: any) => {
+        const key = s.exercise;
+        if (!exMap[key]) exMap[key] = { maxW: 0, reps: 0 };
+        exMap[key].maxW = Math.max(exMap[key].maxW, s.weight);
+        exMap[key].reps += s.reps;
+      });
+      const detail = Object.entries(exMap)
+        .map(([name, d]) => `${name}(最大${d.maxW}kg)`)
+        .join('、') || '（自由训练）';
+      return `  ${i + 1}. ${dateStr}：${detail}，时长${Math.round((w.duration ?? 0) / 60)}分钟`;
+    }).join('\n');
 
     const muscleFrequency = extractMuscleGroups(recentSessions);
-
     const leastTrainedMuscle = await getLeastTrainedMuscle(userId, muscleFrequency);
-
     const exercises = await generateWorkoutPlan(leastTrainedMuscle);
+    const focusCN = muscleGroupCN[leastTrainedMuscle] || leastTrainedMuscle;
+    const selectedExercises = exercises.slice(0, 4);
+    const exerciseNames = selectedExercises.map(e => e.name).join('、');
+
+    const freqDesc = Object.entries(muscleFrequency)
+      .map(([k, v]) => `${muscleGroupCN[k] || k}:${v}组`)
+      .join('、');
+
+    let prompt: string;
+    if (isNewUser) {
+      prompt = `这是一位新用户，还没有训练记录。请为他推荐一个适合初学者的入门训练计划（${focusCN}方向），动作：${exerciseNames}。
+输出严格JSON：{"reason":"2句激励性欢迎语+推荐理由","plan":[{"name":"动作名","sets":3,"reps":"10-12","tip":"动作要点1句"}]}`;
+    } else if (needsRest) {
+      const hoursText = hoursSinceLast !== null ? `上次训练距今${Math.round(hoursSinceLast)}小时` : '近期训练量较大';
+      prompt = `用户近期训练记录：\n${historyLines}\n\n${hoursText}，疲劳指数${fatigueScore}。请给出恢复建议。
+输出严格JSON：{"reason":"1-2句说明为何需要休息并给出恢复建议","plan":[]}`;
+    } else {
+      prompt = `用户近期训练记录：
+${historyLines}
+
+各肌群训练频次：${freqDesc}
+今日推荐重点：${focusCN}（训练最少的肌群）
+推荐动作：${exerciseNames}
+
+请根据以上真实训练数据，输出严格JSON（不含其他文字）：
+{"reason":"2-3句个性化推荐理由，引用具体训练数据","plan":[{"name":"动作名","sets":4,"reps":"8-10","tip":"针对该用户的具体动作要点"}]}`;
+    }
 
     let recommendationReason = '';
-    if (Object.values(muscleFrequency).every(freq => freq === 0)) {
-      recommendationReason = '你还没有最近的训练记录。让我们开始训练吧！';
-    } else {
-      recommendationReason = `今日建议：\n👉 ${leastTrainedMuscle.charAt(0).toUpperCase() + leastTrainedMuscle.slice(1)}\n原因：\n👉 本周训练不足`;
+    let aiPlan: ExercisePlan[] | undefined;
+
+    try {
+      const parsed = await completeJSON<{ reason?: string; plan?: ExercisePlan[] }>({
+        messages: [
+          { role: 'system', content: SUGGESTION_SYSTEM },
+          { role: 'user', content: prompt },
+        ],
+        model: 'qwen-turbo',
+        temperature: 0.7,
+        maxTokens: 600,
+      });
+      recommendationReason = parsed.reason || `建议今天训练${focusCN}。`;
+      if (Array.isArray(parsed.plan)) aiPlan = parsed.plan;
+    } catch {
+      recommendationReason = isNewUser
+        ? '欢迎开始你的健身之旅！推荐从基础动作开始，循序渐进。'
+        : needsRest
+        ? '近期训练量较大，建议今天安排主动恢复或充分休息。'
+        : `${focusCN}近期训练较少，建议今天重点加强，平衡肌群发展。`;
     }
 
     const suggestion: WorkoutSuggestion = {
-      muscleFocus: leastTrainedMuscle.charAt(0).toUpperCase() + leastTrainedMuscle.slice(1) + ' Day',
-      exercises: exercises.slice(0, 4),
+      muscleFocus: needsRest ? '休息恢复' : `${focusCN}日`,
+      exercises: needsRest ? [] : selectedExercises,
       recommendationReason,
+      aiPlan,
     };
 
     return NextResponse.json(suggestion);

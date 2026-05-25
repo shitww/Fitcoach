@@ -1,4 +1,5 @@
 import { Workout, WorkoutSet } from '@prisma/client';
+import { calculate1RM } from './calc';
 
 interface PRRecord {
   exercise: string;
@@ -16,9 +17,9 @@ export function analyzeTrends(workouts: WorkoutWithSets[]): { data: Array<{ date
   const trendData = workouts
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
     .map(workout => {
-      const allSets = workout.workoutSets;
+      const allSets = workout.workoutSets.filter(s => s.type === 'S');
       const maxWeight = Math.max(...allSets.map(set => set.weight), 0);
-      const max1RM = Math.max(...allSets.map(set => set.weight * (1 + set.reps / 30)), 0);
+      const max1RM = Math.max(...allSets.map(set => calculate1RM(set.weight, set.reps)), 0);
 
       return {
         date: workout.date.toISOString().split('T')[0],
@@ -35,9 +36,9 @@ export function getPersonalRecords(workouts: WorkoutWithSets[]): PRRecord[] {
   const exercisePRs = new Map<string, PRRecord>();
 
   workouts.forEach(workout => {
-    workout.workoutSets.forEach(set => {
+    workout.workoutSets.filter(s => s.type === 'S').forEach(set => {
       const exerciseName = set.exercise;
-      const estimated1RM = set.weight * (1 + set.reps / 30);
+      const estimated1RM = calculate1RM(set.weight, set.reps);
 
       const existingPR = exercisePRs.get(exerciseName);
       if (!existingPR || estimated1RM > existingPR.estimated1RM) {

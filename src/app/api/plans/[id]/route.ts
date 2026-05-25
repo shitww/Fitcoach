@@ -1,14 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { auth } from '@/lib/auth';
-
-async function getDbUserId() {
-  const session = await auth();
-  const userEmail = session?.user?.email;
-  if (!userEmail) return null;
-  const user = await prisma.user.findUnique({ where: { email: userEmail } });
-  return user?.id || null;
-}
+import { getDbUserId } from '@/lib/get-db-user';
+import { emitDashboardEvent } from '@/lib/dashboard/events';
 
 async function getPlan(id: string, userId: string) {
   return prisma.trainingPlan.findFirst({ where: { id, userId }, include: { days: { orderBy: { dayIndex: 'asc' } } } });
@@ -66,6 +59,7 @@ export async function PUT(
       include: { days: { orderBy: { dayIndex: 'asc' } } }
     });
 
+    emitDashboardEvent("PLAN_UPDATED", userId);
     return NextResponse.json({ plan: updated });
   } catch (error) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
@@ -83,6 +77,7 @@ export async function DELETE(
     const plan = await getPlan(id, userId);
     if (!plan) return NextResponse.json({ error: 'Plan not found' }, { status: 404 });
     await prisma.trainingPlan.delete({ where: { id } });
+    emitDashboardEvent("PLAN_DELETED", userId);
     return NextResponse.json({ success: true });
   } catch (error) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

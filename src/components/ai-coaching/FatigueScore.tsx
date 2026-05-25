@@ -37,12 +37,12 @@ export const FatigueScore: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="rounded-2xl p-4 animate-pulse" style={{ background: '#111', border: '1px solid #1e1e1e' }}>
+      <div className="rounded-2xl p-4 animate-pulse" style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-zinc-800"></div>
+          <div className="w-10 h-10 rounded-xl bg-secondary"></div>
           <div className="flex-1">
-            <div className="h-4 bg-zinc-800 rounded w-1/2 mb-2"></div>
-            <div className="h-3 bg-zinc-800 rounded w-3/4"></div>
+            <div className="h-4 bg-secondary rounded w-1/2 mb-2"></div>
+            <div className="h-3 bg-secondary rounded w-3/4"></div>
           </div>
         </div>
       </div>
@@ -88,7 +88,7 @@ export const FatigueScore: React.FC = () => {
       <div className="flex items-center gap-3">
         <div 
           className="w-10 h-10 rounded-xl flex items-center justify-center"
-          style={{ background: 'rgba(255,255,255,0.05)' }}
+          style={{ background: 'var(--surface-3)' }}
         >
           {fatigueData.status === 'high' ? (
             <AlertTriangle className="w-5 h-5" style={{ color: statusColors.dot }} />
@@ -102,7 +102,7 @@ export const FatigueScore: React.FC = () => {
               {getStatusEmoji()} {fatigueData.statusText}
             </span>
           </div>
-          <div className="text-xs" style={{ color: 'rgba(255,255,255,0.4)' }}>
+          <div className="text-xs" style={{ color: 'var(--text-low)' }}>
             {fatigueData.recommendation}
           </div>
         </div>
@@ -110,7 +110,7 @@ export const FatigueScore: React.FC = () => {
           <div className="text-lg font-black" style={{ color: statusColors.text }}>
             {fatigueData.fatigueScore}
           </div>
-          <div className="text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>疲劳指数</div>
+          <div className="text-xs" style={{ color: 'var(--text-low)' }}>疲劳指数</div>
         </div>
       </div>
     </div>

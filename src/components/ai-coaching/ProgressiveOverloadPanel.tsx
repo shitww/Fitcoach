@@ -75,86 +75,90 @@ export const ProgressiveOverloadPanel: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="bg-zinc-900 rounded-lg shadow-lg p-6">
+      <div className="rounded-2xl p-5" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
         <div className="animate-pulse">
-          <div className="h-8 bg-zinc-800 rounded w-1/2 mb-4"></div>
-          <div className="h-64 bg-zinc-800 rounded mb-4"></div>
-          <div className="h-8 bg-zinc-800 rounded w-3/4"></div>
+          <div className="h-8 bg-secondary rounded w-1/2 mb-4"></div>
+          <div className="h-64 bg-secondary rounded mb-4"></div>
+          <div className="h-8 bg-secondary rounded w-3/4"></div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="bg-zinc-900 rounded-lg shadow-lg p-6">
-      <h2 className="text-xl font-bold text-white mb-6 flex items-center">
-        <Trophy className="mr-2 text-lime-400" size={20} />
-        Progressive Overload
+    <div className="rounded-2xl p-5" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
+      <h2 className="text-base font-bold mb-4 flex items-center gap-2" style={{ color: 'var(--foreground)' }}>
+        <Trophy size={18} style={{ color: 'var(--accent)' }} />
+        渐进超负荷
       </h2>
 
-      {/* Weekly Volume Comparison */}
-      <div className="grid grid-cols-2 gap-4 mb-6">
-        <div className="bg-zinc-800 rounded-lg p-4">
-          <p className="text-zinc-400 text-sm">This Week</p>
-          <p className="text-white text-2xl font-bold">{data.thisWeekVolume.toLocaleString()} kg</p>
+      {/* 本周 vs 上周 */}
+      <div className="grid grid-cols-2 gap-3 mb-4">
+        <div className="rounded-xl p-3" style={{ background: 'var(--surface-2)' }}>
+          <p className="text-xs" style={{ color: 'var(--text-low)' }}>本周训练量</p>
+          <p className="text-xl font-black" style={{ color: 'var(--foreground)' }}>{data.thisWeekVolume.toLocaleString()} <span className="text-sm font-normal" style={{ color: 'var(--text-low)' }}>kg</span></p>
         </div>
-        <div className="bg-zinc-800 rounded-lg p-4">
-          <p className="text-zinc-400 text-sm">Last Week</p>
-          <p className="text-white text-2xl font-bold">{data.lastWeekVolume.toLocaleString()} kg</p>
+        <div className="rounded-xl p-3" style={{ background: 'var(--surface-2)' }}>
+          <p className="text-xs" style={{ color: 'var(--text-low)' }}>上周训练量</p>
+          <p className="text-xl font-black" style={{ color: 'var(--foreground)' }}>{data.lastWeekVolume.toLocaleString()} <span className="text-sm font-normal" style={{ color: 'var(--text-low)' }}>kg</span></p>
         </div>
       </div>
 
-      {/* Percentage Change */}
-      <div className={`flex items-center mb-6 p-3 rounded-lg ${isPositiveChange ? 'bg-lime-900/30' : 'bg-zinc-800'}`}>
+      {/* 百分比变化 */}
+      <div className="flex items-center mb-4 p-3 rounded-xl" style={{
+        background: isPositiveChange ? 'var(--accent-dim)' : 'var(--surface-2)',
+        border: '1px solid var(--border)'
+      }}>
         {isPositiveChange ? (
-          <ArrowUp className="text-lime-400 mr-2" size={16} />
+          <ArrowUp style={{ color: 'var(--accent)' }} className="mr-2" size={16} />
         ) : (
-          <ArrowDown className="text-zinc-400 mr-2" size={16} />
+          <ArrowDown style={{ color: 'var(--text-low)' }} className="mr-2" size={16} />
         )}
-        <span className={`font-medium ${isPositiveChange ? 'text-lime-400' : 'text-zinc-400'}`}>
-          {isPositiveChange ? '+' : ''}{percentageChange}% from last week
+        <span className="text-sm font-semibold" style={{ color: isPositiveChange ? 'var(--accent)' : 'var(--text-med)' }}>
+          {isPositiveChange ? '+' : ''}{percentageChange}%（较上周）
         </span>
       </div>
 
-      {/* Volume Trend Chart */}
-      <div className="mb-6">
-        <h3 className="text-white font-medium mb-3">Volume Trend (Last 7 Days)</h3>
-        <div className="h-64 bg-zinc-800 rounded-lg p-4">
+      {/* 训练量趋势图 */}
+      <div className="mb-4">
+        <h3 className="text-sm font-semibold mb-3" style={{ color: 'var(--text-med)' }}>近 7 日训练量趋势</h3>
+        <div className="h-48 rounded-xl p-3" style={{ background: 'var(--surface-2)' }}>
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={data.volumeTrend}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#333" />
-              <XAxis dataKey="date" stroke="#888" />
-              <YAxis stroke="#888" />
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+              <XAxis dataKey="date" stroke="var(--text-faint)" tick={{ fontSize: 11 }} />
+              <YAxis stroke="var(--text-faint)" tick={{ fontSize: 11 }} />
               <Tooltip 
-                contentStyle={{ backgroundColor: '#222', borderColor: '#444' }} 
-                itemStyle={{ color: '#fff' }}
-                formatter={(value: number) => [`${value} kg`, 'Volume']}
+                contentStyle={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8 }} 
+                itemStyle={{ color: 'var(--foreground)' }}
+                formatter={(value) => [`${Number(value ?? 0)} kg`, '训练量']}
+                labelFormatter={(label) => `日期：${label}`}
               />
               <Line 
                 type="monotone" 
                 dataKey="volume" 
-                stroke="#10b981" 
+                stroke="var(--accent)" 
                 strokeWidth={2} 
-                dot={{ fill: '#10b981', r: 4 }} 
-                activeDot={{ r: 6, fill: '#10b981' }} 
+                dot={{ fill: 'var(--accent)', r: 3 }} 
+                activeDot={{ r: 5, fill: 'var(--accent)' }} 
               />
             </LineChart>
           </ResponsiveContainer>
         </div>
       </div>
 
-      {/* PR Detection */}
+      {/* 新 PR */}
       {data.newPRs.length > 0 && (
-        <div className="bg-lime-900/20 rounded-lg p-4 border border-lime-800">
-          <h3 className="text-white font-medium mb-3 flex items-center">
-            <Trophy className="mr-2 text-lime-400" size={18} />
-            New PRs 🎉
+        <div className="rounded-xl p-4" style={{ background: 'var(--accent-dim)', border: '1px solid var(--border)' }}>
+          <h3 className="text-sm font-bold mb-2 flex items-center gap-2" style={{ color: 'var(--accent)' }}>
+            <Trophy size={16} />
+            今日新纪录 🎉
           </h3>
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             {data.newPRs.map((pr) => (
-              <div key={pr.exerciseId} className="flex items-center justify-between">
-                <span className="text-white">{pr.exerciseName}</span>
-                <span className="text-lime-400 font-medium">+{pr.currentWeight}kg</span>
+              <div key={pr.exerciseId} className="flex items-center justify-between text-sm">
+                <span style={{ color: 'var(--foreground)' }}>{pr.exerciseName}</span>
+                <span className="font-bold" style={{ color: 'var(--accent)' }}>+{pr.currentWeight}kg</span>
               </div>
             ))}
           </div>

@@ -45,31 +45,23 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
-        token.id = user.id
-        token.sub = user.id
+        // 首次登录时把用户信息存入 JWT，后续请求不再查数据库
+        token.userId = user.id;
+        token.sub = user.id;
+        token.name = user.name;
+        token.email = user.email;
+        token.avatar = user.avatar;
       }
-      // 每次jwt更新时获取最新的用户信息
-      if (token.id) {
-        const dbUser = await prisma.user.findUnique({
-          where: { id: token.id as string },
-          select: { name: true, email: true, avatar: true }
-        })
-        if (dbUser) {
-          token.name = dbUser.name
-          token.email = dbUser.email
-          token.avatar = dbUser.avatar
-        }
-      }
-      return token
+      return token;
     },
     async session({ session, token }) {
       if (session.user) {
-        session.user.id = token.sub as string
-        session.user.name = token.name as string
-        session.user.email = token.email as string
-        session.user.avatar = token.avatar as string
+        session.user.id = (token.userId as string) || (token.sub as string);
+        session.user.name = token.name as string;
+        session.user.email = token.email as string;
+        session.user.avatar = token.avatar as string;
       }
-      return session
+      return session;
     }
   },
   pages: {
@@ -77,6 +69,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   },
   session: {
     strategy: "jwt",
+    maxAge: 30 * 24 * 60 * 60, // 30 天过期
   },
   trustHost: true,
 })

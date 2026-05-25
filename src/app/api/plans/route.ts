@@ -1,50 +1,33 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { auth } from '@/lib/auth';
+import { getDbUserId } from '@/lib/get-db-user';
+import { getUserPlans } from '@/lib/dashboard';
+import { emitDashboardEvent } from '@/lib/dashboard/events';
 import { logger } from '@/lib/logger';
 
 // GET /api/plans - 获取用户所有计划
 export async function GET() {
   try {
-    const session = await auth();
-    const userEmail = session?.user?.email;
-    if (!userEmail) {
+    const userId = await getDbUserId();
+    if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    const dbUser = await prisma.user.findUnique({ where: { email: userEmail } });
-    if (!dbUser) {
-      return NextResponse.json({ error: 'User not found' }, { status: 401 });
-    }
-    const userId = dbUser.id;
 
-    const plans = await prisma.trainingPlan.findMany({
-      where: { userId },
-      orderBy: { createdAt: 'desc' },
-      include: {
-        days: { orderBy: { dayIndex: 'asc' } }
-      }
-    });
-
+    const plans = await getUserPlans(userId);
     return NextResponse.json({ plans });
   } catch (error) {
-    logger.warn('GET /api/plans error:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    logger.error('GET /api/plans error:', error);
+    return NextResponse.json({ error: '获取训练计划失败，请稍后重试' }, { status: 500 });
   }
 }
 
 // POST /api/plans - 创建训练计划
 export async function POST(request: NextRequest) {
   try {
-    const session = await auth();
-    const userEmail = session?.user?.email;
-    if (!userEmail) {
+    const userId = await getDbUserId();
+    if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    const dbUser = await prisma.user.findUnique({ where: { email: userEmail } });
-    if (!dbUser) {
-      return NextResponse.json({ error: 'User not found' }, { status: 401 });
-    }
-    const userId = dbUser.id;
 
     const body = await request.json();
     const { name, goal, frequency, level, days } = body;
@@ -73,9 +56,10 @@ export async function POST(request: NextRequest) {
       include: { days: { orderBy: { dayIndex: 'asc' } } }
     });
 
+    emitDashboardEvent("PLAN_CREATED", userId);
     return NextResponse.json({ plan }, { status: 201 });
   } catch (error) {
     logger.error('POST /api/plans error:', error);
-    return NextResponse.json({ error: 'Internal server error', details: String(error) }, { status: 500 });
+    return NextResponse.json({ error: '创建训练计划失败，请稍后重试', details: String(error) }, { status: 500 });
   }
 }

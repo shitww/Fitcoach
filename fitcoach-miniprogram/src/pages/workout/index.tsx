@@ -8,6 +8,8 @@ interface WorkoutSet {
   reps: number
 }
 
+type InputChangeEvent = { detail: { value: string } }
+
 export default function Workout() {
   const [weight, setWeight] = useState('')
   const [reps, setReps] = useState('')
@@ -45,7 +47,13 @@ export default function Workout() {
 
     Taro.navigateTo({
       url: '/pages/summary/index',
-      success: function (res) {
+      success: (
+        res: {
+          eventChannel: {
+            emit: (event: string, payload: { workoutData: WorkoutSet[] }) => void
+          }
+        }
+      ) => {
         res.eventChannel.emit('sendWorkoutData', {
           workoutData: sets
         })
@@ -65,7 +73,7 @@ export default function Workout() {
             className='input-field'
             type='number'
             value={weight}
-            onInput={(e) => setWeight(e.detail.value)}
+            onInput={(e: InputChangeEvent) => setWeight(e.detail.value)}
             placeholder='输入重量'
             placeholderClass='input-placeholder'
           />
@@ -77,7 +85,7 @@ export default function Workout() {
             className='input-field'
             type='number'
             value={reps}
-            onInput={(e) => setReps(e.detail.value)}
+            onInput={(e: InputChangeEvent) => setReps(e.detail.value)}
             placeholder='输入次数'
             placeholderClass='input-placeholder'
           />

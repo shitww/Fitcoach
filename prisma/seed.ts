@@ -1,5 +1,5 @@
 import { hash } from "bcryptjs"
-import { prisma } from "../lib/prisma"
+import { prisma } from "../src/lib/prisma"
 
 async function main() {
   console.log("创建演示账号...")

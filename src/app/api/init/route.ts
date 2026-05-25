@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { hash } from 'bcryptjs'
 import { prisma } from '@/lib/prisma'
 import { logger } from '@/lib/logger'
 
@@ -10,8 +11,7 @@ async function ensureDemoUser() {
     })
 
     if (!existing) {
-      // bcrypt hash for "demo123" - 12 rounds
-      const hashedPassword = '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewKyDA.mmSVZ.1.u'
+      const hashedPassword = await hash('demo123', 12)
 
       await prisma.user.create({
         data: {
@@ -20,7 +20,7 @@ async function ensureDemoUser() {
           name: '演示用户'
         }
       })
-      logger.info('✅ Demo user created')
+      logger.info('Demo user created')
     }
   } catch (error) {
     logger.error('Demo user creation error:', error)

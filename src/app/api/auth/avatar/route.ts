@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
+import { getDbUserId } from '@/lib/get-db-user';
 import { prisma } from '@/lib/prisma';
 import { writeFile, mkdir } from 'fs/promises';
 import path from 'path';
@@ -9,6 +10,11 @@ export async function POST(request: NextRequest) {
   try {
     const session = await auth();
     if (!session?.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const userId = await getDbUserId();
+    if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -32,7 +38,7 @@ export async function POST(request: NextRequest) {
 
     // 生成文件名
     const fileExt = file.name.split('.').pop() || 'jpg';
-    const fileName = `${session.user.id}-${Date.now()}.${fileExt}`;
+    const fileName = `${userId}-${Date.now()}.${fileExt}`;
 
     // 确保上传目录存在
     const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'avatars');
@@ -48,7 +54,7 @@ export async function POST(request: NextRequest) {
     const avatarUrl = `/uploads/avatars/${fileName}`;
     const updatedUser = await prisma.user.update({
       where: {
-        id: session.user.id
+        id: userId
       },
       data: {
         avatar: avatarUrl

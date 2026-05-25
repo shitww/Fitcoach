@@ -1,20 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { auth } from '@/lib/auth';
+import { getDbUserId } from '@/lib/get-db-user';
 import { logger } from '@/lib/logger';
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await auth();
-    const userEmail = session?.user?.email;
-    if (!userEmail) {
+    const userId = await getDbUserId();
+    if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    const dbUser = await prisma.user.findUnique({ where: { email: userEmail } });
-    if (!dbUser) {
-      return NextResponse.json({ error: 'User not found' }, { status: 401 });
-    }
-    const userId = dbUser.id;
 
     const { searchParams } = new URL(request.url);
     const exerciseName = searchParams.get('name');

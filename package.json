@@ -2,58 +2,53 @@
   "name": "fitcoach",
   "version": "0.1.0",
   "private": true,
-
   "engines": {
     "node": ">=24"
   },
-
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev --hostname 0.0.0.0",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",
     "db:studio": "prisma studio",
     "db:seed": "prisma db seed"
   },
-
   "prisma": {
     "seed": "tsx prisma/seed.ts"
   },
-
   "dependencies": {
-    "@prisma/client": "^6.19.3",
-    "bcrypt": "^5.1.1",
+    "@prisma/client": "6.19.3",
+    "@radix-ui/react-slot": "^1.2.4",
     "bcryptjs": "^3.0.3",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
     "framer-motion": "^12.38.0",
     "lucide-react": "^1.8.0",
-    "next": "16.2.4",
+    "next": "15.3.3",
     "next-auth": "^5.0.0-beta.31",
+    "next-themes": "^0.4.6",
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "recharts": "^3.8.1",
+    "tailwind-merge": "^3.6.0",
     "vaul": "^1.1.2",
     "zustand": "^5.0.12"
   },
-
   "devDependencies": {
-    "typescript": "^5",
-    "eslint": "^9",
-    "eslint-config-next": "16.2.4",
-
-    "tailwindcss": "^4",
     "@tailwindcss/postcss": "^4",
-
-    "prisma": "^6.19.3",
-
-    "tsx": "^4.19.0",
-
+    "@types/bcryptjs": "^2.4.6",
     "@types/node": "^24",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "@types/bcrypt": "^5.0.2"
-  }
+    "eslint": "^9",
+    "eslint-config-next": "15.3.3",
+    "prisma": "^6.19.3",
+    "tailwindcss": "^4",
+    "tsx": "^4.19.0",
+    "typescript": "^5"
+  },
+  "packageManager": "pnpm@10.33.2+sha512.a90faf6feeab71ad6c6e57f94e0fe1a12f5dcc22cd754db40ae9593eb6a3e0b6b12e3540218bb37ae083404b1f2ce6db2a4121e979829b4aff94b99f49da1cf8"
 }

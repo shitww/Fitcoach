@@ -1,16 +1,22 @@
 "use client"
 
 import { SessionProvider } from "next-auth/react"
+import type { Session } from "next-auth"
+import { ToastProvider } from "@/components/Toast"
+import { ThemeProvider } from "@/contexts/ThemeContext"
 
-export function Providers({ children }: { children: React.ReactNode }) {
+export function Providers({ children, session }: { children: React.ReactNode; session?: Session | null }) {
   return (
-    <SessionProvider
-      options={{
-        refetchInterval: 60 * 60, // 每60秒重新获取会话
-        refetchOnWindowFocus: false, // 窗口聚焦时不重新获取会话
-      }}
-    >
-      {children}
-    </SessionProvider>
+    <ThemeProvider>
+      <SessionProvider
+        session={session}
+        refetchInterval={60 * 60}
+        refetchOnWindowFocus={false}
+      >
+        <ToastProvider>
+          {children}
+        </ToastProvider>
+      </SessionProvider>
+    </ThemeProvider>
   )
 }

@@ -8,13 +8,17 @@ interface WorkoutSet {
   reps: number
 }
 
+interface SendWorkoutDataPayload {
+  workoutData: WorkoutSet[]
+}
+
 export default function Summary() {
   const [workoutData, setWorkoutData] = useState<WorkoutSet[]>([])
   const [feedback, setFeedback] = useState('')
 
   useDidShow(() => {
     const eventChannel = Taro.getCurrentInstance().page!.getOpenerEventChannel()
-    eventChannel.on('sendWorkoutData', function(data) {
+    eventChannel.on('sendWorkoutData', function (data: SendWorkoutDataPayload) {
       setWorkoutData(data.workoutData)
     })
   })

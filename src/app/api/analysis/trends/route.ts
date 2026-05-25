@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getDbUserId } from '@/lib/get-db-user';
 import { logger } from '@/lib/logger';
+import { getPeriodDateRange } from '@/lib/date-range';
 
 export async function GET(request: NextRequest) {
   try {
@@ -13,18 +14,12 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const period = searchParams.get('period') || 'month';
     const exercise = searchParams.get('exercise') || 'all';
-
-    let startDate = new Date();
-    if (period === 'week') {
-      startDate.setDate(startDate.getDate() - 7);
-    } else if (period === 'month') {
-      startDate.setMonth(startDate.getMonth() - 1);
-    } else {
-      startDate.setFullYear(startDate.getFullYear() - 1);
-    }
+    const customStart = searchParams.get('start') ?? undefined;
+    const customEnd = searchParams.get('end') ?? undefined;
+    const { start: startDate, end: endDate } = getPeriodDateRange(period, customStart, customEnd);
 
     const workouts = await prisma.workout.findMany({
-      where: { userId, date: { gte: startDate } },
+      where: { userId, date: { gte: startDate, lte: endDate } },
       include: { workoutSets: true },
       orderBy: { date: 'asc' }
     });
@@ -32,7 +27,8 @@ export async function GET(request: NextRequest) {
     const trends = workouts.map(w => {
       let volume = 0;
       let sets = 0;
-      w.workoutSets.forEach(set => {
+      const workSets = w.workoutSets.filter(s => s.type === 'S');
+      workSets.forEach(set => {
         volume += set.weight * set.reps;
         sets++;
       });
@@ -40,7 +36,7 @@ export async function GET(request: NextRequest) {
         date: w.date.toISOString().split('T')[0],
         volume,
         sets,
-        exercises: [...new Set(w.workoutSets.map(s => s.exercise))]
+        exercises: [...new Set(workSets.map(s => s.exercise))]
       };
     });
 

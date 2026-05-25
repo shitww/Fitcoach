@@ -1,232 +1,164 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
-import { prisma } from '@/lib/prisma';
+import { getDbUserId } from '@/lib/get-db-user';
 import { logger } from '@/lib/logger';
-
-async function getExerciseMaxWeight(userId: string, exerciseName: string): Promise<number> {
-  const result = await prisma.workoutSet.findFirst({
-    where: {
-      exercise: exerciseName,
-      type: "S",
-      workout: {
-        userId: userId
-      }
-    },
-    orderBy: {
-      weight: "desc"
-    },
-    select: {
-      weight: true
-    }
-  });
-  return result?.weight || 0;
-}
-
-async function detectAndMarkPRs(
-  userId: string,
-  exercises: Array<{
-    name: string;
-    sets: Array<{ weight: number; reps: number; rir: number }>;
-  }>
-): Promise<Array<{ exerciseName: string; weight: number; reps: number; previousMax: number }>> {
-  const newPRs: Array<{ exerciseName: string; weight: number; reps: number; previousMax: number }> = [];
-
-  for (const exercise of exercises) {
-    const previousMax = await getExerciseMaxWeight(userId, exercise.name);
-
-    for (const set of exercise.sets) {
-      if (set.weight > previousMax) {
-        newPRs.push({
-          exerciseName: exercise.name,
-          weight: set.weight,
-          reps: set.reps,
-          previousMax: previousMax,
-        });
-        break;
-      }
-    }
-  }
-
-  return newPRs;
-}
+import { prisma } from '@/lib/prisma';
+import { emitDashboardEvent } from '@/lib/dashboard/events';
+import {
+  createWorkout,
+  listWorkouts,
+  getWorkoutById,
+  replaceWorkout,
+  WorkoutValidationError,
+} from '@/lib/workout-service';
 
 export async function POST(request: NextRequest) {
-  const session = await auth();
-
-  if (!session || !session.user?.id) {
+  const userId = await getDbUserId();
+  if (!userId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   try {
     const data = await request.json();
-    const { exercises, totalVolume, duration, notes } = data;
-
-    if (!exercises || exercises.length === 0) {
-      return NextResponse.json({ error: 'No exercises provided' }, { status: 400 });
-    }
-
-    const detectedPRs = await detectAndMarkPRs(session.user.id, exercises);
-
-    const prSet = new Set(
-      detectedPRs.map((pr) => `${pr.exerciseName}-${pr.weight}`)
-    );
-
-    const muscleGroups = Array.from(
-      new Set(exercises.map((exercise: any) => exercise.muscleGroup).filter(Boolean))
-    ).join(',');
-
-    let setNumber = 1;
-    const workoutSetsData = exercises.flatMap((exercise: any) =>
-      exercise.sets.map((set: any, index: number) => ({
-        exercise: exercise.name,
-        muscleGroup: exercise.muscleGroup || '',
-        type: set.isWarmup ? "W" : "S",
-        setNumber: setNumber++,
-        weight: set.weight,
-        reps: set.reps,
-        rir: set.rir,
-        isPR: prSet.has(`${exercise.name}-${set.weight}`),
-      }))
-    );
-
-    const workout = await prisma.workout.create({
-      data: {
-        userId: session.user.id,
-        date: new Date(),
-        duration: duration || 0,
-        notes: notes || '',
-        totalVolume: totalVolume || 0,
-        workoutSets: {
-          create: workoutSetsData,
-        },
-      },
-      include: {
-        workoutSets: true,
-      },
+    const result = await createWorkout(userId, {
+      exercises: data.exercises,
+      totalVolume: data.totalVolume,
+      duration: data.duration,
+      notes: data.notes,
     });
 
-    return NextResponse.json(
-      {
-        ...workout,
-        newPRs: detectedPRs,
-      },
-      { status: 201 }
-    );
+    emitDashboardEvent("WORKOUT_LOGGED", userId);
+    return NextResponse.json({ data: result }, { status: 201 });
   } catch (error) {
-    logger.error("❌ REAL ERROR:", error);
-    return NextResponse.json({ error: String(error) }, { status: 500 });
+    if (error instanceof WorkoutValidationError) {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
+    logger.error('Workout POST error:', error);
+    return NextResponse.json({ error: '保存训练记录失败，请稍后重试' }, { status: 500 });
   }
 }
 
 export async function GET(request: NextRequest) {
-  const session = await auth();
-
-  if (!session || !session.user?.id) {
+  const userId = await getDbUserId();
+  if (!userId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   try {
     const { searchParams } = new URL(request.url);
-    const id = searchParams.get("id");
-    const limit = parseInt(searchParams.get("limit") || "10");
+    const id = searchParams.get('id');
+    const limit = parseInt(searchParams.get('limit') || '10', 10);
+    const offset = parseInt(searchParams.get('offset') || '0', 10);
 
     if (id) {
-      // Single workout by ID
-      const workout = await prisma.workout.findUnique({
-        where: {
-          id: id,
-          userId: session.user.id
-        },
-        include: {
-          workoutSets: true
-        }
-      });
-
-      if (!workout) {
+      const summary = await getWorkoutById(userId, id);
+      if (!summary) {
         return NextResponse.json({ error: 'Workout not found' }, { status: 404 });
       }
-
-      const exerciseMap = new Map<string, any>();
-      workout.workoutSets.forEach(set => {
-        if (!exerciseMap.has(set.exercise)) {
-          exerciseMap.set(set.exercise, {
-            id: set.id,
-            name: set.exercise,
-            muscleGroup: set.muscleGroup,
-            sets: []
-          });
-        }
-        exerciseMap.get(set.exercise).sets.push({
-          weight: set.weight,
-          reps: set.reps,
-          rir: set.rir ?? 0,
-          isFailure: set.rir === 0,
-          isPR: set.isPR,
-          setNumber: set.setNumber,
-        });
-      });
-
-      const transformedWorkout = {
-        id: workout.id,
-        exercises: Array.from(exerciseMap.values()),
-        totalVolume: workout.totalVolume,
-        duration: workout.duration || 0,
-        date: workout.date,
-        notes: workout.notes
-      };
-
-      return NextResponse.json({ data: transformedWorkout });
-    } else {
-      // Workout list
-      const [workouts, total] = await Promise.all([
-        prisma.workout.findMany({
-          where: { userId: session.user.id },
-          orderBy: { date: 'desc' },
-          take: limit,
-          include: {
-            workoutSets: true
-          }
-        }),
-        prisma.workout.count({
-          where: { userId: session.user.id }
-        })
-      ]);
-
-      const transformedWorkouts = workouts.map(workout => {
-        const exerciseMap = new Map<string, any>();
-        workout.workoutSets.forEach(set => {
-          if (!exerciseMap.has(set.exercise)) {
-            exerciseMap.set(set.exercise, {
-              id: set.id,
-              name: set.exercise,
-              muscleGroup: set.muscleGroup,
-              sets: []
-            });
-          }
-          exerciseMap.get(set.exercise).sets.push({
-            weight: set.weight,
-            reps: set.reps,
-            rir: set.rir ?? 0,
-            isFailure: set.rir === 0,
-            isPR: set.isPR,
-            setNumber: set.setNumber,
-          });
-        });
-
-        return {
-          id: workout.id,
-          exercises: Array.from(exerciseMap.values()),
-          totalVolume: workout.totalVolume,
-          duration: workout.duration || 0,
-          date: workout.date,
-          notes: workout.notes
-        };
-      });
-
-      return NextResponse.json({ data: transformedWorkouts, total });
+      return NextResponse.json({ data: summary });
     }
+
+    const result = await listWorkouts(userId, { limit, offset });
+    return NextResponse.json(result);
   } catch (error) {
-    logger.error("❌ REAL ERROR:", error);
-    return NextResponse.json({ error: String(error) }, { status: 500 });
+    logger.error('Workout GET error:', error);
+    return NextResponse.json({ error: '获取训练记录失败，请稍后重试' }, { status: 500 });
+  }
+}
+
+export async function PUT(request: NextRequest) {
+  const userId = await getDbUserId();
+  if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+  try {
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get('id');
+    if (!id) return NextResponse.json({ error: 'Missing id' }, { status: 400 });
+
+    const body = await request.json();
+    const result = await replaceWorkout(userId, id, {
+      date: body.date,
+      duration: body.duration,
+      notes: body.notes,
+      exercises: body.exercises || [],
+    });
+    emitDashboardEvent("WORKOUT_LOGGED", userId);
+    return NextResponse.json({ data: result });
+  } catch (error) {
+    if (error instanceof Error && error.message === 'Workout not found') {
+      return NextResponse.json({ error: 'Not found' }, { status: 404 });
+    }
+    logger.error('Workout PUT error:', error);
+    return NextResponse.json({ error: '更新训练记录失败' }, { status: 500 });
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  const userId = await getDbUserId();
+  if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+  try {
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get('id');
+    if (!id) return NextResponse.json({ error: 'Missing id' }, { status: 400 });
+
+    const deleted = await prisma.workout.deleteMany({ where: { id, userId } });
+    if (deleted.count === 0) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+
+    emitDashboardEvent("WORKOUT_LOGGED", userId);
+    return NextResponse.json({ data: { success: true } });
+  } catch (error) {
+    logger.error('Workout DELETE error:', error);
+    return NextResponse.json({ error: '删除训练记录失败' }, { status: 500 });
+  }
+}
+
+export async function PATCH(request: NextRequest) {
+  const userId = await getDbUserId();
+  if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+  try {
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get('id');
+    if (!id) return NextResponse.json({ error: 'Missing id' }, { status: 400 });
+
+    // Verify ownership
+    const workout = await prisma.workout.findFirst({ where: { id, userId } });
+    if (!workout) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+
+    const body = await request.json();
+    const { notes, sets } = body as {
+      notes?: string;
+      sets?: { id: string; weight: number; reps: number; rir: number; isFailure: boolean }[];
+    };
+
+    // Update each modified set
+    if (sets && sets.length > 0) {
+      for (const s of sets) {
+        await prisma.workoutSet.updateMany({
+          where: { id: s.id, workoutId: id },
+          data: { weight: s.weight, reps: s.reps, rir: s.rir, isFailure: s.isFailure },
+        });
+      }
+    }
+
+    // Recalculate totalVolume from all current sets
+    const allSets = await prisma.workoutSet.findMany({ where: { workoutId: id } });
+    const newVolume = allSets.reduce((sum, s) => sum + s.weight * s.reps, 0);
+
+    // Update workout record
+    await prisma.workout.update({
+      where: { id },
+      data: { ...(notes !== undefined && { notes }), totalVolume: newVolume },
+    });
+
+    // Invalidate AI feedback cache so user can regenerate
+    await prisma.feedback.deleteMany({ where: { workoutId: id, userId, type: 'summary' } });
+
+    emitDashboardEvent("WORKOUT_LOGGED", userId);
+    const updated = await getWorkoutById(userId, id);
+    return NextResponse.json({ data: updated });
+  } catch (error) {
+    logger.error('Workout PATCH error:', error);
+    return NextResponse.json({ error: '更新训练记录失败' }, { status: 500 });
   }
 }
