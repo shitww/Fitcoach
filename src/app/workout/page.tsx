@@ -1068,7 +1068,7 @@ function WorkoutContent() {
 
   const logSet = () => {
     if (!currentExercise || !reps) { toast({ message: '请填写所有字段', type: 'error' }); return; }
-    if (!isBodyweight && !weight) { toast({ message: '请填写所有字段', type: 'error' }); return; }
+    if (!isCurrentExerciseTimed && !isBodyweight && !weight) { toast({ message: '请填写所有字段', type: 'error' }); return; }
     const prevSetCount = exercises.find(e => e.name === currentExercise)?.sets.length ?? 0;
     if (sessionPhase === 'idle') {
       storeStartTraining();

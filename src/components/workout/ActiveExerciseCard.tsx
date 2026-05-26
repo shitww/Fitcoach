@@ -130,8 +130,20 @@ const ActiveExerciseCard = memo(function ActiveExerciseCard({
   // Notify parent of countdown state changes
   useEffect(() => { onCdActiveChange?.(cdActive); }, [cdActive, onCdActiveChange]);
 
+  const [editingField, setEditingField] = useState<'weight' | 'reps' | null>(null);
   const [showCdGuard, setShowCdGuard] = useState(false);
   const pendingActionRef = useRef<(() => void) | null>(null);
+
+  function commitEdit(field: 'weight' | 'reps', raw: string) {
+    if (field === 'weight') {
+      const v = parseFloat(raw);
+      onWeightChange(isNaN(v) ? '' : v.toString());
+    } else {
+      const v = isTimed ? parseInt(raw) : parseInt(raw);
+      onRepsChange(isNaN(v) || v <= 0 ? '' : v.toString());
+    }
+    setEditingField(null);
+  }
 
   function guardedAction(action: () => void) {
     if (cdActive) {
@@ -296,11 +308,25 @@ const ActiveExerciseCard = memo(function ActiveExerciseCard({
                 <Plus className="w-5 h-5" style={{ color: 'var(--text-med)' }} />
               </StepButton>
               <div className="flex items-baseline gap-1">
-                <span className="font-black tabular-nums leading-none"
-                  style={{ fontSize: '3.5rem', letterSpacing: '-0.03em', color: 'var(--foreground)' }}>
-                  {repsNum || '0'}
-                </span>
-                <span className="text-sm font-semibold mb-1" style={{ color: 'var(--text-faint)' }}>秒</span>
+                {editingField === 'reps' ? (
+                  <input
+                    type="number" inputMode="numeric" autoFocus
+                    defaultValue={repsNum || ''}
+                    onBlur={e => commitEdit('reps', e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
+                    className="font-black tabular-nums leading-none text-center bg-transparent outline-none border-b-2"
+                    style={{ fontSize: '3.5rem', letterSpacing: '-0.03em', color: 'var(--foreground)', width: 100, borderColor: 'var(--color-accent)' }}
+                  />
+                ) : (
+                  <span
+                    className="font-black tabular-nums leading-none cursor-text"
+                    style={{ fontSize: '3.5rem', letterSpacing: '-0.03em', color: 'var(--foreground)' }}
+                    onClick={() => setEditingField('reps')}
+                  >
+                    {repsNum || '0'}
+                  </span>
+                )}
+                {editingField !== 'reps' && <span className="text-sm font-semibold mb-1" style={{ color: 'var(--text-faint)' }}>秒</span>}
               </div>
               <StepButton onClick={() => stepReps(-1)}>
                 <Minus className="w-5 h-5" style={{ color: 'var(--text-med)' }} />
@@ -335,17 +361,25 @@ const ActiveExerciseCard = memo(function ActiveExerciseCard({
               <Plus className="w-5 h-5" style={{ color: 'var(--text-med)' }} />
             </StepButton>
             <div className="flex items-baseline gap-1 min-h-[4rem] items-center justify-center">
-              <span
-                className="font-black tabular-nums leading-none"
-                style={{
-                  fontSize: '3rem',
-                  letterSpacing: '-0.03em',
-                  color: isBodyweight ? 'var(--text-faint)' : 'var(--foreground)',
-                }}
-              >
-                {isBodyweight ? '—' : (weightNum || '0')}
-              </span>
-              {!isBodyweight && (
+              {!isBodyweight && editingField === 'weight' ? (
+                <input
+                  type="number" inputMode="decimal" autoFocus
+                  defaultValue={weightNum || ''}
+                  onBlur={e => commitEdit('weight', e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
+                  className="font-black tabular-nums leading-none text-center bg-transparent outline-none border-b-2"
+                  style={{ fontSize: '3rem', letterSpacing: '-0.03em', color: 'var(--foreground)', width: 100, borderColor: 'var(--color-accent)' }}
+                />
+              ) : (
+                <span
+                  className="font-black tabular-nums leading-none cursor-text"
+                  style={{ fontSize: '3rem', letterSpacing: '-0.03em', color: isBodyweight ? 'var(--text-faint)' : 'var(--foreground)' }}
+                  onClick={() => { if (!isBodyweight) setEditingField('weight'); }}
+                >
+                  {isBodyweight ? '—' : (weightNum || '0')}
+                </span>
+              )}
+              {!isBodyweight && editingField !== 'weight' && (
                 <span className="text-sm font-semibold mb-1" style={{ color: 'var(--text-faint)' }}>
                   kg
                 </span>
@@ -364,15 +398,27 @@ const ActiveExerciseCard = memo(function ActiveExerciseCard({
               <Plus className="w-5 h-5" style={{ color: 'var(--text-med)' }} />
             </StepButton>
             <div className="flex items-baseline gap-1 min-h-[4rem] items-center justify-center">
-              <span
-                className="font-black tabular-nums leading-none"
-                style={{ fontSize: '3rem', letterSpacing: '-0.03em', color: 'var(--foreground)' }}
-              >
-                {repsNum || '0'}
-              </span>
-              <span className="text-sm font-semibold mb-1" style={{ color: 'var(--text-faint)' }}>
-                次
-              </span>
+              {editingField === 'reps' ? (
+                <input
+                  type="number" inputMode="numeric" autoFocus
+                  defaultValue={repsNum || ''}
+                  onBlur={e => commitEdit('reps', e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
+                  className="font-black tabular-nums leading-none text-center bg-transparent outline-none border-b-2"
+                  style={{ fontSize: '3rem', letterSpacing: '-0.03em', color: 'var(--foreground)', width: 80, borderColor: 'var(--color-accent)' }}
+                />
+              ) : (
+                <span
+                  className="font-black tabular-nums leading-none cursor-text"
+                  style={{ fontSize: '3rem', letterSpacing: '-0.03em', color: 'var(--foreground)' }}
+                  onClick={() => setEditingField('reps')}
+                >
+                  {repsNum || '0'}
+                </span>
+              )}
+              {editingField !== 'reps' && (
+                <span className="text-sm font-semibold mb-1" style={{ color: 'var(--text-faint)' }}>次</span>
+              )}
             </div>
             <StepButton onClick={() => stepReps(-1)}>
               <Minus className="w-5 h-5" style={{ color: 'var(--text-med)' }} />
