@@ -108,16 +108,8 @@ const ActiveExerciseCard = memo(function ActiveExerciseCard({
         style={{ borderBottom: '1px solid var(--border)' }}
       >
         <div className="flex-1 min-w-0">
-          {(totalExercises > 0 || isLastHint) && (
+          {isLastHint && (
             <div className="flex items-center gap-2 mb-0.5">
-              {totalExercises > 0 && (
-                <span
-                  className="text-xs font-bold px-2 py-0.5 rounded-full"
-                  style={{ background: 'var(--accent-dim)', color: 'rgb(var(--accent))' }}
-                >
-                  {exerciseIndex + 1}/{totalExercises}
-                </span>
-              )}
               {isLastHint && (
                 <span
                   className="text-xs font-black"
@@ -144,7 +136,7 @@ const ActiveExerciseCard = memo(function ActiveExerciseCard({
             touchAction: 'manipulation',
           }}
         >
-          更换
+          动作库
         </button>
       </div>
 
