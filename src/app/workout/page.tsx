@@ -454,6 +454,8 @@ function WorkoutContent() {
 
   const sessionRestoredRef = useRef(false);
   const [showExitModal, setShowExitModal] = useState(false);
+  const [isTimedCdActive, setIsTimedCdActive] = useState(false);
+  const [cdGuardPending, setCdGuardPending] = useState<string | null>(null); // exercise name to switch to after confirm
 
   // Keep store's nextExercise in sync so RestBar can read it globally
   useEffect(() => {
@@ -676,6 +678,14 @@ function WorkoutContent() {
   }, []);
 
   // (Selection screen is now inline — no modal trigger needed)
+
+  const guardedSelectExercise = (exercise: string) => {
+    if (isTimedCdActive) {
+      setCdGuardPending(exercise);
+      return;
+    }
+    void selectExercise(exercise);
+  };
 
   const selectExercise = async (exercise: string) => {
     setCurrentExercise(exercise);
@@ -1715,8 +1725,8 @@ function WorkoutContent() {
                   muscleGroupLabel={muscleGroupLabel || undefined}
                   userId={userId ?? undefined}
                   onSelectExercise={name => {
-                    selectExercise(name);
-                    if (sessionPhase === 'idle') storeStartTraining();
+                    guardedSelectExercise(name);
+                    if (sessionPhase === 'idle' && !isTimedCdActive) storeStartTraining();
                   }}
                   onOpenSearch={() => router.push(`/exercises?back=/workout${workoutMuscleGroup ? `?mg=${workoutMuscleGroup}` : ''}`)}
                 />
@@ -1766,6 +1776,7 @@ function WorkoutContent() {
                 isLoading={isLoading}
                 hint={hint ?? undefined}
                 isTimed={isCurrentExerciseTimed}
+                onCdActiveChange={setIsTimedCdActive}
               />
             )}
 
@@ -1976,6 +1987,50 @@ function WorkoutContent() {
       </div>
 
       {/* Rest overlay moved to global RestBar in ClientProviders — no full-screen overlay here */}
+
+      {/* ── Countdown guard modal (chip-select during timed countdown) ── */}
+      {cdGuardPending && (
+        <div
+          className="fixed inset-0 z-[200] flex items-center justify-center px-6"
+          style={{ background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(4px)' }}
+          onClick={() => setCdGuardPending(null)}
+        >
+          <div
+            className="w-full max-w-xs rounded-3xl p-6 flex flex-col items-center gap-4"
+            style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}
+            onClick={e => e.stopPropagation()}
+          >
+            <span style={{ fontSize: '2rem' }}>⏱</span>
+            <div className="text-center">
+              <p className="font-black text-base" style={{ color: 'var(--text-high)' }}>正在计时中</p>
+              <p className="text-sm mt-1" style={{ color: 'var(--text-low)' }}>
+                坚持住！确定要切换到 <span className="font-bold">{cdGuardPending.split(' (')[0]}</span> 吗？
+              </p>
+            </div>
+            <div className="flex gap-3 w-full">
+              <button
+                className="flex-1 py-3 rounded-2xl text-sm font-bold transition-all active:scale-95"
+                style={{ background: 'var(--surface-3)', color: 'var(--text-med)', touchAction: 'manipulation' }}
+                onClick={() => setCdGuardPending(null)}
+              >
+                继续坚持
+              </button>
+              <button
+                className="flex-1 py-3 rounded-2xl text-sm font-bold transition-all active:scale-95"
+                style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444', touchAction: 'manipulation' }}
+                onClick={() => {
+                  const target = cdGuardPending;
+                  setCdGuardPending(null);
+                  void selectExercise(target);
+                  if (sessionPhase === 'idle') storeStartTraining();
+                }}
+              >
+                放弃切换
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── F: Mode-entry intro overlay (auto-dismissed after ~1.6s) ── */}
       {introContent && (

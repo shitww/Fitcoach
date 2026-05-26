@@ -24,6 +24,7 @@ export interface ActiveExerciseCardProps {
   isLoading: boolean;
   hint?: string;
   isTimed?: boolean;
+  onCdActiveChange?: (active: boolean) => void;
 }
 
 const RIR_META = [
@@ -72,7 +73,7 @@ const ActiveExerciseCard = memo(function ActiveExerciseCard({
   currentExercise, weight, reps, rir, isBodyweight, restTime,
   lastRecord, completedSetsCount, exerciseIndex, totalExercises,
   onWeightChange, onRepsChange, onRirChange, onBodyweightToggle,
-  onRestTimeChange, onLogSet, onChangeExercise, isLoading, hint, isTimed,
+  onRestTimeChange, onLogSet, onChangeExercise, isLoading, hint, isTimed, onCdActiveChange,
 }: ActiveExerciseCardProps) {
   const [showSecondary, setShowSecondary] = useState(false);
   const [cdActive, setCdActive] = useState(false);
@@ -125,6 +126,21 @@ const ActiveExerciseCard = memo(function ActiveExerciseCard({
 
   // Reset countdown when exercise changes
   useEffect(() => { stopCountdown(); }, [currentExercise, stopCountdown]);
+
+  // Notify parent of countdown state changes
+  useEffect(() => { onCdActiveChange?.(cdActive); }, [cdActive, onCdActiveChange]);
+
+  const [showCdGuard, setShowCdGuard] = useState(false);
+  const pendingActionRef = useRef<(() => void) | null>(null);
+
+  function guardedAction(action: () => void) {
+    if (cdActive) {
+      pendingActionRef.current = action;
+      setShowCdGuard(true);
+    } else {
+      action();
+    }
+  }
 
   const weightNum = parseFloat(weight) || 0;
   const repsNum   = parseInt(reps) || 0;
@@ -182,7 +198,7 @@ const ActiveExerciseCard = memo(function ActiveExerciseCard({
           </h2>
         </div>
         <button
-          onClick={onChangeExercise}
+          onClick={() => guardedAction(onChangeExercise)}
           className="shrink-0 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all active:scale-95"
           style={{
             background: 'var(--surface-3)',
@@ -192,6 +208,48 @@ const ActiveExerciseCard = memo(function ActiveExerciseCard({
         >
           动作库
         </button>
+
+        {/* ── Countdown guard dialog ── */}
+        {showCdGuard && (
+          <div
+            className="fixed inset-0 z-[200] flex items-center justify-center px-6"
+            style={{ background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(4px)' }}
+            onClick={() => setShowCdGuard(false)}
+          >
+            <div
+              className="w-full max-w-xs rounded-3xl p-6 flex flex-col items-center gap-4"
+              style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}
+              onClick={e => e.stopPropagation()}
+            >
+              <span style={{ fontSize: '2rem' }}>⏱</span>
+              <div className="text-center">
+                <p className="font-black text-base" style={{ color: 'var(--text-high)' }}>正在计时中</p>
+                <p className="text-sm mt-1" style={{ color: 'var(--text-low)' }}>坚持住！确定要放弃这组吗？</p>
+              </div>
+              <div className="flex gap-3 w-full">
+                <button
+                  className="flex-1 py-3 rounded-2xl text-sm font-bold transition-all active:scale-95"
+                  style={{ background: 'var(--surface-3)', color: 'var(--text-med)', touchAction: 'manipulation' }}
+                  onClick={() => setShowCdGuard(false)}
+                >
+                  继续坚持
+                </button>
+                <button
+                  className="flex-1 py-3 rounded-2xl text-sm font-bold transition-all active:scale-95"
+                  style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444', touchAction: 'manipulation' }}
+                  onClick={() => {
+                    setShowCdGuard(false);
+                    stopCountdown();
+                    pendingActionRef.current?.();
+                    pendingActionRef.current = null;
+                  }}
+                >
+                  放弃本组
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ── Mega-number input grid ── */}
