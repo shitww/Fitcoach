@@ -1761,7 +1761,7 @@ function WorkoutContent() {
 
             {/* ── Session history: completed exercises below input card ── */}
             {trainingType === 'strength' && (() => {
-              const doneExs = exercises.filter(e => e.name !== currentExercise && e.sets.length > 0);
+              const doneExs = exercises.filter(e => e.sets.length > 0);
               if (doneExs.length === 0) return null;
               return (
                 <div className="mt-4 space-y-2">
