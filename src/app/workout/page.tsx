@@ -917,6 +917,8 @@ function WorkoutContent() {
       });
       if (response.status === 401) { router.push('/auth/signin'); return; }
       if (!response.ok) { toast({ message: '保存失败，请重试', type: 'error' }); return; }
+      const cardioJson = await response.json();
+      const cardioWorkoutId = cardioJson.data?.workout?.id ?? cardioJson.data?.id;
       if (userId) removeUserStorageItem(userId, 'pending_workout');
       setIsLoading(false);
       setCompletionSummary({
@@ -928,8 +930,8 @@ function WorkoutContent() {
           `消耗约 ${calories} 千卡`,
           '每一步都算数',
         ],
-        ctaLabel: '返回首页',
-        onCta: () => router.push('/'),
+        ctaLabel: '查看训练总结',
+        onCta: () => router.push(cardioWorkoutId ? `/summary?id=${cardioWorkoutId}` : '/'),
       });
       return;
     } catch (e) {
@@ -998,6 +1000,8 @@ function WorkoutContent() {
       });
       if (response.status === 401) { router.push('/auth/signin'); return; }
       if (!response.ok) { toast({ message: '保存失败，请重试', type: 'error' }); return; }
+      const recoveryJson = await response.json();
+      const recoveryWorkoutId = recoveryJson.data?.workout?.id ?? recoveryJson.data?.id;
       if (userId) removeUserStorageItem(userId, 'pending_workout');
       setIsLoading(false);
       setCompletionSummary({
@@ -1007,8 +1011,8 @@ function WorkoutContent() {
           '身体放松了一点',
           '今天也照顾到了身体',
         ],
-        ctaLabel: '返回首页',
-        onCta: () => router.push('/'),
+        ctaLabel: '查看训练总结',
+        onCta: () => router.push(recoveryWorkoutId ? `/summary?id=${recoveryWorkoutId}` : '/'),
       });
       return;
     } catch (e) {
@@ -1169,8 +1173,8 @@ function WorkoutContent() {
             '坚持比完美更重要',
             '明天继续保持节奏',
           ],
-          ctaLabel: '返回首页',
-          onCta: () => router.push('/'),
+          ctaLabel: '查看训练总结',
+          onCta: () => router.push(`/summary?id=${workoutId}`),
         });
         return;
       }
