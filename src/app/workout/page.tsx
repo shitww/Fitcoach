@@ -1713,12 +1713,37 @@ function WorkoutContent() {
               </div>
             ) : null}
 
-            {/* ── Session history: completed exercises always visible above input ── */}
+
+            {(trainingType === 'strength' || !trainingType) && (
+              <ActiveExerciseCard
+                currentExercise={currentExercise}
+                weight={weight}
+                reps={reps}
+                rir={rir}
+                isBodyweight={isBodyweight}
+                restTime={restTime}
+                lastRecord={lastExerciseRecord}
+                completedSetsCount={exercises.find(e => e.name === currentExercise)?.sets.length ?? 0}
+                exerciseIndex={Math.max(savedExercises.indexOf(currentExercise), 0)}
+                totalExercises={savedExercises.length}
+                onWeightChange={setWeight}
+                onRepsChange={setReps}
+                onRirChange={setRir}
+                onBodyweightToggle={() => setIsBodyweight(p => !p)}
+                onRestTimeChange={setRestTime}
+                onLogSet={logSet}
+                onChangeExercise={() => router.push('/exercises?mode=select')}
+                isLoading={isLoading}
+                hint={hint ?? undefined}
+              />
+            )}
+
+            {/* ── Session history: completed exercises below input card ── */}
             {trainingType === 'strength' && (() => {
               const doneExs = exercises.filter(e => e.name !== currentExercise && e.sets.length > 0);
               if (doneExs.length === 0) return null;
               return (
-                <div className="mb-4 space-y-2">
+                <div className="mt-4 space-y-2">
                   {doneExs.map(ex => {
                     const vol = ex.sets.reduce((s, st) => s + (st.isBodyweight ? 0 : st.weight * st.reps), 0);
                     return (
@@ -1755,60 +1780,6 @@ function WorkoutContent() {
                 </div>
               );
             })()}
-
-            {(trainingType === 'strength' || !trainingType) && (
-              <ActiveExerciseCard
-                currentExercise={currentExercise}
-                weight={weight}
-                reps={reps}
-                rir={rir}
-                isBodyweight={isBodyweight}
-                restTime={restTime}
-                lastRecord={lastExerciseRecord}
-                completedSetsCount={exercises.find(e => e.name === currentExercise)?.sets.length ?? 0}
-                exerciseIndex={Math.max(savedExercises.indexOf(currentExercise), 0)}
-                totalExercises={savedExercises.length}
-                onWeightChange={setWeight}
-                onRepsChange={setReps}
-                onRirChange={setRir}
-                onBodyweightToggle={() => setIsBodyweight(p => !p)}
-                onRestTimeChange={setRestTime}
-                onLogSet={logSet}
-                onChangeExercise={() => router.push('/exercises?mode=select')}
-                isLoading={isLoading}
-                hint={hint ?? undefined}
-              />
-            )}
-
-            {/* 全场训练概览 */}
-            {exercises.length > 0 && (
-              <div className="rounded-2xl p-5 mt-8" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
-                <h3 className="text-lg font-bold mb-4">全场训练概览</h3>
-                <div className="space-y-3">
-                  {exercises.map((exercise, index) => (
-                    <div
-                      key={index}
-                      className="flex items-center justify-between p-3 rounded-xl cursor-pointer transition-all active:scale-[0.98]"
-                      style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}
-                      onClick={() => selectExercise(exercise.name)}
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: 'var(--accent-dim)' }}>
-                          <Dumbbell className="w-4 h-4" style={{ color: 'var(--accent)' }} />
-                        </div>
-                        <div>
-                          <h4 className="font-semibold text-sm">{exercise.name.split(' (')[0]}</h4>
-                          <p className="text-xs" style={{ color: 'var(--text-low)' }}>{exercise.sets.length} 组</p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-sm font-semibold" style={{ color: 'var(--accent)' }}>{exercise.totalVolume} kg</div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
 
             {/* Finish */}
             {exercises.length > 0 && (
