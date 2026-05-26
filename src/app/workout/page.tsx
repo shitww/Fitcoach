@@ -234,8 +234,8 @@ const IntroOverlay = memo(function IntroOverlay({
       style={{ background: 'rgba(0,0,0,0.92)', backdropFilter: 'blur(14px)' }}>
       <div className="text-center px-8">
         <div className="text-7xl mb-5">{emoji}</div>
-        <h2 className="text-2xl font-black text-foreground mb-2">{title}</h2>
-        <p className="text-sm" style={{ color: 'rgba(255,255,255,0.4)' }}>{subtitle}</p>
+        <h2 className="text-2xl font-black mb-2" style={{ color: '#ffffff' }}>{title}</h2>
+        <p className="text-sm" style={{ color: 'rgba(255,255,255,0.65)' }}>{subtitle}</p>
       </div>
     </div>
   );
@@ -711,8 +711,29 @@ function WorkoutContent() {
   useEffect(() => {
     const exerciseParam = searchParams.get('exercise');
     if (!exerciseParam || !dbExercisesLoaded) return;
+    // Snapshot weight/reps from session backup so selectExercise's async
+    // DB fetch cannot overwrite them after the session restore has run.
+    const mgParam = searchParams.get('mg');
+    const raw = userId ? getUserStorageItem(userId, 'workout_session') : null;
+    let snapWeight: string | null = null;
+    let snapReps: string | null = null;
+    let snapMg: string | null = mgParam;
+    if (raw) {
+      try {
+        const d = JSON.parse(raw);
+        snapWeight = d.weight ?? null;
+        snapReps   = d.reps   ?? null;
+        if (!snapMg && d.workoutMuscleGroup) snapMg = d.workoutMuscleGroup;
+      } catch { /* ignore */ }
+    }
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    selectExercise(decodeURIComponent(exerciseParam));
+    selectExercise(decodeURIComponent(exerciseParam)).then(() => {
+      // After the async fetch, restore the pre-navigation weight/reps so they
+      // are not silently overwritten by DB-fetched defaults.
+      if (snapWeight !== null) setWeight(snapWeight);
+      if (snapReps   !== null) setReps(snapReps);
+      if (snapMg) setWorkoutMuscleGroup(snapMg);
+    });
     router.replace('/workout');
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams, dbExercisesLoaded]);
@@ -778,6 +799,7 @@ function WorkoutContent() {
           if (d.trainingNotes) setTrainingNotes(d.trainingNotes);
           if (d.isBodyweight !== undefined) setIsBodyweight(d.isBodyweight);
           if (d.trainingType) setTrainingType(d.trainingType);
+          if (d.workoutMuscleGroup) setWorkoutMuscleGroup(d.workoutMuscleGroup);
           if (Array.isArray(d.savedExercises) && d.savedExercises.length > 0) setSavedExercises(d.savedExercises);
         } catch (e) { logger.error('恢复训练会话失败:', e); }
       }
@@ -844,9 +866,10 @@ function WorkoutContent() {
       isBodyweight,
       trainingNotes,
       trainingType,
+      workoutMuscleGroup,
       savedExercises,
     }));
-  }, [exercises, currentExercise, completedSets, trainingNotes, sessionPhase, userId, weight, reps, rir, restTime, isBodyweight, trainingType, savedExercises]);
+  }, [exercises, currentExercise, completedSets, trainingNotes, sessionPhase, userId, weight, reps, rir, restTime, isBodyweight, trainingType, workoutMuscleGroup, savedExercises]);
 
 
 

@@ -76,6 +76,7 @@ export default function ExercisesContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const selectMode = searchParams.get('mode') === 'select';
+  const backUrl = searchParams.get('back') || '/workout';
   const { isTrainingActive, isPaused } = useWorkoutTimer();
   const hasActiveSession = isTrainingActive || isPaused;
   const [selectedFilter, setSelectedFilter] = useState('all');
@@ -262,7 +263,7 @@ export default function ExercisesContent() {
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-4">
-            <button onClick={() => router.push(selectMode ? '/workout' : '/')} className="p-2.5 rounded-xl bg-card border border-border hover:bg-secondary transition-colors">
+            <button onClick={() => router.push(selectMode ? backUrl : '/')} className="p-2.5 rounded-xl bg-card border border-border hover:bg-secondary transition-colors">
               <ArrowLeft className="w-5 h-5 text-muted-foreground" />
             </button>
             <div>
@@ -400,7 +401,10 @@ export default function ExercisesContent() {
                     className="rounded-2xl p-5 bg-card border border-border hover:border-border transition-all cursor-pointer"
                     onClick={() => {
                       if (selectMode) {
-                        router.push(`/workout?exercise=${encodeURIComponent(exercise.name)}`);
+                        const dest = backUrl.includes('?')
+                          ? `${backUrl}&exercise=${encodeURIComponent(exercise.name)}`
+                          : `${backUrl}?exercise=${encodeURIComponent(exercise.name)}`;
+                        router.push(dest);
                       } else if (isSelectingExercise) {
                         setSelectedTrainingExercise(exercise);
                         setIsSelectingExercise(false);
@@ -575,7 +579,15 @@ export default function ExercisesContent() {
                 关闭
               </button>
               <button
-                onClick={() => { setSelectedExercise(null); router.push(`/workout?exercise=${encodeURIComponent(selectedExercise.name)}`); }}
+                onClick={() => {
+                  setSelectedExercise(null);
+                  const dest = selectMode
+                    ? (backUrl.includes('?')
+                        ? `${backUrl}&exercise=${encodeURIComponent(selectedExercise.name)}`
+                        : `${backUrl}?exercise=${encodeURIComponent(selectedExercise.name)}`)
+                    : `/workout?exercise=${encodeURIComponent(selectedExercise.name)}`;
+                  router.push(dest);
+                }}
                 className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm bg-white text-black hover:bg-zinc-200"
               >
                 <Zap className="w-4 h-4" />{hasActiveSession ? '继续训练' : '开始训练'}
