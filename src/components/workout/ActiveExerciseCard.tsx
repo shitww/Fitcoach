@@ -24,7 +24,6 @@ export interface ActiveExerciseCardProps {
   isLoading: boolean;
   hint?: string;
   isTimed?: boolean;
-  isBodyweightLocked?: boolean;
   onCdActiveChange?: (active: boolean) => void;
 }
 
@@ -74,7 +73,7 @@ const ActiveExerciseCard = memo(function ActiveExerciseCard({
   currentExercise, weight, reps, rir, isBodyweight, restTime,
   lastRecord, completedSetsCount, exerciseIndex, totalExercises,
   onWeightChange, onRepsChange, onRirChange, onBodyweightToggle,
-  onRestTimeChange, onLogSet, onChangeExercise, isLoading, hint, isTimed, isBodyweightLocked, onCdActiveChange,
+  onRestTimeChange, onLogSet, onChangeExercise, isLoading, hint, isTimed, onCdActiveChange,
 }: ActiveExerciseCardProps) {
   const [showSecondary, setShowSecondary] = useState(false);
   const [cdActive, setCdActive] = useState(false);
@@ -338,10 +337,10 @@ const ActiveExerciseCard = memo(function ActiveExerciseCard({
           )}
         </div>
       ) : (
-        /* ── Standard mode: weight + reps (or reps-only when locked) ── */
-        <div className={isBodyweightLocked ? 'flex justify-center' : 'grid grid-cols-2'} style={{ borderBottom: '1px solid var(--border)' }}>
-          {/* Weight — hidden for bodyweight-locked exercises (stretch/warmup/cardio) */}
-          {!isBodyweightLocked && <div
+        /* ── Standard mode: weight + reps ── */
+        <div className="grid grid-cols-2" style={{ borderBottom: '1px solid var(--border)' }}>
+          {/* Weight */}
+          <div
             className="flex flex-col items-center py-6 gap-3"
             style={{ borderRight: '1px solid var(--border)' }}
           >
@@ -391,7 +390,7 @@ const ActiveExerciseCard = memo(function ActiveExerciseCard({
             <StepButton onClick={() => stepWeight(-2.5)} disabled={isBodyweight}>
               <Minus className="w-5 h-5" style={{ color: 'var(--text-med)' }} />
             </StepButton>
-          </div>}
+          </div>
           {/* Reps */}
           <div className="flex flex-col items-center py-6 gap-3">
             <div className="flex items-center justify-start w-full px-4">

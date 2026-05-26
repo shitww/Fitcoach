@@ -94,7 +94,7 @@ const getExerciseMuscleGroup = (exercise: string): string => {
 
 // exerciseNotes removed - now using DB cache
 
-/** Exercises whose "reps" field means seconds held (isometric/timed holds only). */
+/** Exercises whose "reps" field actually means seconds held. */
 const TIMED_EXERCISES = new Set([
   '平板支撑', '侧平板支撑', '俯撑', '单臂平板支撑',
   '靠墙蹲', '靠墙静蹲', '壁坐',
@@ -103,26 +103,6 @@ const TIMED_EXERCISES = new Set([
   '超人式保持', 'Superman保持',
   '单腿平衡', '瑜伽保持',
 ]);
-
-/** Warmup/stretch exercises — bodyweight reps only, no weight input. */
-const WARMUP_EXERCISES = new Set([
-  '弹力带外旋', '肩关节环绕', '轻重量侧平举',
-  '动态俯卧撑（半程）', '动态胸部拉伸', '空重卧推',
-  '猫牛式拉伸', '弹力带直臂下压', '轻重量单臂划船',
-  '臀桥激活', '腿部动态拉伸', '空重深蹲',
-  '手腕绕环', '肘关节热身', '空重弯举',
-  '骨盆前倾后倾', '死虫式激活', '平板支撑激活',
-  '全身动态热身', '弓步拉伸', '肩部环绕',
-  '关节环绕活动', '轻度有氧激活',
-]);
-
-/** True for exercises that need no weight — stretching, warmup, or cardio category. */
-function isBodyweightOnlyExercise(name: string): boolean {
-  const base = name.split(' (')[0];
-  if (WARMUP_EXERCISES.has(base)) return true;
-  const cat = exerciseCache.get(base)?.category;
-  return cat === 'stretching' || cat === 'cardio';
-}
 
 const safeJsonParse = (val: string): string[] => {
     try { return JSON.parse(val); } catch { return []; }
@@ -487,20 +467,11 @@ function WorkoutContent() {
 
   // True when the current exercise records duration (seconds) instead of weight+reps
   const isCurrentExerciseTimed = Boolean(
-    currentExercise && TIMED_EXERCISES.has(currentExercise.split(' (')[0])
+    currentExercise && (
+      TIMED_EXERCISES.has(currentExercise.split(' (')[0]) ||
+      exerciseCache.get(currentExercise.split(' (')[0])?.category === 'stretching'
+    )
   );
-  // True for stretching/warmup/cardio — show reps only, auto-bodyweight
-  const isCurrentExerciseBodyweightOnly = Boolean(
-    currentExercise && !isCurrentExerciseTimed && isBodyweightOnlyExercise(currentExercise)
-  );
-
-  // Auto-apply bodyweight mode for stretch/warmup/cardio exercises
-  useEffect(() => {
-    if (isCurrentExerciseBodyweightOnly) {
-      setIsBodyweight(true);
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isCurrentExerciseBodyweightOnly]);
 
   // ── Phase 4: exercise transition effect ──────────────────────────────────────
   useEffect(() => {
@@ -748,7 +719,7 @@ function WorkoutContent() {
         });
         if (response.ok) {
           const data = await response.json();
-          const isTimed = TIMED_EXERCISES.has(exerciseName);
+          const isTimed = TIMED_EXERCISES.has(exerciseName) || exerciseCache.get(exerciseName)?.category === 'stretching';
           if (data.data) {
             setLastExerciseRecord(data.data);
             setWeight(data.data.weight.toString());
@@ -763,7 +734,7 @@ function WorkoutContent() {
             return;
           }
           logger.warn("API warning:", await response.text());
-          const isTimed2 = TIMED_EXERCISES.has(exerciseName);
+          const isTimed2 = TIMED_EXERCISES.has(exerciseName) || exerciseCache.get(exerciseName)?.category === 'stretching';
           setLastExerciseRecord(null);
           setWeight('');
           setReps(isTimed2 ? '30' : '');
@@ -1812,7 +1783,6 @@ function WorkoutContent() {
                 isLoading={isLoading}
                 hint={hint ?? undefined}
                 isTimed={isCurrentExerciseTimed}
-                isBodyweightLocked={isCurrentExerciseBodyweightOnly}
                 onCdActiveChange={setIsTimedCdActive}
               />
             )}
@@ -1825,7 +1795,7 @@ function WorkoutContent() {
                 <div className="mt-4 space-y-2">
                   {doneExs.map(ex => {
                     const exBaseName = ex.name.split(' (')[0];
-                    const exIsTimed = TIMED_EXERCISES.has(exBaseName);
+                    const exIsTimed = TIMED_EXERCISES.has(exBaseName) || exerciseCache.get(exBaseName)?.category === 'stretching';
                     const vol = exIsTimed ? 0 : ex.sets.reduce((s, st) => s + (st.isBodyweight ? 0 : st.weight * st.reps), 0);
                     return (
                       <div key={ex.id} className="flex items-center gap-3 px-4 py-2.5 rounded-xl"
