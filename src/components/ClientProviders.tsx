@@ -12,10 +12,15 @@ const FloatingTimer = dynamic(() => import('@/components/FloatingTimer'), {
   ssr: false,
 })
 
+const RestBar = dynamic(() => import('@/components/workout/RestBar'), {
+  ssr: false,
+})
+
 export default function ClientProviders() {
   return (
     <>
       <FloatingTimer />
+      <RestBar />
       <PWARegister />
       <PWAInstallPrompt />
       <PWAUpdateBanner />

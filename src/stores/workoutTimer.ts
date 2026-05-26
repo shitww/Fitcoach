@@ -53,6 +53,7 @@ interface WorkoutTimerState {
   trainingDuration: number;
   restTimer: RestTimer;
   currentExercise: string | null;
+  nextExercise: string | null;
   totalSets: number;
   sessionType: string | null;
   cardioSpeed: number;
@@ -84,6 +85,7 @@ interface WorkoutTimerState {
   /** Legacy alias — prefer completeRest / skipRest */
   stopRest: () => void;
   setCurrentExercise: (name: string | null) => void;
+  setNextExercise: (name: string | null) => void;
   incrementSets: () => void;
   setSessionType: (type: string | null) => void;
   setCardioParams: (speed: number, incline: number, level: number) => void;
@@ -102,6 +104,7 @@ export const useWorkoutTimer = create<WorkoutTimerState>()(
       trainingDuration: 0,
       restTimer: REST_IDLE,
       currentExercise: null,
+      nextExercise: null,
       totalSets: 0,
       sessionType: null,
       sessionId: null,
@@ -207,6 +210,7 @@ export const useWorkoutTimer = create<WorkoutTimerState>()(
         set({ currentExercise: name });
         if (name !== null) logAndEmit({ type: 'EXERCISE_CHANGED', ts: Date.now(), payload: { name } }, get().sessionId ?? '');
       },
+      setNextExercise: (name) => set({ nextExercise: name }),
       incrementSets: () => {
         set(s => ({ totalSets: s.totalSets + 1 }));
         logAndEmit({ type: 'SET_COMPLETED', ts: Date.now() }, get().sessionId ?? '');

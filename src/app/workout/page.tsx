@@ -347,6 +347,7 @@ function WorkoutContent() {
     startRest: storeStartRest,
     skipRest: storeSkipRest,
     setCurrentExercise: setTimerExercise,
+    setNextExercise: storeSetNextExercise,
     incrementSets: storeIncrementSets,
     setCardioSession: storeSetCardioSession,
     setFreeSession: storeSetFreeSession,
@@ -364,6 +365,7 @@ function WorkoutContent() {
       startRest: s.startRest,
       skipRest: s.skipRest,
       setCurrentExercise: s.setCurrentExercise,
+      setNextExercise: s.setNextExercise,
       incrementSets: s.incrementSets,
       setCardioSession: s.setCardioSession,
       setFreeSession: s.setFreeSession,
@@ -452,6 +454,14 @@ function WorkoutContent() {
 
   const sessionRestoredRef = useRef(false);
   const [showExitModal, setShowExitModal] = useState(false);
+
+  // Keep store's nextExercise in sync so RestBar can read it globally
+  useEffect(() => {
+    if (trainingType !== 'strength' || !currentExercise) { storeSetNextExercise(null); return; }
+    const idx = exercises.findIndex(e => e.name === currentExercise);
+    storeSetNextExercise(exercises[idx + 1]?.name ?? null);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [exercises, currentExercise, trainingType]);
 
   // True when the current exercise records duration (seconds) instead of weight+reps
   const isCurrentExerciseTimed = Boolean(
@@ -1961,13 +1971,7 @@ function WorkoutContent() {
 
       </div>
 
-      {/* ── Rest overlay — full-screen when rest is active ── */}
-      <RestOverlay
-        onSkip={storeSkipRest}
-        nextExercise={trainingType === 'strength' && exercises.length > 0 && currentExercise
-          ? exercises[exercises.findIndex(e => e.name === currentExercise) + 1]?.name
-          : undefined}
-      />
+      {/* Rest overlay moved to global RestBar in ClientProviders — no full-screen overlay here */}
 
       {/* ── F: Mode-entry intro overlay (auto-dismissed after ~1.6s) ── */}
       {introContent && (
