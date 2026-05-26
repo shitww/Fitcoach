@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { ArrowLeft, Edit, Trash2, Calendar, Clock, Dumbbell, Flame, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Edit, Trash2, Calendar, Clock, Dumbbell, Flame, AlertCircle, Zap } from 'lucide-react';
 import { logger } from "@/lib/logger";
 import { SkeletonList, SkeletonStatGrid } from '@/components/Skeleton';
 import { EmptyState } from '@/components/EmptyState';
@@ -14,8 +14,17 @@ export default function WorkoutDetailPage() {
   const [workout, setWorkout] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [aiFeedback, setAiFeedback] = useState<string | null>(null);
 
   useEffect(() => { fetchWorkout(); }, [params.id]);
+
+  useEffect(() => {
+    if (!params.id) return;
+    fetch(`/api/analysis/workout-feedback?workoutId=${params.id}`, { credentials: 'include' })
+      .then(r => r.json())
+      .then(d => { if (d.cached && d.feedback?.coach) setAiFeedback(d.feedback.coach); })
+      .catch(() => {});
+  }, [params.id]);
 
   const fetchWorkout = async () => {
     if (!params.id) return;
@@ -237,6 +246,19 @@ export default function WorkoutDetailPage() {
             )}
           </div>
         ))}
+
+        {/* AI Coach Feedback */}
+        {aiFeedback && (
+          <div className="rounded-2xl p-5 mb-6" style={{ background: 'var(--surface)', border: '1px solid var(--accent-dim)' }}>
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: 'var(--accent-dim)' }}>
+                <Zap className="w-3.5 h-3.5" style={{ color: 'var(--accent)' }} />
+              </div>
+              <span className="text-sm font-bold" style={{ color: 'var(--accent)' }}>AI 教练反馈</span>
+            </div>
+            <p className="text-sm leading-relaxed whitespace-pre-wrap" style={{ color: 'var(--text-med)' }}>{aiFeedback}</p>
+          </div>
+        )}
 
         <div className="mt-6 flex justify-center">
           <button onClick={() => router.push('/')}
