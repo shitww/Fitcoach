@@ -1,6 +1,6 @@
 'use client';
-import { memo, useState } from 'react';
-import { Check, ChevronDown, Plus, Minus, Loader2 } from 'lucide-react';
+import { memo, useState, useEffect, useRef, useCallback } from 'react';
+import { Check, ChevronDown, Plus, Minus, Loader2, Play, X } from 'lucide-react';
 import { REST_TIME_PRESETS } from '@/lib/exercise-constants';
 
 export interface ActiveExerciseCardProps {
@@ -75,6 +75,42 @@ const ActiveExerciseCard = memo(function ActiveExerciseCard({
   onRestTimeChange, onLogSet, onChangeExercise, isLoading, hint, isTimed,
 }: ActiveExerciseCardProps) {
   const [showSecondary, setShowSecondary] = useState(false);
+  const [cdActive, setCdActive] = useState(false);
+  const [cdRemaining, setCdRemaining] = useState(0);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const stopCountdown = useCallback(() => {
+    if (intervalRef.current) { clearInterval(intervalRef.current); intervalRef.current = null; }
+    setCdActive(false);
+    setCdRemaining(0);
+  }, []);
+
+  const startCountdown = useCallback(() => {
+    const secs = parseInt(reps) || 30;
+    setCdRemaining(secs);
+    setCdActive(true);
+  }, [reps]);
+
+  useEffect(() => {
+    if (!cdActive) return;
+    intervalRef.current = setInterval(() => {
+      setCdRemaining(prev => {
+        if (prev <= 1) {
+          clearInterval(intervalRef.current!);
+          intervalRef.current = null;
+          setCdActive(false);
+          onLogSet();
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cdActive]);
+
+  // Reset countdown when exercise changes
+  useEffect(() => { stopCountdown(); }, [currentExercise, stopCountdown]);
 
   const weightNum = parseFloat(weight) || 0;
   const repsNum   = parseInt(reps) || 0;
@@ -148,23 +184,58 @@ const ActiveExerciseCard = memo(function ActiveExerciseCard({
       {isTimed ? (
         /* ── Timed mode: single-column, seconds only ── */
         <div className="flex flex-col items-center py-6 gap-3" style={{ borderBottom: '1px solid var(--border)' }}>
-          <div className="flex items-center justify-start w-full px-4">
-            <span className="text-xs font-bold" style={{ color: 'var(--text-faint)' }}>时间（秒）</span>
-          </div>
-          <StepButton onClick={() => stepReps(1)}>
-            <Plus className="w-5 h-5" style={{ color: 'var(--text-med)' }} />
-          </StepButton>
-          <div className="flex items-baseline gap-1">
-            <span className="font-black tabular-nums leading-none"
-              style={{ fontSize: '3.5rem', letterSpacing: '-0.03em', color: 'var(--foreground)' }}>
-              {repsNum || '0'}
-            </span>
-            <span className="text-sm font-semibold mb-1" style={{ color: 'var(--text-faint)' }}>秒</span>
-          </div>
-          <StepButton onClick={() => stepReps(-1)}>
-            <Minus className="w-5 h-5" style={{ color: 'var(--text-med)' }} />
-          </StepButton>
-          <p className="text-xs" style={{ color: 'var(--text-faint)' }}>每次 ±5 秒</p>
+          {cdActive ? (
+            /* Countdown running */
+            <>
+              <p className="text-xs font-bold" style={{ color: 'var(--text-faint)' }}>倒计时中…</p>
+              <div className="relative flex items-center justify-center" style={{ width: 120, height: 120 }}>
+                <svg width="120" height="120" style={{ position: 'absolute', top: 0, left: 0, transform: 'rotate(-90deg)' }}>
+                  <circle cx="60" cy="60" r="52" fill="none" stroke="var(--border)" strokeWidth="6" />
+                  <circle cx="60" cy="60" r="52" fill="none"
+                    stroke="var(--color-accent)" strokeWidth="6"
+                    strokeDasharray={`${2 * Math.PI * 52}`}
+                    strokeDashoffset={`${2 * Math.PI * 52 * (1 - cdRemaining / (parseInt(reps) || 30))}`}
+                    strokeLinecap="round"
+                    style={{ transition: 'stroke-dashoffset 0.9s linear' }}
+                  />
+                </svg>
+                <div className="flex items-baseline gap-0.5">
+                  <span className="font-black tabular-nums" style={{ fontSize: '2.8rem', letterSpacing: '-0.03em', color: 'var(--foreground)' }}>
+                    {cdRemaining}
+                  </span>
+                  <span className="text-sm font-semibold" style={{ color: 'var(--text-faint)' }}>秒</span>
+                </div>
+              </div>
+              <button
+                onClick={stopCountdown}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all active:scale-95"
+                style={{ background: 'var(--surface-3)', color: 'var(--text-low)', border: '1px solid var(--border)' }}
+              >
+                <X className="w-3.5 h-3.5" /> 取消
+              </button>
+            </>
+          ) : (
+            /* Setup: pick duration */
+            <>
+              <div className="flex items-center justify-start w-full px-4">
+                <span className="text-xs font-bold" style={{ color: 'var(--text-faint)' }}>目标时间（秒）</span>
+              </div>
+              <StepButton onClick={() => stepReps(1)}>
+                <Plus className="w-5 h-5" style={{ color: 'var(--text-med)' }} />
+              </StepButton>
+              <div className="flex items-baseline gap-1">
+                <span className="font-black tabular-nums leading-none"
+                  style={{ fontSize: '3.5rem', letterSpacing: '-0.03em', color: 'var(--foreground)' }}>
+                  {repsNum || '0'}
+                </span>
+                <span className="text-sm font-semibold mb-1" style={{ color: 'var(--text-faint)' }}>秒</span>
+              </div>
+              <StepButton onClick={() => stepReps(-1)}>
+                <Minus className="w-5 h-5" style={{ color: 'var(--text-med)' }} />
+              </StepButton>
+              <p className="text-xs" style={{ color: 'var(--text-faint)' }}>每次 ±5 秒</p>
+            </>
+          )}
         </div>
       ) : (
         /* ── Standard mode: weight + reps ── */
@@ -346,24 +417,44 @@ const ActiveExerciseCard = memo(function ActiveExerciseCard({
 
       {/* ── Primary CTA ── */}
       <div className="px-5 pb-5 pt-4">
-        <button
-          onClick={onLogSet}
-          disabled={!canLog || isLoading}
-          className="w-full flex items-center justify-center gap-2 rounded-2xl py-4 font-black text-base transition-all active:scale-[0.97]"
-          style={{
-            background: 'rgb(var(--accent))',
-            color: 'var(--accent-text)',
-            opacity: !canLog || isLoading ? 0.45 : 1,
-            boxShadow: isLastHint && canLog ? '0 0 24px var(--wo-strength-shadow)' : 'none',
-            touchAction: 'manipulation',
-          }}
-        >
-          {isLoading
-            ? <Loader2 className="w-5 h-5 animate-spin" />
-            : <Check className="w-5 h-5" />
-          }
-          {isLoading ? '保存中…' : setLabel}
-        </button>
+        {isTimed ? (
+          /* Timed CTA: 开始计时 → auto-logs when done */
+          !cdActive && (
+            <button
+              onClick={startCountdown}
+              disabled={!canLog || isLoading}
+              className="w-full flex items-center justify-center gap-2 rounded-2xl py-4 font-black text-base transition-all active:scale-[0.97]"
+              style={{
+                background: 'rgb(var(--accent))',
+                color: 'var(--accent-text)',
+                opacity: !canLog || isLoading ? 0.45 : 1,
+                touchAction: 'manipulation',
+              }}
+            >
+              <Play className="w-5 h-5" fill="currentColor" />
+              开始计时 · {repsNum}秒
+            </button>
+          )
+        ) : (
+          <button
+            onClick={onLogSet}
+            disabled={!canLog || isLoading}
+            className="w-full flex items-center justify-center gap-2 rounded-2xl py-4 font-black text-base transition-all active:scale-[0.97]"
+            style={{
+              background: 'rgb(var(--accent))',
+              color: 'var(--accent-text)',
+              opacity: !canLog || isLoading ? 0.45 : 1,
+              boxShadow: isLastHint && canLog ? '0 0 24px var(--wo-strength-shadow)' : 'none',
+              touchAction: 'manipulation',
+            }}
+          >
+            {isLoading
+              ? <Loader2 className="w-5 h-5 animate-spin" />
+              : <Check className="w-5 h-5" />
+            }
+            {isLoading ? '保存中…' : setLabel}
+          </button>
+        )}
 
         {hint && (
           <p className="mt-2.5 text-center text-xs" style={{ color: 'var(--text-faint)' }}>
