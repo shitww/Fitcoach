@@ -63,7 +63,13 @@ export default function ExerciseQuickLauncher({
   const exercises = (() => {
     const all: string[] = [];
     const seen = new Set<string>();
-    for (const e of [...recentExercises, ...commonExercises]) {
+    // When a muscle group is selected: muscle-group exercises come first so
+    // unrelated history entries never push the relevant exercises off screen.
+    // Without a muscle group (free mode): keep history-first behaviour.
+    const ordered = muscleGroup
+      ? [...commonExercises, ...recentExercises]
+      : [...recentExercises, ...commonExercises];
+    for (const e of ordered) {
       if (!seen.has(e)) {
         seen.add(e);
         all.push(e);
@@ -94,7 +100,7 @@ export default function ExerciseQuickLauncher({
         <div>
           <p className="text-sm font-black">常用{muscleGroupLabel ?? ''}动作</p>
           <p className="text-xs mt-0.5" style={{ color: 'var(--text-low)' }}>
-            {recentExercises.length > 0 ? '历史优先 · 点击立即开始' : '点击立即开始'}
+            {muscleGroup ? '部位优先 · 点击立即开始' : recentExercises.length > 0 ? '历史优先 · 点击立即开始' : '点击立即开始'}
           </p>
         </div>
         <button onClick={() => setCollapsed(true)} style={{ color: 'var(--text-low)', background: 'none', border: 'none' }}>
