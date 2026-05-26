@@ -1728,7 +1728,14 @@ function WorkoutContent() {
                     guardedSelectExercise(name);
                     if (sessionPhase === 'idle' && !isTimedCdActive) storeStartTraining();
                   }}
-                  onOpenSearch={() => router.push(`/exercises?back=/workout${workoutMuscleGroup ? `?mg=${workoutMuscleGroup}` : ''}`)}
+                  onOpenSearch={() => {
+                    if (isTimedCdActive) {
+                      setCdGuardPending('\x00__search__');
+                      return;
+                    }
+                    const back = `/workout${workoutMuscleGroup ? `?mg=${workoutMuscleGroup}` : ''}`;
+                    router.push(`/exercises?mode=select&back=${encodeURIComponent(back)}`);
+                  }}
                 />
               </>
             )}
@@ -2004,7 +2011,9 @@ function WorkoutContent() {
             <div className="text-center">
               <p className="font-black text-base" style={{ color: 'var(--text-high)' }}>正在计时中</p>
               <p className="text-sm mt-1" style={{ color: 'var(--text-low)' }}>
-                坚持住！确定要切换到 <span className="font-bold">{cdGuardPending.split(' (')[0]}</span> 吗？
+                {cdGuardPending === '\x00__search__'
+                  ? '坚持住！确定要离开去动作库吗？'
+                  : <>坚持住！确定要切换到 <span className="font-bold">{cdGuardPending.split(' (')[0]}</span> 吗？</>}
               </p>
             </div>
             <div className="flex gap-3 w-full">
@@ -2021,8 +2030,13 @@ function WorkoutContent() {
                 onClick={() => {
                   const target = cdGuardPending;
                   setCdGuardPending(null);
-                  void selectExercise(target);
-                  if (sessionPhase === 'idle') storeStartTraining();
+                  if (target === '\x00__search__') {
+                    const back = `/workout${workoutMuscleGroup ? `?mg=${workoutMuscleGroup}` : ''}`;
+                    router.push(`/exercises?mode=select&back=${encodeURIComponent(back)}`);
+                  } else if (target) {
+                    void selectExercise(target);
+                    if (sessionPhase === 'idle') storeStartTraining();
+                  }
                 }}
               >
                 放弃切换
