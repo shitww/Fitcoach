@@ -467,10 +467,7 @@ function WorkoutContent() {
 
   // True when the current exercise records duration (seconds) instead of weight+reps
   const isCurrentExerciseTimed = Boolean(
-    currentExercise && (
-      TIMED_EXERCISES.has(currentExercise.split(' (')[0]) ||
-      exerciseCache.get(currentExercise.split(' (')[0])?.category === 'stretching'
-    )
+    currentExercise && TIMED_EXERCISES.has(currentExercise.split(' (')[0])
   );
 
   // ── Phase 4: exercise transition effect ──────────────────────────────────────
@@ -719,7 +716,7 @@ function WorkoutContent() {
         });
         if (response.ok) {
           const data = await response.json();
-          const isTimed = TIMED_EXERCISES.has(exerciseName) || exerciseCache.get(exerciseName)?.category === 'stretching';
+          const isTimed = TIMED_EXERCISES.has(exerciseName);
           if (data.data) {
             setLastExerciseRecord(data.data);
             setWeight(data.data.weight.toString());
@@ -734,7 +731,7 @@ function WorkoutContent() {
             return;
           }
           logger.warn("API warning:", await response.text());
-          const isTimed2 = TIMED_EXERCISES.has(exerciseName) || exerciseCache.get(exerciseName)?.category === 'stretching';
+          const isTimed2 = TIMED_EXERCISES.has(exerciseName);
           setLastExerciseRecord(null);
           setWeight('');
           setReps(isTimed2 ? '30' : '');
@@ -1795,7 +1792,7 @@ function WorkoutContent() {
                 <div className="mt-4 space-y-2">
                   {doneExs.map(ex => {
                     const exBaseName = ex.name.split(' (')[0];
-                    const exIsTimed = TIMED_EXERCISES.has(exBaseName) || exerciseCache.get(exBaseName)?.category === 'stretching';
+                    const exIsTimed = TIMED_EXERCISES.has(exBaseName);
                     const vol = exIsTimed ? 0 : ex.sets.reduce((s, st) => s + (st.isBodyweight ? 0 : st.weight * st.reps), 0);
                     return (
                       <div key={ex.id} className="flex items-center gap-3 px-4 py-2.5 rounded-xl"

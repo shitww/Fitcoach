@@ -55,12 +55,6 @@ const exercises: Ex[] = [
     tips:['下落深度根据肩关节灵活性调整。','熟练后可挂杠铃片增加负重。'],
     commonMistakes:['身体过于直立变成三头肌主导。','下落速度过快冲击肩关节。'] },
 
-  { name:'夹胸', nameEn:'Chest Fly', muscleGroup:'chest', category:'isolation', equipment:'Machine', difficulty:'简单',
-    description:'通过器械或哑铃弧线合拢，孤立刺激胸大肌内侧，增强胸中缝线条。',
-    instructions:['调整器械或躺凳，手臂向两侧展开呈弧形。','呼气，以胸肌发力将双臂在身体前方合拢。','顶点停顿挤压胸肌1秒。','吸气缓慢回放，充分拉伸胸肌。'],
-    tips:['全程保持肘关节微弯，避免肘关节锁死。','顶点挤压是关键，重量宁轻勿重。'],
-    commonMistakes:['用手臂发力代替胸肌。','重量过大导致动作变形。'] },
-
   { name:'蝴蝶机夹胸', nameEn:'Machine Pec Deck', muscleGroup:'chest', category:'isolation', equipment:'Machine', difficulty:'简单',
     description:'轨迹固定的胸部孤立器械动作，安全性高，初学者也能精准感受胸肌收缩。',
     instructions:['调整座椅高度使把手与肩同高，背部贴紧靠垫。','双臂抵住臂垫，初始位置双臂向两侧张开。','呼气，胸肌发力将双臂向前合拢，顶部停顿1秒。','吸气，缓慢回到初始位置充分拉伸。'],
