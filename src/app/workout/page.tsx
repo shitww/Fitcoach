@@ -23,6 +23,8 @@ import { AmbientGlow } from "@/components/AmbientGlow";
 import type { RecoveryWorkoutPlan } from '@/types/workout-plan';
 import RestOverlay from '@/components/workout/RestOverlay';
 import ActiveExerciseCard from '@/components/workout/ActiveExerciseCard';
+import { detectExerciseMode, loadModeOverrides, saveModeOverride } from '@/lib/exercise-recording-mode';
+import type { ExerciseRecordingMode } from '@/lib/exercise-recording-mode';
 
 interface Set {
   weight: number;
@@ -94,15 +96,6 @@ const getExerciseMuscleGroup = (exercise: string): string => {
 
 // exerciseNotes removed - now using DB cache
 
-/** Exercises whose "reps" field actually means seconds held. */
-const TIMED_EXERCISES = new Set([
-  '平板支撑', '侧平板支撑', '俯撑', '单臂平板支撑',
-  '靠墙蹲', '靠墙静蹲', '壁坐',
-  '悬挂', '死亡悬挂', '悬垂保持',
-  'L坐', 'L-sit',
-  '超人式保持', 'Superman保持',
-  '单腿平衡', '瑜伽保持',
-]);
 
 const safeJsonParse = (val: string): string[] => {
     try { return JSON.parse(val); } catch { return []; }
@@ -456,6 +449,7 @@ function WorkoutContent() {
   const [showExitModal, setShowExitModal] = useState(false);
   const [isTimedCdActive, setIsTimedCdActive] = useState(false);
   const [cdGuardPending, setCdGuardPending] = useState<string | null>(null); // exercise name to switch to after confirm
+  const [exerciseModeOverrides, setExerciseModeOverrides] = useState<Record<string, ExerciseRecordingMode>>(() => loadModeOverrides());
 
   // Keep store's nextExercise in sync so RestBar can read it globally
   useEffect(() => {
@@ -465,13 +459,26 @@ function WorkoutContent() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [exercises, currentExercise, trainingType]);
 
-  // True when the current exercise records duration (seconds) instead of weight+reps
-  const isCurrentExerciseTimed = Boolean(
-    currentExercise && (
-      TIMED_EXERCISES.has(currentExercise.split(' (')[0]) ||
-      exerciseCache.get(currentExercise.split(' (')[0])?.category === 'stretching'
-    )
-  );
+  // Derive recording mode for the current exercise
+  const currentExerciseMode: ExerciseRecordingMode = currentExercise
+    ? (exerciseModeOverrides[currentExercise] ??
+        detectExerciseMode(
+          currentExercise.split(' (')[0],
+          exerciseCache.get(currentExercise.split(' (')[0])?.category,
+        ))
+    : 'strength';
+  const isCurrentExerciseTimed = currentExerciseMode === 'timed';
+
+  function handleModeChange(m: ExerciseRecordingMode) {
+    if (!currentExercise) return;
+    setExerciseModeOverrides(prev => ({ ...prev, [currentExercise]: m }));
+    saveModeOverride(currentExercise, m);
+    // Reset reps to sensible defaults when switching modes
+    if (m === 'timed') setReps('30');
+    else if (m === 'cardio') setReps('20');
+    else if (m === 'warmup') setReps('10');
+    else setReps('');
+  }
 
   // ── Phase 4: exercise transition effect ──────────────────────────────────────
   useEffect(() => {
@@ -719,7 +726,7 @@ function WorkoutContent() {
         });
         if (response.ok) {
           const data = await response.json();
-          const isTimed = TIMED_EXERCISES.has(exerciseName) || exerciseCache.get(exerciseName)?.category === 'stretching';
+          const isTimed = detectExerciseMode(exerciseName, exerciseCache.get(exerciseName)?.category) === 'timed';
           if (data.data) {
             setLastExerciseRecord(data.data);
             setWeight(data.data.weight.toString());
@@ -734,7 +741,7 @@ function WorkoutContent() {
             return;
           }
           logger.warn("API warning:", await response.text());
-          const isTimed2 = TIMED_EXERCISES.has(exerciseName) || exerciseCache.get(exerciseName)?.category === 'stretching';
+          const isTimed2 = detectExerciseMode(exerciseName, exerciseCache.get(exerciseName)?.category) === 'timed';
           setLastExerciseRecord(null);
           setWeight('');
           setReps(isTimed2 ? '30' : '');
@@ -1067,8 +1074,14 @@ function WorkoutContent() {
 
 
   const logSet = () => {
-    if (!currentExercise || !reps) { toast({ message: '请填写所有字段', type: 'error' }); return; }
-    if (!isCurrentExerciseTimed && !isBodyweight && !weight) { toast({ message: '请填写所有字段', type: 'error' }); return; }
+    if (!currentExercise) { toast({ message: '请填写所有字段', type: 'error' }); return; }
+    if (currentExerciseMode === 'warmup') { /* reps default handled by card */ }
+    else if (currentExerciseMode === 'timed' || currentExerciseMode === 'cardio') {
+      if (!reps || parseInt(reps) <= 0) { toast({ message: '请填写时间', type: 'error' }); return; }
+    } else {
+      if (!reps) { toast({ message: '请填写所有字段', type: 'error' }); return; }
+      if (!isBodyweight && !weight) { toast({ message: '请填写所有字段', type: 'error' }); return; }
+    }
     const prevSetCount = exercises.find(e => e.name === currentExercise)?.sets.length ?? 0;
     if (sessionPhase === 'idle') {
       storeStartTraining();
@@ -1782,7 +1795,8 @@ function WorkoutContent() {
                 onChangeExercise={() => router.push('/exercises?mode=select')}
                 isLoading={isLoading}
                 hint={hint ?? undefined}
-                isTimed={isCurrentExerciseTimed}
+                mode={currentExerciseMode}
+                onModeChange={handleModeChange}
                 onCdActiveChange={setIsTimedCdActive}
               />
             )}
@@ -1795,8 +1809,8 @@ function WorkoutContent() {
                 <div className="mt-4 space-y-2">
                   {doneExs.map(ex => {
                     const exBaseName = ex.name.split(' (')[0];
-                    const exIsTimed = TIMED_EXERCISES.has(exBaseName) || exerciseCache.get(exBaseName)?.category === 'stretching';
-                    const vol = exIsTimed ? 0 : ex.sets.reduce((s, st) => s + (st.isBodyweight ? 0 : st.weight * st.reps), 0);
+                    const exMode = exerciseModeOverrides[ex.name] ?? detectExerciseMode(exBaseName, exerciseCache.get(exBaseName)?.category);
+                    const vol = (exMode === 'timed' || exMode === 'warmup' || exMode === 'cardio') ? 0 : ex.sets.reduce((s, st) => s + (st.isBodyweight ? 0 : st.weight * st.reps), 0);
                     return (
                       <div key={ex.id} className="flex items-center gap-3 px-4 py-2.5 rounded-xl"
                         style={{ background: 'var(--surface)', border: '1px solid var(--border)', opacity: 0.72 }}>
@@ -1811,7 +1825,7 @@ function WorkoutContent() {
                           <div className="text-xs mt-0.5 truncate" style={{ color: 'var(--text-low)' }}>
                             {ex.sets.map((s, i) => (
                               <span key={i}>{i > 0 ? ' · ' : ''}
-                                {exIsTimed ? `${s.reps}秒` : (s.isBodyweight ? `${s.reps}次` : `${s.weight}×${s.reps}`)}
+                                {exMode === 'timed' ? `${s.reps}秒` : exMode === 'cardio' ? `${s.reps}分钟` : exMode === 'warmup' ? `${s.reps}次` : (s.isBodyweight ? `${s.reps}次` : `${s.weight}×${s.reps}`)}
                               </span>
                             ))}
                           </div>

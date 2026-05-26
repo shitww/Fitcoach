@@ -2,6 +2,7 @@
 import { memo, useState, useEffect, useRef, useCallback } from 'react';
 import { Check, ChevronDown, Plus, Minus, Loader2, Play, X } from 'lucide-react';
 import { REST_TIME_PRESETS } from '@/lib/exercise-constants';
+import type { ExerciseRecordingMode } from '@/lib/exercise-recording-mode';
 
 export interface ActiveExerciseCardProps {
   currentExercise: string;
@@ -23,7 +24,8 @@ export interface ActiveExerciseCardProps {
   onChangeExercise: () => void;
   isLoading: boolean;
   hint?: string;
-  isTimed?: boolean;
+  mode?: ExerciseRecordingMode;
+  onModeChange?: (m: ExerciseRecordingMode) => void;
   onCdActiveChange?: (active: boolean) => void;
 }
 
@@ -73,7 +75,8 @@ const ActiveExerciseCard = memo(function ActiveExerciseCard({
   currentExercise, weight, reps, rir, isBodyweight, restTime,
   lastRecord, completedSetsCount, exerciseIndex, totalExercises,
   onWeightChange, onRepsChange, onRirChange, onBodyweightToggle,
-  onRestTimeChange, onLogSet, onChangeExercise, isLoading, hint, isTimed, onCdActiveChange,
+  onRestTimeChange, onLogSet, onChangeExercise, isLoading, hint,
+  mode = 'strength', onModeChange, onCdActiveChange,
 }: ActiveExerciseCardProps) {
   const [showSecondary, setShowSecondary] = useState(false);
   const [cdActive, setCdActive] = useState(false);
@@ -139,7 +142,7 @@ const ActiveExerciseCard = memo(function ActiveExerciseCard({
       const v = parseFloat(raw);
       onWeightChange(isNaN(v) ? '' : v.toString());
     } else {
-      const v = isTimed ? parseInt(raw) : parseInt(raw);
+      const v = parseInt(raw);
       onRepsChange(isNaN(v) || v <= 0 ? '' : v.toString());
     }
     setEditingField(null);
@@ -160,10 +163,13 @@ const ActiveExerciseCard = memo(function ActiveExerciseCard({
     ? (weightNum * (1 + repsNum / 30)).toFixed(1)
     : null;
 
-  const isLastHint  = completedSetsCount >= 2;
-  const canLog      = isTimed
-    ? Boolean(currentExercise && reps && parseInt(reps) > 0)
-    : Boolean(currentExercise && reps && (isBodyweight || weight));
+  const isLastHint  = mode === 'strength' && completedSetsCount >= 2;
+  const canLog = (() => {
+    if (!currentExercise) return false;
+    if (mode === 'warmup') return true;
+    if (mode === 'timed' || mode === 'cardio') return repsNum > 0;
+    return Boolean(reps && (isBodyweight || weight));
+  })();
   const setLabel    = completedSetsCount > 0 ? `第 ${completedSetsCount + 1} 组` : '完成此组';
   const rirColor    = getRirColor(rir);
   const rirLabel    = getRirLabel(rir);
@@ -174,7 +180,7 @@ const ActiveExerciseCard = memo(function ActiveExerciseCard({
     onWeightChange(next.toString());
   }
   function stepReps(delta: number) {
-    const step = isTimed ? 5 : 1;
+    const step = mode === 'timed' ? 5 : mode === 'cardio' ? 5 : 1;
     const next = Math.max(0, repsNum + delta * step);
     onRepsChange(next.toString());
   }
@@ -221,6 +227,32 @@ const ActiveExerciseCard = memo(function ActiveExerciseCard({
           动作库
         </button>
 
+        {/* ── Mode selector ── */}
+        {onModeChange && (
+          <div className="w-full px-5 pt-2 pb-0 flex gap-1.5">
+            {([
+              { key: 'strength' as const, label: '负重', emoji: '🏋' },
+              { key: 'timed'    as const, label: '计时', emoji: '⏱' },
+              { key: 'warmup'   as const, label: '热身', emoji: '🤸' },
+              { key: 'cardio'   as const, label: '有氧', emoji: '🏃' },
+            ]).map(({ key, label, emoji }) => (
+              <button
+                key={key}
+                onClick={() => onModeChange(key)}
+                className="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold transition-all active:scale-95"
+                style={{
+                  background: mode === key ? 'rgb(var(--accent))' : 'var(--surface-3)',
+                  color: mode === key ? 'var(--accent-text)' : 'var(--text-faint)',
+                  border: mode === key ? 'none' : '1px solid var(--border)',
+                  touchAction: 'manipulation',
+                }}
+              >
+                {emoji} {label}
+              </button>
+            ))}
+          </div>
+        )}
+
         {/* ── Countdown guard dialog ── */}
         {showCdGuard && (
           <div
@@ -265,7 +297,7 @@ const ActiveExerciseCard = memo(function ActiveExerciseCard({
       </div>
 
       {/* ── Mega-number input grid ── */}
-      {isTimed ? (
+      {mode === 'timed' ? (
         /* ── Timed mode: single-column, seconds only ── */
         <div className="flex flex-col items-center py-6 gap-3" style={{ borderBottom: '1px solid var(--border)' }}>
           {cdActive ? (
@@ -335,6 +367,77 @@ const ActiveExerciseCard = memo(function ActiveExerciseCard({
               <p className="text-xs" style={{ color: 'var(--text-faint)' }}>每次 ±5 秒</p>
             </>
           )}
+        </div>
+      ) : mode === 'warmup' ? (
+        /* ── Warmup mode: reps only, no weight ── */
+        <div className="flex flex-col items-center py-6 gap-3" style={{ borderBottom: '1px solid var(--border)' }}>
+          <div className="flex items-center justify-start w-full px-4">
+            <span className="text-xs font-bold" style={{ color: 'var(--text-faint)' }}>动作次数</span>
+          </div>
+          <StepButton onClick={() => stepReps(1)}>
+            <Plus className="w-5 h-5" style={{ color: 'var(--text-med)' }} />
+          </StepButton>
+          <div className="flex items-baseline gap-1">
+            {editingField === 'reps' ? (
+              <input
+                type="text" inputMode="numeric" autoFocus
+                defaultValue={repsNum || ''}
+                onFocus={e => e.target.select()}
+                onBlur={e => commitEdit('reps', e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
+                className="font-black tabular-nums leading-none text-center bg-transparent"
+                style={{ fontSize: '3.5rem', letterSpacing: '-0.03em', color: 'var(--foreground)', width: 80, border: 'none', outline: 'none', caretColor: 'var(--color-accent)' }}
+              />
+            ) : (
+              <span
+                className="font-black tabular-nums leading-none cursor-text"
+                style={{ fontSize: '3.5rem', letterSpacing: '-0.03em', color: 'var(--foreground)' }}
+                onClick={() => setEditingField('reps')}
+              >
+                {repsNum || '0'}
+              </span>
+            )}
+            {editingField !== 'reps' && <span className="text-sm font-semibold mb-1" style={{ color: 'var(--text-faint)' }}>次</span>}
+          </div>
+          <StepButton onClick={() => stepReps(-1)}>
+            <Minus className="w-5 h-5" style={{ color: 'var(--text-med)' }} />
+          </StepButton>
+        </div>
+      ) : mode === 'cardio' ? (
+        /* ── Cardio mode (in strength session): duration only ── */
+        <div className="flex flex-col items-center py-6 gap-3" style={{ borderBottom: '1px solid var(--border)' }}>
+          <div className="flex items-center justify-start w-full px-4">
+            <span className="text-xs font-bold" style={{ color: 'var(--text-faint)' }}>时长（分钟）</span>
+          </div>
+          <StepButton onClick={() => stepReps(1)}>
+            <Plus className="w-5 h-5" style={{ color: 'var(--text-med)' }} />
+          </StepButton>
+          <div className="flex items-baseline gap-1">
+            {editingField === 'reps' ? (
+              <input
+                type="text" inputMode="numeric" autoFocus
+                defaultValue={repsNum || ''}
+                onFocus={e => e.target.select()}
+                onBlur={e => commitEdit('reps', e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
+                className="font-black tabular-nums leading-none text-center bg-transparent"
+                style={{ fontSize: '3.5rem', letterSpacing: '-0.03em', color: 'var(--foreground)', width: 100, border: 'none', outline: 'none', caretColor: 'var(--color-accent)' }}
+              />
+            ) : (
+              <span
+                className="font-black tabular-nums leading-none cursor-text"
+                style={{ fontSize: '3.5rem', letterSpacing: '-0.03em', color: 'var(--foreground)' }}
+                onClick={() => setEditingField('reps')}
+              >
+                {repsNum || '0'}
+              </span>
+            )}
+            {editingField !== 'reps' && <span className="text-sm font-semibold mb-1" style={{ color: 'var(--text-faint)' }}>分钟</span>}
+          </div>
+          <StepButton onClick={() => stepReps(-1)}>
+            <Minus className="w-5 h-5" style={{ color: 'var(--text-med)' }} />
+          </StepButton>
+          <p className="text-xs" style={{ color: 'var(--text-faint)' }}>每次 ±5 分钟</p>
         </div>
       ) : (
         /* ── Standard mode: weight + reps ── */
@@ -438,10 +541,16 @@ const ActiveExerciseCard = memo(function ActiveExerciseCard({
         >
           {lastRecord ? (
             <span className="text-xs" style={{ color: 'var(--text-faint)' }}>
-              上次 {lastRecord.weight}kg × {lastRecord.reps}次
+              {mode === 'timed'
+                ? `上次 ${lastRecord.reps}秒`
+                : mode === 'warmup'
+                  ? `上次 ${lastRecord.reps}次`
+                  : mode === 'cardio'
+                    ? `上次 ${lastRecord.reps}分钟`
+                    : `上次 ${lastRecord.weight}kg × ${lastRecord.reps}次`}
             </span>
           ) : <span />}
-          {est1RM && (
+          {est1RM && mode === 'strength' && (
             <span className="text-xs font-bold" style={{ color: 'var(--text-low)' }}>
               预估1RM: {est1RM}kg
             </span>
@@ -538,8 +647,7 @@ const ActiveExerciseCard = memo(function ActiveExerciseCard({
 
       {/* ── Primary CTA ── */}
       <div className="px-5 pb-5 pt-4">
-        {isTimed ? (
-          /* Timed CTA: 开始计时 → auto-logs when done */
+        {mode === 'timed' ? (
           !cdActive && (
             <button
               onClick={startCountdown}
@@ -556,6 +664,26 @@ const ActiveExerciseCard = memo(function ActiveExerciseCard({
               开始计时 · {repsNum}秒
             </button>
           )
+        ) : mode === 'warmup' ? (
+          <button
+            onClick={onLogSet}
+            disabled={isLoading}
+            className="w-full flex items-center justify-center gap-2 rounded-2xl py-4 font-black text-base transition-all active:scale-[0.97]"
+            style={{ background: 'rgb(var(--accent))', color: 'var(--accent-text)', opacity: isLoading ? 0.45 : 1, touchAction: 'manipulation' }}
+          >
+            {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Check className="w-5 h-5" />}
+            {isLoading ? '保存中…' : `记录热身组${repsNum > 0 ? ` · ${repsNum}次` : ''}`}
+          </button>
+        ) : mode === 'cardio' ? (
+          <button
+            onClick={onLogSet}
+            disabled={!canLog || isLoading}
+            className="w-full flex items-center justify-center gap-2 rounded-2xl py-4 font-black text-base transition-all active:scale-[0.97]"
+            style={{ background: 'rgb(var(--accent))', color: 'var(--accent-text)', opacity: !canLog || isLoading ? 0.45 : 1, touchAction: 'manipulation' }}
+          >
+            {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Check className="w-5 h-5" />}
+            {isLoading ? '保存中…' : `记录有氧${repsNum > 0 ? ` · ${repsNum}分钟` : ''}`}
+          </button>
         ) : (
           <button
             onClick={onLogSet}
@@ -569,10 +697,7 @@ const ActiveExerciseCard = memo(function ActiveExerciseCard({
               touchAction: 'manipulation',
             }}
           >
-            {isLoading
-              ? <Loader2 className="w-5 h-5 animate-spin" />
-              : <Check className="w-5 h-5" />
-            }
+            {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Check className="w-5 h-5" />}
             {isLoading ? '保存中…' : setLabel}
           </button>
         )}
