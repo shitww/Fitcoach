@@ -5,22 +5,24 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import {
   ArrowLeft, Dumbbell, Clock, Check,
-  Plus, Minus, X, Flame, Activity, Target,
-  BookOpen, Loader2, ChevronRight, Info
+  X, Flame, Activity, Target,
+  BookOpen, Loader2, ChevronRight
 } from 'lucide-react';
-import WarmupGuideModal from '@/components/WarmupGuideModal';
+import WarmupPanel from '@/app/workout/components/WarmupPanel';
+import ExerciseQuickLauncher from '@/app/workout/components/ExerciseQuickLauncher';
 import TrainingTypeModal, { type TrainingType, type CardioParams } from '@/components/TrainingTypeModal';
 import { useShallow } from 'zustand/shallow';
 import { useWorkoutTimer, selectTrainingSeconds, selectRestSecondsRemaining } from '@/stores/workoutTimer';
 import { logger } from '@/lib/logger';
-import { REST_TIME_PRESETS, MUSCLE_GROUP_MAP } from '@/lib/exercise-constants';
+import { MUSCLE_GROUP_MAP } from '@/lib/exercise-constants';
 import { getUserStorageItem, setUserStorageItem, removeUserStorageItem } from '@/lib/user-storage';
 import { useToast } from '@/components/Toast';
 import { useWorkoutEffects } from '@/hooks/useWorkoutEffects';
 import { useWorkoutHint } from '@/hooks/useWorkoutHint';
 import { AmbientGlow } from "@/components/AmbientGlow";
-import { PENDING_PLAN_KEY } from '@/types/workout-plan';
 import type { RecoveryWorkoutPlan } from '@/types/workout-plan';
+import RestOverlay from '@/components/workout/RestOverlay';
+import ActiveExerciseCard from '@/components/workout/ActiveExerciseCard';
 
 interface Set {
   weight: number;
@@ -159,51 +161,6 @@ const WorkoutHeaderTimer = memo(function WorkoutHeaderTimer() {
   );
 });
 
-/**
- * Rest countdown pill. Pure renderer — no audio/vibration/toast here.
- * All side-effects on completion are handled by useWorkoutEffects (effect layer).
- */
-const WorkoutRestPill = memo(function WorkoutRestPill({ onSkip }: { onSkip: () => void }) {
-  const restTimer    = useWorkoutTimer(s => s.restTimer);
-  const completeRest = useWorkoutTimer(s => s.completeRest);
-  const restSecs     = useWorkoutTimer(selectRestSecondsRemaining);
-
-  // State transition only — side-effects (audio/vibration/toast) fired by useWorkoutEffects
-  useEffect(() => {
-    if (restTimer.phase !== 'running') return;
-    if (restSecs > 0) return;
-    completeRest();
-  }, [restSecs, restTimer.phase, completeRest]);
-
-  if (restSecs <= 0) return null;
-  return (
-    <div className="mb-4 flex items-center gap-3 rounded-2xl px-4 py-3"
-      style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
-      <Clock size={14} color={restSecs <= 10 ? '#ef4444' : '#f59e0b'} />
-      <span className="text-sm font-bold" style={{ color: restSecs <= 10 ? '#ef4444' : '#f59e0b' }}>休息中</span>
-      <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--surface-3)' }}>
-        <div className="h-full rounded-full transition-all duration-500 ease-linear"
-          style={{
-            background: restSecs <= 10 ? '#ef4444' : '#f59e0b',
-            width: `${restTimer.duration > 0 ? (restSecs / restTimer.duration) * 100 : 0}%`,
-          }}
-        />
-      </div>
-      <span className="text-sm font-black tabular-nums"
-        style={{ color: restSecs <= 10 ? '#ef4444' : '#f59e0b', minWidth: 36, textAlign: 'right' }}>
-        {restSecs >= 60
-          ? `${Math.floor(restSecs / 60)}:${String(restSecs % 60).padStart(2, '0')}`
-          : `${restSecs}s`}
-      </span>
-      <button
-        onClick={onSkip}
-        style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-low)', padding: '11px 8px', margin: '-11px -8px', touchAction: 'manipulation' }}
-      >
-        <X size={14} />
-      </button>
-    </div>
-  );
-});
 
 /** Generic live training duration display — use in place of `formatDuration(displayDuration)`. */
 const LiveDuration = memo(function LiveDuration({ className, style }: { className?: string; style?: React.CSSProperties }) {
@@ -423,7 +380,6 @@ function WorkoutContent() {
   const [savedExercises, setSavedExercises] = useState<string[]>([]);
   const [planDayName, setPlanDayName] = useState('');
   const [customExercises, setCustomExercises] = useState<string[]>([]);
-  const [showRir, setShowRir] = useState(false);
   const [trainingNotes, setTrainingNotes] = useState('');
   const [lastExerciseRecord, setLastExerciseRecord] = useState<{weight: number; reps: number; date: string} | null>(null);
   const [completedSets, setCompletedSets] = useState<{weight: number; reps: number; rir: number | null; isBodyweight: boolean}[]>([]);
@@ -432,8 +388,8 @@ function WorkoutContent() {
   const [muscleExercises, setMuscleExercises] = useState<{name: string; alias?: string}[]>([]);
   const [muscleGroupLabel, setMuscleGroupLabel] = useState('');
   const [muscleListExpanded, setMuscleListExpanded] = useState(true);
-  const [showWarmupModal, setShowWarmupModal] = useState(false);
-  const [warmupPreselected, setWarmupPreselected] = useState<string[]>([]);
+  const [workoutMuscleGroup, setWorkoutMuscleGroup] = useState<string | null>(null);
+  const [warmupDone, setWarmupDone] = useState(false);
   const [detailExerciseName, setDetailExerciseName] = useState<string | null>(null);
   const [showCardioSetup, setShowCardioSetup] = useState(false);
   const [trainingType, setTrainingType] = useState<TrainingType | null>(
@@ -483,70 +439,71 @@ function WorkoutContent() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentExercise]);
 
-  // ── Plan hydration from /intent → /plan-preview → /workout?mode= flow ───────
+  // ── Session entry: ?mg=X (strength) | ?mode=cardio&cardioType=X | ?mode=recovery&focus=X ──
   useEffect(() => {
-    const mode = new URLSearchParams(window.location.search).get('mode');
-    if (!mode || storeSessionPhase === 'active' || storeSessionPhase === 'paused') return;
-    try {
-      const raw = localStorage.getItem(PENDING_PLAN_KEY);
-      if (!raw) return;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const plan: any = JSON.parse(raw);
-      if (plan?.meta?.mode !== mode) return;
+    if (storeSessionPhase === 'active' || storeSessionPhase === 'paused') return;
+    const params = new URLSearchParams(window.location.search);
+    const mg = params.get('mg');
+    const mode = params.get('mode');
 
-      if (mode === 'strength') {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const names: string[] = (plan.exercises as any[]).map((e: any) => e.name as string);
-        const mg = (plan.muscleGroup as string) || '';
-        const validKeys = ['chest','back','shoulders','arms','legs','abs','fullbody'];
-        storeSetSessionType('strength');
-        storeStartTraining();
-        const label = (plan.muscleGroupLabel as string) || '力量';
-        startTransition(() => {
-          setTrainingType('strength');
-          setSavedExercises(names);
-          if (plan.muscleGroupLabel) setPlanDayName(plan.muscleGroupLabel as string);
-          if (validKeys.includes(mg)) setWarmupPreselected([mg]);
-          setShowWarmupModal(true);
-          setIntroContent({ emoji: '💪', title: `今天练${label}`, subtitle: `已为你安排 ${names.length} 个动作` });
-          setIntroVisible(true);
+    const MG_LABELS: Record<string, string> = {
+      chest: '胸部', back: '背部', shoulders: '肩部',
+      arms: '手臂', legs: '腿部', abs: '腹部', fullbody: '全身',
+    };
+
+    if (mg) {
+      const label = MG_LABELS[mg] ?? mg;
+      storeSetSessionType('strength');
+      storeStartTraining();
+      startTransition(() => {
+        setTrainingType('strength');
+        setWorkoutMuscleGroup(mg);
+        setMuscleGroupLabel(label);
+        setPlanDayName(label);
+        setIntroContent({ emoji: '💪', title: `今天练${label}`, subtitle: '热身后开始正式训练' });
+        setIntroVisible(true);
+      });
+      setTimeout(() => startTransition(() => setIntroVisible(false)), 1600);
+    } else if (mode === 'cardio') {
+      const ct = (params.get('cardioType') as TrainingType) || 'treadmill';
+      const ctLabel = ct === 'treadmill' ? '跑步机快走' : '爬楼机训练';
+      storeSetCardioSession(true);
+      storeSetSessionType(ct);
+      storeStartTraining();
+      startTransition(() => {
+        setTrainingType(ct);
+        setIntroContent({ emoji: ct === 'treadmill' ? '🏃' : '🧗', title: `开始${ctLabel}`, subtitle: '记录时间、速度和消耗' });
+        setIntroVisible(true);
+      });
+      setTimeout(() => startTransition(() => setIntroVisible(false)), 1600);
+    } else if (mode === 'recovery') {
+      const focus = params.get('focus') ?? 'full_body';
+      const FOCUS_LABELS: Record<string, string> = {
+        full_body: '全身放松', lower_body: '下肢恢复', upper_body: '上肢恢复', mobility: '灵活性',
+      };
+      const RECOVERY_STEPS: Record<string, RecoveryWorkoutPlan['steps']> = {
+        full_body:  [{ name: '泡沫轴滚压', durationSec: 120, description: '全身主要肌群缓慢滚压' }, { name: '髋屈肌拉伸', durationSec: 60, description: '弓步姿势，感受髋部拉伸' }, { name: '胸部拉伸', durationSec: 60, description: '双手交叉后背，打开胸腔' }, { name: '脊柱旋转', durationSec: 60, description: '平躺，双膝倒向两侧' }],
+        lower_body: [{ name: '股四头肌拉伸', durationSec: 60, description: '单腿站立，向后拉脚踝' }, { name: '腘绳肌拉伸', durationSec: 60, description: '坐姿前屈，感受大腿后侧' }, { name: '臀部鸽子式', durationSec: 120, description: '每侧各保持一分钟' }, { name: '小腿拉伸', durationSec: 60, description: '靠墙站立，弓步拉伸' }],
+        upper_body: [{ name: '肩部拉伸', durationSec: 60, description: '手臂横拉，感受肩后侧' }, { name: '胸部开胸', durationSec: 60, description: '双手相握向后伸展' }, { name: '颈部侧拉', durationSec: 60, description: '缓慢侧倾，各15秒' }, { name: '背阔肌拉伸', durationSec: 120, description: '侧身悬挂或门框拉伸' }],
+        mobility:   [{ name: '猫牛式', durationSec: 60, description: '配合呼吸缓慢活动脊柱' }, { name: '世界上最好的拉伸', durationSec: 120, description: '弓步结合旋转，左右各一组' }, { name: '髋关节环绕', durationSec: 60, description: '站姿画大圆，顺逆各10圈' }, { name: '肩关节活动', durationSec: 60, description: '前后环绕，逐渐扩大幅度' }],
+      };
+      const steps = RECOVERY_STEPS[focus] ?? RECOVERY_STEPS.full_body;
+      const focusLabel = FOCUS_LABELS[focus] ?? '恢复训练';
+      storeSetFreeSession(true);
+      storeSetSessionType('free');
+      storeStartTraining();
+      startTransition(() => {
+        setRecoveryPlan({
+          meta: { id: Date.now().toString(), generatedAt: Date.now(), estimatedDurationMin: steps.length, level: 'beginner', source: 'template', mode: 'recovery' },
+          focus: (focus as RecoveryWorkoutPlan['focus']),
+          focusLabel,
+          steps,
         });
-        setTimeout(() => startTransition(() => setIntroVisible(false)), 1600);
-      } else if (mode === 'cardio') {
-        const ct = (plan.cardioType as TrainingType) || 'treadmill';
-        const p: CardioParams = {
-          speed:   (plan.suggestedSpeed   as number) || 0,
-          incline: (plan.suggestedIncline as number) || 0,
-          level:   (plan.suggestedLevel   as number) || 0,
-        };
-        const ctLabel = ct === 'treadmill' ? '跑步机快走' : '爬楼机训练';
-        storeSetCardioSession(true);
-        storeSetSessionType(ct);
-        storeSetCardioParams(p.speed, p.incline, p.level);
-        storeStartTraining();
-        startTransition(() => {
-          setTrainingType(ct);
-          setCardioParams(p);
-          const tgtMin = (plan.targetDurationMin as number) ?? 30;
-          setCardioTargetMin(tgtMin);
-          setIntroContent({ emoji: ct === 'treadmill' ? '🏃' : '🧗', title: `开始${ctLabel}`, subtitle: `目标时间 ${tgtMin} 分钟` });
-          setIntroVisible(true);
-        });
-        setTimeout(() => startTransition(() => setIntroVisible(false)), 1600);
-      } else if (mode === 'recovery') {
-        storeSetFreeSession(true);
-        storeSetSessionType('free');
-        storeStartTraining();
-        startTransition(() => {
-          setRecoveryPlan(plan as RecoveryWorkoutPlan);
-          setTrainingType('free');
-          setIntroContent({ emoji: '🧘', title: '开始恢复训练', subtitle: '跟随节奏，慢慢放松' });
-          setIntroVisible(true);
-        });
-        setTimeout(() => startTransition(() => setIntroVisible(false)), 1600);
-      }
-    } catch (e) {
-      logger.error('[Workout] Plan hydration failed:', e);
+        setTrainingType('free');
+        setIntroContent({ emoji: '🧘', title: `开始${focusLabel}`, subtitle: '跟随节奏，慢慢放松' });
+        setIntroVisible(true);
+      });
+      setTimeout(() => startTransition(() => setIntroVisible(false)), 1600);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -762,13 +719,6 @@ function WorkoutContent() {
     if (type === 'strength') {
       storeSetSessionType('strength');
       storeStartTraining();
-      const urlParams = new URLSearchParams(window.location.search);
-      const muscleParam = urlParams.get('muscle');
-      if (muscleParam) {
-        const validKeys = ['chest','back','shoulders','arms','legs','abs','fullbody'];
-        if (validKeys.includes(muscleParam)) setWarmupPreselected([muscleParam]);
-      }
-      setShowWarmupModal(true);
     } else if (type === 'free') {
       // 自由记录：直接开始计时
       storeSetFreeSession(true);
@@ -1031,22 +981,6 @@ function WorkoutContent() {
   };
 
 
-  /** 将热身动作插入到训练列表最前面 */
-  const handleAddWarmup = (warmupNames: string[]) => {
-    if (warmupNames.length === 0) return;
-    setExercises(prev => {
-      const existing = new Set(prev.map(e => e.name));
-      const toAdd = warmupNames.filter(n => !existing.has(n));
-      const warmupRecords = toAdd.map(name => ({
-        id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
-        name,
-        sets: [],
-        restTime: 60,
-        totalVolume: 0,
-      }));
-      return [...warmupRecords, ...prev];
-    });
-  };
 
 
   const logSet = () => {
@@ -1367,8 +1301,6 @@ function WorkoutContent() {
         </div>
 
 
-        {/* Rest Timer pill — managed by WorkoutRestPill which owns audio + side effects */}
-        <WorkoutRestPill onSkip={storeSkipRest} />
 
 
         <>
@@ -1697,45 +1629,24 @@ function WorkoutContent() {
             })()}
 
             {/* ── A1: Today's plan header — collapses after first set ── */}
-            {trainingType === 'strength' && savedExercises.length > 0 && completedSets.length === 0 && !planHeaderCollapsed && (
-              <div className="rounded-2xl px-4 py-4 mb-4" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
-                <div className="flex items-start justify-between mb-3">
-                  <div>
-                    <p className="text-base font-black">{planDayName || '今天的训练'}</p>
-                    <p className="text-xs mt-0.5" style={{ color: 'var(--text-low)' }}>
-                      {savedExercises.length} 个动作 · 按计划开始
-                    </p>
-                  </div>
-                  <button onClick={() => setPlanHeaderCollapsed(true)}
-                    className="p-1.5 rounded-lg" style={{ color: 'var(--text-low)', background: 'var(--surface-2)' }}>
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-                {/* ── A2: Exercise queue — current / next / after ── */}
-                <div className="flex flex-col gap-1.5">
-                  {(() => {
-                    const currentIdx = currentExercise ? Math.max(savedExercises.indexOf(currentExercise), 0) : 0;
-                    const labels = ['当前', '接下来', '之后'];
-                    return savedExercises.slice(currentIdx, currentIdx + 3).map((name, i) => {
-                      const isDone = exercises.some(e => e.name === name && e.sets.length > 0);
-                      const isActive = i === 0;
-                      return (
-                        <div key={name} className="flex items-center gap-3 px-3 py-2 rounded-xl"
-                          style={{ background: isActive ? 'var(--accent-dim)' : 'var(--surface-2)', opacity: isDone ? 0.45 : 1 }}>
-                          <span className="text-xs font-black w-14 shrink-0"
-                            style={{ color: isActive ? 'var(--accent)' : 'var(--text-low)' }}>
-                            {isDone ? '✓ 已完成' : labels[i]}
-                          </span>
-                          <span className="text-sm font-semibold truncate"
-                            style={{ color: isActive ? 'var(--accent)' : 'var(--text-med)' }}>
-                            {name.split(' (')[0]}
-                          </span>
-                        </div>
-                      );
-                    });
-                  })()}
-                </div>
-              </div>
+            {trainingType === 'strength' && (
+              <>
+                <WarmupPanel
+                  muscleGroup={workoutMuscleGroup ?? undefined}
+                  onComplete={() => startTransition(() => setWarmupDone(true))}
+                  onSkip={() => startTransition(() => setWarmupDone(true))}
+                />
+                <ExerciseQuickLauncher
+                  muscleGroup={workoutMuscleGroup ?? undefined}
+                  muscleGroupLabel={muscleGroupLabel || undefined}
+                  userId={userId ?? undefined}
+                  onSelectExercise={name => {
+                    selectExercise(name);
+                    if (sessionPhase === 'idle') storeStartTraining();
+                  }}
+                  onOpenSearch={() => router.push(`/exercises?back=/workout${workoutMuscleGroup ? `?mg=${workoutMuscleGroup}` : ''}`)}
+                />
+              </>
             )}
 
             {/* ── A4: Feedback banners (exercise transition takes priority over set feedback) ── */}
@@ -1801,403 +1712,28 @@ function WorkoutContent() {
               );
             })()}
 
-            {/* Input Card */}
             {(trainingType === 'strength' || !trainingType) && (
-            <div className="rounded-2xl p-5 mb-6" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
-
-              {/* 动作选择区域 */}
-              <div className="mb-5">
-                {currentExercise ? (
-                  <div className="flex items-center gap-3 p-4 rounded-2xl" style={{ background: 'var(--surface-2)', border: '1px solid #2a2a2a' }}>
-                    <div className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0" style={{ background: 'var(--accent-dim)' }}>
-                      <Dumbbell className="w-5 h-5" style={{ color: 'var(--accent)' }} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <div className="text-sm font-black truncate">{currentExercise.split(' (')[0]}</div>
-                        {savedExercises.length > 0 && (
-                          <span className="text-xs shrink-0 tabular-nums"
-                            style={{ color: 'var(--text-low)' }}>
-                            {Math.max(savedExercises.indexOf(currentExercise) + 1, 1)}/{savedExercises.length}
-                          </span>
-                        )}
-                      </div>
-                      {currentExercise.includes('(') && (
-                        <div className="text-xs mt-0.5" style={{ color: 'var(--text-low)' }}>{currentExercise.split('(')[1]?.replace(')', '')}</div>
-                      )}
-                    </div>
-                    <button onClick={() => router.push('/exercises?mode=select')}
-                      className="px-4 py-2 rounded-xl text-sm font-bold shrink-0"
-                      style={{ background: 'var(--surface-3)', color: 'var(--text-med)', touchAction: 'manipulation' }}>
-                      更换
-                    </button>
-                  </div>
-                ) : (
-                  <button onClick={() => router.push('/exercises?mode=select')}
-                    className="w-full flex items-center gap-4 p-4 rounded-2xl active:scale-[0.98] transition-all"
-                    style={{ background: 'var(--surface-2)', border: '2px dashed var(--border)', touchAction: 'manipulation' }}>
-                    <div className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0" style={{ background: 'var(--accent-dim)' }}>
-                      <Dumbbell className="w-6 h-6" style={{ color: 'var(--accent)' }} />
-                    </div>
-                    <div className="flex-1 text-left">
-                      <div className="text-sm font-bold">选择训练动作</div>
-                      <div className="text-xs mt-0.5" style={{ color: 'var(--text-low)' }}>点击打开动作库</div>
-                    </div>
-                    <ChevronRight className="w-5 h-5 shrink-0" style={{ color: 'var(--text-faint)' }} />
-                  </button>
-                )}
-              </div>
-
-              {/* Weight / Reps */}
-              <div className="grid grid-cols-2 gap-3 mb-4">
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <label className="text-xs font-bold" style={{ color: 'var(--text-low)' }}>重量 (kg)</label>
-                    <button
-                      onClick={() => setIsBodyweight(!isBodyweight)}
-                      className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold transition-all"
-                      style={
-                        isBodyweight
-                          ? { background: 'var(--accent)', color: 'var(--text-high)', touchAction: 'manipulation' }
-                          : { background: 'var(--surface-3)', color: 'rgba(255,255,255,0.35)', touchAction: 'manipulation' }
-                      }
-                    >
-                      自重
-                    </button>
-                  </div>
-                  <div className="flex items-center">
-                    <button
-                      onClick={() => {
-                        if (!isBodyweight) {
-                          const current = parseFloat(weight) || 0;
-                          const newValue = Math.max(0, current - 2.5);
-                          setWeight(newValue.toString());
-                        }
-                      }}
-                      onMouseDown={(e) => {
-                        if (!isBodyweight) {
-                          let interval: NodeJS.Timeout;
-                          const startDecreasing = () => {
-                            interval = setInterval(() => {
-                              const current = parseFloat(weight) || 0;
-                              const newValue = Math.max(0, current - 2.5);
-                              setWeight(newValue.toString());
-                            }, 150);
-                          };
-                          startDecreasing();
-                          e.currentTarget.addEventListener('mouseup', () => clearInterval(interval));
-                          e.currentTarget.addEventListener('mouseleave', () => clearInterval(interval));
-                        }
-                      }}
-                      className="w-10 h-11 flex items-center justify-center rounded-l-xl transition-all shrink-0"
-                      style={{ background: 'var(--surface-3)', border: '1px solid var(--border)', borderRight: 'none', touchAction: 'manipulation' }}
-                    >
-                      <Minus className="w-5 h-5" style={{ color: 'var(--text-med)' }} />
-                    </button>
-                    <input
-                      type="number"
-                      inputMode="decimal"
-                      value={weight}
-                      onChange={(e) => setWeight(e.target.value)}
-                      placeholder="0"
-                      disabled={isBodyweight}
-                      className="flex-1 min-w-0 h-11 text-center text-base font-bold disabled:opacity-40"
-                      style={{ 
-                        background: 'var(--surface-2)', border: '1px solid var(--border)', borderLeft: 'none', borderRight: 'none',
-                        color: 'var(--foreground)',
-                        MozAppearance: 'textfield', WebkitAppearance: 'none', appearance: 'textfield'
-                      }}
-                    />
-                    <style jsx>{`
-                      input[type=number]::-webkit-inner-spin-button, 
-                      input[type=number]::-webkit-outer-spin-button {
-                        -webkit-appearance: none;
-                        margin: 0;
-                      }
-                    `}</style>
-                    <button
-                      onClick={() => {
-                        if (!isBodyweight) {
-                          const current = parseFloat(weight) || 0;
-                          const newValue = current + 2.5;
-                          setWeight(newValue.toString());
-                        }
-                      }}
-                      onMouseDown={(e) => {
-                        if (!isBodyweight) {
-                          let interval: NodeJS.Timeout;
-                          const startIncreasing = () => {
-                            interval = setInterval(() => {
-                              const current = parseFloat(weight) || 0;
-                              const newValue = current + 2.5;
-                              setWeight(newValue.toString());
-                            }, 150);
-                          };
-                          startIncreasing();
-                          e.currentTarget.addEventListener('mouseup', () => clearInterval(interval));
-                          e.currentTarget.addEventListener('mouseleave', () => clearInterval(interval));
-                        }
-                      }}
-                      className="w-10 h-11 flex items-center justify-center rounded-r-xl transition-all shrink-0"
-                      style={{ background: 'var(--surface-3)', border: '1px solid var(--border)', borderLeft: 'none', touchAction: 'manipulation' }}
-                    >
-                      <Plus className="w-4 h-4" style={{ color: 'var(--text-med)' }} />
-                    </button>
-                  </div>
-                </div>
-                <div>
-                  <div className="flex items-center mb-2" style={{ height: 28 }}>
-                    <label className="text-xs font-bold" style={{ color: 'var(--text-low)' }}>次数</label>
-                  </div>
-                  <div className="flex items-center">
-                    <button
-                      onClick={() => {
-                        const current = parseInt(reps) || 0;
-                        const newValue = Math.max(0, current - 1);
-                        setReps(newValue.toString());
-                      }}
-                      onMouseDown={(e) => {
-                        let interval: NodeJS.Timeout;
-                        const startDecreasing = () => {
-                          interval = setInterval(() => {
-                            const current = parseInt(reps) || 0;
-                            const newValue = Math.max(0, current - 1);
-                            setReps(newValue.toString());
-                          }, 150);
-                        };
-                        startDecreasing();
-                        e.currentTarget.addEventListener('mouseup', () => clearInterval(interval));
-                        e.currentTarget.addEventListener('mouseleave', () => clearInterval(interval));
-                      }}
-                      className="w-10 h-11 flex items-center justify-center rounded-l-xl transition-all shrink-0"
-                      style={{ background: 'var(--surface-3)', border: '1px solid var(--border)', borderRight: 'none', touchAction: 'manipulation' }}
-                    >
-                      <Minus className="w-4 h-4" style={{ color: 'var(--text-med)' }} />
-                    </button>
-                    <input
-                      type="number"
-                      inputMode="numeric"
-                      value={reps}
-                      onChange={(e) => setReps(e.target.value)}
-                      placeholder="0"
-                      className="flex-1 min-w-0 h-11 text-center text-base font-bold"
-                      style={{ 
-                        background: 'var(--surface-2)', border: '1px solid var(--border)', borderLeft: 'none', borderRight: 'none',
-                        color: 'var(--foreground)',
-                        MozAppearance: 'textfield', WebkitAppearance: 'none', appearance: 'textfield'
-                      }}
-                    />
-                    <button
-                      onClick={() => {
-                        const current = parseInt(reps) || 0;
-                        const newValue = current + 1;
-                        setReps(newValue.toString());
-                      }}
-                      onMouseDown={(e) => {
-                        let interval: NodeJS.Timeout;
-                        const startIncreasing = () => {
-                          interval = setInterval(() => {
-                            const current = parseInt(reps) || 0;
-                            const newValue = current + 1;
-                            setReps(newValue.toString());
-                          }, 150);
-                        };
-                        startIncreasing();
-                        e.currentTarget.addEventListener('mouseup', () => clearInterval(interval));
-                        e.currentTarget.addEventListener('mouseleave', () => clearInterval(interval));
-                      }}
-                      className="w-10 h-11 flex items-center justify-center rounded-r-xl transition-all shrink-0"
-                      style={{ background: 'var(--surface-3)', border: '1px solid var(--border)', borderLeft: 'none', touchAction: 'manipulation' }}
-                    >
-                      <Plus className="w-4 h-4" style={{ color: 'var(--text-med)' }} />
-                    </button>
-                  </div>
-                </div>
-              </div>
-              
-              {/* 实时预估 1RM */}
-              {!isBodyweight && weight && reps && (
-                <div className="mb-4">
-                  <div className="text-xs text-muted-foreground">
-                    预估 1RM: {((parseFloat(weight) || 0) * (1 + (parseInt(reps) || 0) / 30)).toFixed(1)} kg
-                  </div>
-                </div>
-              )}
-              
-              {/* 上次记录（已自动填入） */}
-              {lastExerciseRecord && (
-                <div className="flex items-center gap-2 mb-3 text-xs" style={{ color: 'var(--text-low)' }}>
-                  <span>上次：{lastExerciseRecord.weight}kg × {lastExerciseRecord.reps}次</span>
-                  <span style={{ color: 'var(--text-faint)' }}>· 已自动填入</span>
-                </div>
-              )}
-
-              {/* RIR — 收起状态只显示当前值，点击展开选择 */}
-              <div className="mb-4">
-                <button
-                  onClick={() => setShowRir(p => !p)}
-                  className="w-full flex items-center justify-between text-xs mb-1.5 py-1"
-                  style={{ touchAction: 'manipulation' }}
-                >
-                  <span style={{ color: 'var(--text-low)' }}>RIR（剩余潜力）</span>
-                  <span className="flex items-center gap-1" style={{ color: rir === '0' ? '#ef4444' : rir === '1' || rir === '2' ? '#f59e0b' : '#10b981' }}>
-                    {rir === '0' ? '力竭' : rir === '1' ? '吃力' : rir === '2' ? '适中' : rir === '3' ? '轻松' : '很轻松'}
-                    <span style={{ color: 'var(--text-faint)' }}>{showRir ? '▲' : '▼'}</span>
-                  </span>
-                </button>
-                {showRir && (
-                  <div className="grid grid-cols-5 gap-1">
-                    {[
-                      { value: '4', label: '很轻松', short: '4' },
-                      { value: '3', label: '轻松', short: '3' },
-                      { value: '2', label: '适中', short: '2' },
-                      { value: '1', label: '吃力', short: '1' },
-                      { value: '0', label: '力竭', short: '0' },
-                    ].map((option) => {
-                      const isActive = rir === option.value;
-                      const activeBg = option.value === '0' ? 'rgba(239,68,68,0.7)'
-                        : option.value <= '2' ? 'rgba(245,158,11,0.7)' : 'rgba(16,185,129,0.7)';
-                      return (
-                        <button key={option.value} onClick={() => { setRir(option.value); setShowRir(false); }}
-                          className="py-2.5 rounded-xl text-center font-semibold transition-all active:scale-95"
-                          style={{ touchAction: 'manipulation', color: isActive ? '#fff' : 'var(--text-low)',
-                            ...(isActive ? { background: activeBg } : { background: 'var(--surface-3)', border: '1px solid var(--border)' }) }}>
-                          <div className="text-base font-black leading-none">{option.short}</div>
-                          <div className="text-[10px] mt-0.5 leading-none">{option.label}</div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-
-              {/* 休息时间 */}
-              <div className="mb-4">
-                <label className="block mb-1.5 text-xs" style={{ color: 'var(--text-low)' }}>休息时间</label>
-                <div className="grid grid-cols-4 gap-1.5 mb-2">
-                  {
-                    REST_TIME_PRESETS.map((preset) => (
-                      <button
-                        key={preset.seconds}
-                        onClick={() => setRestTime(preset.seconds.toString())}
-                        className="py-2.5 rounded-xl text-xs font-semibold transition-all active:scale-95"
-                        style={
-                          restTime === preset.seconds.toString()
-                            ? { background: 'var(--accent)', color: 'var(--text-high)' }
-                            : { background: 'var(--surface-3)', color: 'var(--text-low)', border: '1px solid var(--border)' }
-                        }
-                      >
-                        {preset.label}
-                      </button>
-                    ))
-                  }
-                </div>
-                <input
-                  type="number"
-                  inputMode="numeric"
-                  value={restTime}
-                  onChange={(e) => setRestTime(e.target.value)}
-                  className="w-full rounded-xl px-4 py-2.5 text-sm"
-                  style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--foreground)' }}
-                />
-              </div>
-
-              {/* 完成此组按钮 */}
-              {(() => {
-                const doneSets = exercises.find(e => e.name === currentExercise)?.sets.length ?? 0;
-                const isLastHint = doneSets >= 2;
-                return (
-                  <>
-                    {isLastHint && (
-                      <div className="flex items-center justify-center gap-1.5 mb-2"
-                        style={{ animation: 'p3-fade-up 0.3s ease-out' }}>
-                        <span className="text-xs font-black" style={{ color: 'var(--accent)' }}>
-                          💪 最后冲刺
-                        </span>
-                      </div>
-                    )}
-                    <button
-                      onClick={logSet}
-                      disabled={!currentExercise || !reps || (!isBodyweight && !weight)}
-                      className="w-full flex items-center justify-center gap-2 rounded-xl py-4 font-bold text-base text-black transition-all active:scale-[0.97]"
-                      style={{
-                        background: 'var(--accent)',
-                        touchAction: 'manipulation',
-                        boxShadow: isLastHint ? '0 0 20px var(--accent-glow)' : 'none',
-                      }}
-                    >
-                      <Check className="w-5 h-5" />
-                      {doneSets > 0 ? `第 ${doneSets + 1} 组` : '完成此组'}
-                    </button>
-                  </>
-                );
-              })()}
-
-              {/* AI hint — passive, never blocks flow */}
-              {hint && (
-                <p className="mt-3 text-center text-xs" style={{ color: 'var(--text-low)' }}>{hint}</p>
-              )}
-              
-              {/* 训练组数记录 — 按动作分组，换项标注精确时间 */}
-              {exercises.length > 0 && (
-                <div className="mt-5">
-                  <div className="text-sm font-semibold mb-3" style={{ color: 'var(--text-low)' }}>训练组数记录</div>
-                  <div className="space-y-3">
-                    {exercises.map((ex, exIdx) => (
-                      <div key={ex.id} className="rounded-xl overflow-hidden border border-border">
-                        {/* Exercise header */}
-                        <div className="flex items-center justify-between px-4 py-2.5" style={{ background: 'var(--surface-2)' }}>
-                          <span className="text-sm font-bold" style={{ color: 'var(--accent)' }}>
-                            {ex.name.split(' (')[0]}
-                          </span>
-                          <div className="flex items-center gap-2">
-                            {ex.startedAt && (
-                              <span className="text-xs" style={{ color: 'var(--text-low)' }}>
-                                {exIdx === 0 ? '开始' : '换项'} {ex.startedAt}
-                              </span>
-                            )}
-                            <button
-                              onClick={() => setDetailExerciseName(ex.name)}
-                              className="p-1 rounded-lg transition-all"
-                              style={{ color: 'var(--text-low)' }}
-                              title="查看动作详情"
-                            >
-                              <Info className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                        </div>
-                        {/* 无组数时显示学习提示 */}
-                        {ex.sets.length === 0 && (
-                          <button
-                            onClick={() => setDetailExerciseName(ex.name)}
-                            className="w-full flex items-center gap-2 px-4 py-3 border-t border-border/60 transition-all active:opacity-70"
-                            style={{ background: 'rgba(251,146,60,0.05)' }}
-                          >
-                            <BookOpen className="w-3.5 h-3.5 shrink-0" style={{ color: '#fb923c' }} />
-                            <span className="text-xs font-semibold" style={{ color: '#fb923c' }}>查看动作教学</span>
-                            <ChevronRight className="w-3 h-3 ml-auto" style={{ color: '#fb923c' }} />
-                          </button>
-                        )}
-                        {/* Sets */}
-                        {ex.sets.map((set, si) => (
-                          <div key={si} className="flex items-center gap-3 px-4 py-2.5 border-t border-border/60" style={{ background: 'rgba(255,255,255,0.02)' }}>
-                            <span className="text-xs w-8 shrink-0" style={{ color: 'var(--text-low)' }}>第{si + 1}组</span>
-                            {set.isBodyweight
-                              ? <span className="text-sm font-semibold">{set.reps} 次 (自重)</span>
-                              : <span className="text-sm font-semibold">{set.weight} kg × {set.reps}次</span>}
-                            <span className="text-xs ml-auto" style={{ color: 'var(--text-low)' }}>RIR: {set.rir ?? '-'}</span>
-                          </div>
-                        ))}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* 渐进超负荷建议 — moved to post-workout summary to avoid mid-set decision pressure */}
-              
-              {/* 动作注意事项 — accessible via the ⓘ button on each exercise row; inline display removed to preserve execution rhythm */}
-            </div>
+              <ActiveExerciseCard
+                currentExercise={currentExercise}
+                weight={weight}
+                reps={reps}
+                rir={rir}
+                isBodyweight={isBodyweight}
+                restTime={restTime}
+                lastRecord={lastExerciseRecord}
+                completedSetsCount={exercises.find(e => e.name === currentExercise)?.sets.length ?? 0}
+                exerciseIndex={Math.max(savedExercises.indexOf(currentExercise), 0)}
+                totalExercises={savedExercises.length}
+                onWeightChange={setWeight}
+                onRepsChange={setReps}
+                onRirChange={setRir}
+                onBodyweightToggle={() => setIsBodyweight(p => !p)}
+                onRestTimeChange={setRestTime}
+                onLogSet={logSet}
+                onChangeExercise={() => router.push('/exercises?mode=select')}
+                isLoading={isLoading}
+                hint={hint ?? undefined}
+              />
             )}
 
             {/* 全场训练概览 */}
@@ -2387,26 +1923,15 @@ function WorkoutContent() {
           onClose={() => setShowCardioSetup(false)}
         />
 
-        {/* Warmup Guide Modal */}
-        <WarmupGuideModal
-          isOpen={showWarmupModal}
-          onClose={() => setShowWarmupModal(false)}
-          onAddWarmup={handleAddWarmup}
-          preselectedGroups={warmupPreselected.length > 0 ? warmupPreselected : undefined}
-        />
       </div>
 
-      {/* 悬浮热身按钮（训练进行中时可手动再次触发） */}
-      {trainingType === 'strength' && storeSessionPhase !== 'idle' && !showWarmupModal && (
-        <button
-          onClick={() => { setWarmupPreselected([]); setShowWarmupModal(true); }}
-          className="fixed bottom-6 left-4 z-40 flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold shadow-lg"
-          style={{ background: '#1a1a1a', border: '1px solid #2a2a2a', color: '#fb923c' }}
-        >
-          <Flame className="w-3.5 h-3.5" />
-          热身
-        </button>
-      )}
+      {/* ── Rest overlay — full-screen when rest is active ── */}
+      <RestOverlay
+        onSkip={storeSkipRest}
+        nextExercise={trainingType === 'strength' && savedExercises.length > 0 && currentExercise
+          ? savedExercises[savedExercises.indexOf(currentExercise) + 1]
+          : undefined}
+      />
 
       {/* ── F: Mode-entry intro overlay (auto-dismissed after ~1.6s) ── */}
       {introContent && (

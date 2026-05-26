@@ -108,12 +108,12 @@
   --accent-dim: rgba(37,99,235,0.12);
   --accent-glow: rgba(37,99,235,0.22);
   --accent-text: #ffffff;
-  --text-secondary: rgba(24,24,27,0.55);
-  --text-muted: rgba(24,24,27,0.35);
-  --text-high: rgba(24,24,27,0.9);
-  --text-med: rgba(24,24,27,0.6);
-  --text-low: rgba(24,24,27,0.42);
-  --text-faint: rgba(24,24,27,0.22);
+  --text-secondary: rgba(24,24,27,0.65);
+  --text-muted: rgba(24,24,27,0.50);
+  --text-high: rgba(24,24,27,0.92);
+  --text-med: rgba(24,24,27,0.70);
+  --text-low: rgba(24,24,27,0.55);
+  --text-faint: rgba(24,24,27,0.40);
   --nav-bg: rgba(244,244,245,0.94);
   --top-bg: rgba(244,244,245,0.97);
 }
@@ -287,6 +287,44 @@ html {
   opacity: 0;
   animation: revealFadeIn 0.45s cubic-bezier(0.22, 1, 0.36, 1) forwards;
   animation-delay: var(--delay, 0ms);
+}
+
+/* ── Workout OS: design tokens ────────────────────── */
+
+:root, .dark {
+  /* Overlay backgrounds */
+  --wo-overlay-bg:        rgba(0,0,0,0.93);
+  --wo-overlay-bg-light:  rgba(0,0,0,0.55);
+  /* Rest ring colors */
+  --wo-rest-color:        #f59e0b;
+  --wo-rest-urgent:       #ef4444;
+  --wo-rest-glow:         rgba(245,158,11,0.14);
+  --wo-rest-urgent-glow:  rgba(239,68,68,0.14);
+  /* Strength accent (shared with --accent) */
+  --wo-strength-shadow:   rgba(204,255,0,0.22);
+  /* Cardio colors (reused inline but defined here for reference) */
+  --wo-cardio-treadmill:  #60a5fa;
+  --wo-cardio-stair:      #fbbf24;
+  /* Recovery color */
+  --wo-recovery:          #34d399;
+}
+
+/* ── Workout OS: keyframes ─────────────────────────── */
+
+@keyframes wo-slide-up {
+  from { opacity: 0; transform: translateY(12px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0)    scale(1); }
+}
+
+@keyframes wo-number-pop {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(1.08); }
+  100% { transform: scale(1); }
+}
+
+@keyframes wo-badge-in {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
 /* ── Phase 3: Workout execution micro-animations ── */

@@ -255,7 +255,37 @@ export const useWorkoutTimer = create<WorkoutTimerState>()(
   )
 );
 
+// ── WorkoutPhase state machine ────────────────────────────────────────────────
+//
+// High-level UI phase derived entirely from existing store signals.
+// Components subscribe to this instead of testing multiple booleans.
+//
+// Phase ladder:
+//   idle → exercise ──► rest ──► exercise (cycle)
+//          exercise ──► cardio (when isCardioSession)
+//          any      ──► completed (when sessionPhase === 'done')
+//
+// Phases that require page-level UI state (prepare, activation, exercise_switch,
+// summary) are handled in the page component, not the timer store, because they
+// depend on UI transitions (modal open, exercise picker visible, etc.).
+
+export type WorkoutPhase =
+  | 'idle'
+  | 'exercise'
+  | 'rest'
+  | 'cardio'
+  | 'completed';
+
 // ── Derived selectors (stable, importable by any component) ─────────────────
+
+/** Current high-level workout phase — drives UI layout switching. */
+export const selectWorkoutPhase = (s: WorkoutTimerState): WorkoutPhase => {
+  if (s.sessionPhase === 'done') return 'completed';
+  if (s.sessionPhase === 'idle') return 'idle';
+  if (s.restTimer.phase === 'running') return 'rest';
+  if (s.isCardioSession) return 'cardio';
+  return 'exercise';
+};
 
 /** Total training seconds elapsed, derived from store.now (live when active). */
 export const selectTrainingSeconds = (s: WorkoutTimerState): number => {
