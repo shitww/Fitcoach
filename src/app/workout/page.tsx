@@ -1972,8 +1972,8 @@ function WorkoutContent() {
       {/* ── Rest overlay — full-screen when rest is active ── */}
       <RestOverlay
         onSkip={storeSkipRest}
-        nextExercise={trainingType === 'strength' && savedExercises.length > 0 && currentExercise
-          ? savedExercises[savedExercises.indexOf(currentExercise) + 1]
+        nextExercise={trainingType === 'strength' && exercises.length > 0 && currentExercise
+          ? exercises[exercises.findIndex(e => e.name === currentExercise) + 1]?.name
           : undefined}
       />
 
