@@ -443,10 +443,6 @@ function WorkoutContent() {
   const [introContent, setIntroContent] = useState<{ emoji: string; title: string; subtitle: string } | null>(null);
   const [setFeedback, setSetFeedback] = useState<string | null>(null);
   const [planHeaderCollapsed, setPlanHeaderCollapsed] = useState(false);
-  const [completionSummary, setCompletionSummary] = useState<{
-    emoji: string; heading: string; lines: string[];
-    ctaLabel?: string; onCta?: () => void;
-  } | null>(null);
   const [cardioTargetMin, setCardioTargetMin] = useState(30);
   // ── Phase 4: exercise transition state ──────────────────────────────────────
   const prevExerciseRef = useRef<string | null>(null);
@@ -958,18 +954,7 @@ function WorkoutContent() {
       const cardioWorkoutId = cardioJson.data?.workout?.id ?? cardioJson.data?.id;
       if (userId) removeUserStorageItem(userId, 'pending_workout');
       setIsLoading(false);
-      setCompletionSummary({
-        emoji: trainingType === 'treadmill' ? '🏃' : '🧗',
-        heading: '有氧完成 · 做到了',
-        lines: [
-          `坚持了 ${durationMin} 分钟`,
-          ...(dist > 0 ? [`总距离 ${dist.toFixed(2)} km`] : []),
-          `消耗约 ${calories} 千卡`,
-          '每一步都算数',
-        ],
-        ctaLabel: '查看训练总结',
-        onCta: () => router.push(cardioWorkoutId ? `/summary?id=${cardioWorkoutId}` : '/'),
-      });
+      router.push(cardioWorkoutId ? `/summary?id=${cardioWorkoutId}` : '/');
       return;
     } catch (e) {
       logger.error('保存有氧训练失败:', e);
@@ -1041,16 +1026,7 @@ function WorkoutContent() {
       const recoveryWorkoutId = recoveryJson.data?.workout?.id ?? recoveryJson.data?.id;
       if (userId) removeUserStorageItem(userId, 'pending_workout');
       setIsLoading(false);
-      setCompletionSummary({
-        emoji: '🧘',
-        heading: '恢复完成 ✨',
-        lines: [
-          '身体放松了一点',
-          '今天也照顾到了身体',
-        ],
-        ctaLabel: '查看训练总结',
-        onCta: () => router.push(recoveryWorkoutId ? `/summary?id=${recoveryWorkoutId}` : '/'),
-      });
+      router.push(recoveryWorkoutId ? `/summary?id=${recoveryWorkoutId}` : '/');
       return;
     } catch (e) {
       logger.error('保存恢复训练失败:', e);
@@ -1201,18 +1177,7 @@ function WorkoutContent() {
         if (userId) removeUserStorageItem(userId, 'pending_workout');
         if (userId) removeUserStorageItem(userId, 'workout_session');
         setIsLoading(false);
-        setCompletionSummary({
-          emoji: '🎯',
-          heading: '今日训练完成',
-          lines: [
-            `今天完成了 ${uniqueExercisesCount} 个动作`,
-            `共 ${totalSetsCompleted} 组 · ${durationMin} 分钟`,
-            '坚持比完美更重要',
-            '明天继续保持节奏',
-          ],
-          ctaLabel: '查看训练总结',
-          onCta: () => router.push(`/summary?id=${workoutId}`),
-        });
+        router.push(`/summary?id=${workoutId}`);
         return;
       }
     } catch (error) {
@@ -2050,18 +2015,6 @@ function WorkoutContent() {
           emoji={introContent.emoji}
           title={introContent.title}
           subtitle={introContent.subtitle}
-        />
-      )}
-
-      {/* ── D: Mode-specific completion summary overlay ── */}
-      {completionSummary && (
-        <CompletionSummaryOverlay
-          visible={true}
-          emoji={completionSummary.emoji}
-          heading={completionSummary.heading}
-          lines={completionSummary.lines}
-          ctaLabel={completionSummary.ctaLabel}
-          onCta={completionSummary.onCta}
         />
       )}
 
