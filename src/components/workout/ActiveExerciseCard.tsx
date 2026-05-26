@@ -310,12 +310,13 @@ const ActiveExerciseCard = memo(function ActiveExerciseCard({
               <div className="flex items-baseline gap-1">
                 {editingField === 'reps' ? (
                   <input
-                    type="number" inputMode="numeric" autoFocus
+                    type="text" inputMode="numeric" autoFocus
                     defaultValue={repsNum || ''}
+                    onFocus={e => e.target.select()}
                     onBlur={e => commitEdit('reps', e.target.value)}
                     onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
-                    className="font-black tabular-nums leading-none text-center bg-transparent outline-none border-b-2"
-                    style={{ fontSize: '3.5rem', letterSpacing: '-0.03em', color: 'var(--foreground)', width: 100, borderColor: 'var(--color-accent)' }}
+                    className="font-black tabular-nums leading-none text-center bg-transparent"
+                    style={{ fontSize: '3.5rem', letterSpacing: '-0.03em', color: 'var(--foreground)', width: 100, border: 'none', outline: 'none', caretColor: 'var(--color-accent)' }}
                   />
                 ) : (
                   <span
@@ -363,12 +364,13 @@ const ActiveExerciseCard = memo(function ActiveExerciseCard({
             <div className="flex items-baseline gap-1 min-h-[4rem] items-center justify-center">
               {!isBodyweight && editingField === 'weight' ? (
                 <input
-                  type="number" inputMode="decimal" autoFocus
+                  type="text" inputMode="decimal" autoFocus
                   defaultValue={weightNum || ''}
+                  onFocus={e => e.target.select()}
                   onBlur={e => commitEdit('weight', e.target.value)}
                   onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
-                  className="font-black tabular-nums leading-none text-center bg-transparent outline-none border-b-2"
-                  style={{ fontSize: '3rem', letterSpacing: '-0.03em', color: 'var(--foreground)', width: 100, borderColor: 'var(--color-accent)' }}
+                  className="font-black tabular-nums leading-none text-center bg-transparent"
+                  style={{ fontSize: '3rem', letterSpacing: '-0.03em', color: 'var(--foreground)', width: 100, border: 'none', outline: 'none', caretColor: 'var(--color-accent)' }}
                 />
               ) : (
                 <span
@@ -400,12 +402,13 @@ const ActiveExerciseCard = memo(function ActiveExerciseCard({
             <div className="flex items-baseline gap-1 min-h-[4rem] items-center justify-center">
               {editingField === 'reps' ? (
                 <input
-                  type="number" inputMode="numeric" autoFocus
+                  type="text" inputMode="numeric" autoFocus
                   defaultValue={repsNum || ''}
+                  onFocus={e => e.target.select()}
                   onBlur={e => commitEdit('reps', e.target.value)}
                   onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
-                  className="font-black tabular-nums leading-none text-center bg-transparent outline-none border-b-2"
-                  style={{ fontSize: '3rem', letterSpacing: '-0.03em', color: 'var(--foreground)', width: 80, borderColor: 'var(--color-accent)' }}
+                  className="font-black tabular-nums leading-none text-center bg-transparent"
+                  style={{ fontSize: '3rem', letterSpacing: '-0.03em', color: 'var(--foreground)', width: 80, border: 'none', outline: 'none', caretColor: 'var(--color-accent)' }}
                 />
               ) : (
                 <span
