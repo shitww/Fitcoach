@@ -378,7 +378,12 @@ function WorkoutContent() {
   const [exercises, setExercises] = useState<Exercise[]>([]);
 
   const [savedExercises, setSavedExercises] = useState<string[]>([]);
-  const [planDayName, setPlanDayName] = useState('');
+  const [planDayName, setPlanDayName] = useState(() => {
+    const mg = searchParams.get('mg');
+    if (!mg || storeSessionPhase === 'active' || storeSessionPhase === 'paused') return '';
+    const L: Record<string, string> = { chest: '胸部', back: '背部', shoulders: '肩部', arms: '手臂', legs: '腿部', abs: '腹部', fullbody: '全身' };
+    return L[mg] ?? mg;
+  });
   const [customExercises, setCustomExercises] = useState<string[]>([]);
   const [trainingNotes, setTrainingNotes] = useState('');
   const [lastExerciseRecord, setLastExerciseRecord] = useState<{weight: number; reps: number; date: string} | null>(null);
@@ -386,15 +391,30 @@ function WorkoutContent() {
   const [isLoading, setIsLoading] = useState(false);
   const [dbExercisesLoaded, setDbExercisesLoaded] = useState(false);
   const [muscleExercises, setMuscleExercises] = useState<{name: string; alias?: string}[]>([]);
-  const [muscleGroupLabel, setMuscleGroupLabel] = useState('');
+  const [muscleGroupLabel, setMuscleGroupLabel] = useState(() => {
+    const mg = searchParams.get('mg');
+    if (!mg || storeSessionPhase === 'active' || storeSessionPhase === 'paused') return '';
+    const L: Record<string, string> = { chest: '胸部', back: '背部', shoulders: '肩部', arms: '手臂', legs: '腿部', abs: '腹部', fullbody: '全身' };
+    return L[mg] ?? mg;
+  });
   const [muscleListExpanded, setMuscleListExpanded] = useState(true);
-  const [workoutMuscleGroup, setWorkoutMuscleGroup] = useState<string | null>(null);
+  const [workoutMuscleGroup, setWorkoutMuscleGroup] = useState<string | null>(() =>
+    (storeSessionPhase === 'active' || storeSessionPhase === 'paused') ? null : searchParams.get('mg')
+  );
   const [warmupDone, setWarmupDone] = useState(false);
   const [detailExerciseName, setDetailExerciseName] = useState<string | null>(null);
   const [showCardioSetup, setShowCardioSetup] = useState(false);
-  const [trainingType, setTrainingType] = useState<TrainingType | null>(
-    () => ((storeSessionPhase === 'active' || storeSessionPhase === 'paused') && storeSessionType ? storeSessionType as TrainingType : null)
-  );
+  const [trainingType, setTrainingType] = useState<TrainingType | null>(() => {
+    if ((storeSessionPhase === 'active' || storeSessionPhase === 'paused') && storeSessionType) {
+      return storeSessionType as TrainingType;
+    }
+    const mg = searchParams.get('mg');
+    if (mg) return 'strength';
+    const mode = searchParams.get('mode');
+    if (mode === 'cardio') return (searchParams.get('cardioType') as TrainingType) || 'treadmill';
+    if (mode === 'recovery') return 'free';
+    return null;
+  });
   const [cardioParams, setCardioParams] = useState<CardioParams>(
     () => (storeCardioSpeed > 0 || storeCardioLevel > 0)
       ? { speed: storeCardioSpeed, incline: storeCardioIncline, level: storeCardioLevel }
@@ -454,12 +474,8 @@ function WorkoutContent() {
     if (mg) {
       const label = MG_LABELS[mg] ?? mg;
       storeSetSessionType('strength');
-      storeStartTraining();
+      // storeStartTraining() deferred — fires when user picks first exercise
       startTransition(() => {
-        setTrainingType('strength');
-        setWorkoutMuscleGroup(mg);
-        setMuscleGroupLabel(label);
-        setPlanDayName(label);
         setIntroContent({ emoji: '💪', title: `今天练${label}`, subtitle: '热身后开始正式训练' });
         setIntroVisible(true);
       });
@@ -1146,7 +1162,8 @@ function WorkoutContent() {
   // ── Inline selection screen (shown before any training type is chosen) ──
   // NOTE: deliberately NOT gated on dbExercisesLoaded to avoid the flash where the
   // strength UI briefly renders before the exercise library finishes loading.
-  const showSelectionScreen = !trainingType && storeSessionPhase === 'idle';
+  const urlHasMode = !!(searchParams.get('mg') || searchParams.get('mode'));
+  const showSelectionScreen = !trainingType && storeSessionPhase === 'idle' && !urlHasMode;
 
   if (showSelectionScreen) {
     return (
