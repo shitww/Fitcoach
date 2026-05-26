@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Clock, X, Activity, Pause, Play, Dumbbell } from 'lucide-react';
+import { Clock, X, Activity, Pause, Play } from 'lucide-react';
 import { useWorkoutTimer, selectTrainingSeconds, selectRestSecondsRemaining } from '@/stores/workoutTimer';
 
 function formatSeconds(s: number): string {
@@ -121,13 +121,13 @@ export default function FloatingTimer() {
             {/* Icon */}
             {isPaused
               ? <Pause size={12} color="#4b5563" strokeWidth={2.5} />
-              : <Activity size={12} color="var(--accent)" strokeWidth={2.5} />}
+              : <Activity size={12} color="var(--color-accent)" strokeWidth={2.5} />}
 
             {/* Training time */}
             <span style={{
               fontSize: 14,
               fontWeight: 700,
-              color: isPaused ? '#4b5563' : 'var(--accent)',
+              color: isPaused ? '#4b5563' : 'var(--color-accent)',
               fontVariantNumeric: 'tabular-nums',
               fontFamily: 'monospace',
               letterSpacing: '0.03em',
@@ -228,7 +228,7 @@ export default function FloatingTimer() {
                 <div style={{
                   fontSize: 56,
                   fontWeight: 900,
-                  color: isPaused ? '#2d3748' : 'var(--accent)',
+                  color: isPaused ? '#2d3748' : 'var(--color-accent)',
                   fontVariantNumeric: 'tabular-nums',
                   fontFamily: 'monospace',
                   letterSpacing: '0.03em',
@@ -256,7 +256,7 @@ export default function FloatingTimer() {
                   style={{
                     width: '100%', padding: '17px',
                     borderRadius: 16, border: 'none',
-                    background: 'var(--accent)',
+                    background: 'var(--color-accent)',
                     color: 'var(--accent-text)',
                     fontSize: 16, fontWeight: 900,
                     cursor: 'pointer',
@@ -264,8 +264,8 @@ export default function FloatingTimer() {
                     touchAction: 'manipulation',
                   }}
                 >
-                  <Dumbbell size={20} />
-                  返回训练页面
+                  <Play size={18} fill="currentColor" />
+                  继续训练
                 </button>
 
                 {/* Pause / Resume */}
