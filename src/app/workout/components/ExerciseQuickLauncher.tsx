@@ -37,7 +37,7 @@ export default function ExerciseQuickLauncher({
   useEffect(() => {
     if (!userId) return;
     setLoading(true);
-    fetch('/api/workout?limit=10')
+    fetch('/api/workout?limit=20')
       .then(r => r.json())
       .then(data => {
         if (!Array.isArray(data?.data)) return;
@@ -46,6 +46,9 @@ export default function ExerciseQuickLauncher({
         for (const workout of data.data) {
           for (const ex of (workout.exercises ?? [])) {
             const name: string = ex.exerciseName ?? ex.name ?? '';
+            const exMg: string = (ex.muscleGroup ?? '').toLowerCase();
+            // Only include exercises that match the current muscle group (when known)
+            if (muscleGroup && exMg && exMg !== muscleGroup.toLowerCase()) continue;
             if (name && !seen.has(name)) {
               seen.add(name);
               recent.push(name);
@@ -58,18 +61,12 @@ export default function ExerciseQuickLauncher({
       })
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, [userId]);
+  }, [userId, muscleGroup]);
 
   const exercises = (() => {
     const all: string[] = [];
     const seen = new Set<string>();
-    // When a muscle group is selected: muscle-group exercises come first so
-    // unrelated history entries never push the relevant exercises off screen.
-    // Without a muscle group (free mode): keep history-first behaviour.
-    const ordered = muscleGroup
-      ? [...commonExercises, ...recentExercises]
-      : [...recentExercises, ...commonExercises];
-    for (const e of ordered) {
+    for (const e of [...recentExercises, ...commonExercises]) {
       if (!seen.has(e)) {
         seen.add(e);
         all.push(e);
@@ -100,7 +97,7 @@ export default function ExerciseQuickLauncher({
         <div>
           <p className="text-sm font-black">常用{muscleGroupLabel ?? ''}动作</p>
           <p className="text-xs mt-0.5" style={{ color: 'var(--text-low)' }}>
-            {muscleGroup ? '部位优先 · 点击立即开始' : recentExercises.length > 0 ? '历史优先 · 点击立即开始' : '点击立即开始'}
+            {recentExercises.length > 0 ? '历史优先 · 点击立即开始' : '点击立即开始'}
           </p>
         </div>
         <button onClick={() => setCollapsed(true)} style={{ color: 'var(--text-low)', background: 'none', border: 'none' }}>
