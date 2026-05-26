@@ -1776,7 +1776,9 @@ function WorkoutContent() {
               return (
                 <div className="mt-4 space-y-2">
                   {doneExs.map(ex => {
-                    const vol = ex.sets.reduce((s, st) => s + (st.isBodyweight ? 0 : st.weight * st.reps), 0);
+                    const exBaseName = ex.name.split(' (')[0];
+                    const exIsTimed = TIMED_EXERCISES.has(exBaseName) || exerciseCache.get(exBaseName)?.category === 'stretching';
+                    const vol = exIsTimed ? 0 : ex.sets.reduce((s, st) => s + (st.isBodyweight ? 0 : st.weight * st.reps), 0);
                     return (
                       <div key={ex.id} className="flex items-center gap-3 px-4 py-2.5 rounded-xl"
                         style={{ background: 'var(--surface)', border: '1px solid var(--border)', opacity: 0.72 }}>
@@ -1786,11 +1788,13 @@ function WorkoutContent() {
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="text-sm font-semibold truncate" style={{ color: 'var(--text-med)' }}>
-                            {ex.name.split(' (')[0]}
+                            {exBaseName}
                           </div>
                           <div className="text-xs mt-0.5 truncate" style={{ color: 'var(--text-low)' }}>
                             {ex.sets.map((s, i) => (
-                              <span key={i}>{i > 0 ? ' · ' : ''}{s.isBodyweight ? `${s.reps}次` : `${s.weight}×${s.reps}`}</span>
+                              <span key={i}>{i > 0 ? ' · ' : ''}
+                                {exIsTimed ? `${s.reps}秒` : (s.isBodyweight ? `${s.reps}次` : `${s.weight}×${s.reps}`)}
+                              </span>
                             ))}
                           </div>
                         </div>
