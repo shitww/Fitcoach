@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter, usePathname } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Clock, X, Activity, Pause, Play } from 'lucide-react';
 import { useWorkoutTimer, selectTrainingSeconds, selectRestSecondsRemaining } from '@/stores/workoutTimer';
@@ -16,7 +16,6 @@ function formatSeconds(s: number): string {
 
 export default function FloatingTimer() {
   const router = useRouter();
-  const pathname = usePathname();
   const {
     isTrainingActive,
     isPaused,
@@ -47,8 +46,6 @@ export default function FloatingTimer() {
   const [showEndConfirm, setShowEndConfirm] = useState(false);
 
   const isVisible = isTrainingActive || isPaused || isRestActive;
-  // On the workout page the header already shows the timer — hide the pill
-  const onWorkoutPage = pathname === '/workout';
 
   const hasContent = totalSets > 0 || (isCardioSession && trainSecs > 0) || (isFreeSession && trainSecs > 0);
 
@@ -76,7 +73,7 @@ export default function FloatingTimer() {
     router.push('/workout?action=finish');
   };
 
-  if (!isVisible || onWorkoutPage) return null;
+  if (!isVisible) return null;
 
   return (
     <>
