@@ -2019,7 +2019,7 @@ function WorkoutContent() {
             <button
               onClick={() => setShowExitModal(false)}
               className="w-full py-3.5 rounded-2xl text-sm font-bold mb-3 transition-all active:scale-[0.98]"
-              style={{ background: 'var(--accent)', color: 'var(--accent-text)' }}
+              style={{ background: 'var(--color-accent)', color: 'var(--accent-text)' }}
             >
               继续训练
             </button>
