@@ -23,6 +23,7 @@ export interface ActiveExerciseCardProps {
   onChangeExercise: () => void;
   isLoading: boolean;
   hint?: string;
+  isTimed?: boolean;
 }
 
 const RIR_META = [
@@ -71,7 +72,7 @@ const ActiveExerciseCard = memo(function ActiveExerciseCard({
   currentExercise, weight, reps, rir, isBodyweight, restTime,
   lastRecord, completedSetsCount, exerciseIndex, totalExercises,
   onWeightChange, onRepsChange, onRirChange, onBodyweightToggle,
-  onRestTimeChange, onLogSet, onChangeExercise, isLoading, hint,
+  onRestTimeChange, onLogSet, onChangeExercise, isLoading, hint, isTimed,
 }: ActiveExerciseCardProps) {
   const [showSecondary, setShowSecondary] = useState(false);
 
@@ -82,7 +83,9 @@ const ActiveExerciseCard = memo(function ActiveExerciseCard({
     : null;
 
   const isLastHint  = completedSetsCount >= 2;
-  const canLog      = Boolean(currentExercise && reps && (isBodyweight || weight));
+  const canLog      = isTimed
+    ? Boolean(currentExercise && reps && parseInt(reps) > 0)
+    : Boolean(currentExercise && reps && (isBodyweight || weight));
   const setLabel    = completedSetsCount > 0 ? `第 ${completedSetsCount + 1} 组` : '完成此组';
   const rirColor    = getRirColor(rir);
   const rirLabel    = getRirLabel(rir);
@@ -93,7 +96,8 @@ const ActiveExerciseCard = memo(function ActiveExerciseCard({
     onWeightChange(next.toString());
   }
   function stepReps(delta: number) {
-    const next = Math.max(0, repsNum + delta);
+    const step = isTimed ? 5 : 1;
+    const next = Math.max(0, repsNum + delta * step);
     onRepsChange(next.toString());
   }
 
@@ -141,82 +145,98 @@ const ActiveExerciseCard = memo(function ActiveExerciseCard({
       </div>
 
       {/* ── Mega-number input grid ── */}
-      <div className="grid grid-cols-2" style={{ borderBottom: '1px solid var(--border)' }}>
-
-        {/* Weight */}
-        <div
-          className="flex flex-col items-center py-6 gap-3"
-          style={{ borderRight: '1px solid var(--border)' }}
-        >
-          <div className="flex items-center justify-between w-full px-4">
-            <span className="text-xs font-bold" style={{ color: 'var(--text-faint)' }}>重量</span>
-            <button
-              onClick={onBodyweightToggle}
-              className="text-xs font-bold px-2 py-0.5 rounded-full transition-all active:scale-95"
-              style={
-                isBodyweight
-                  ? { background: 'rgb(var(--accent))', color: 'var(--accent-text)' }
-                  : { background: 'var(--surface-3)', color: 'var(--text-faint)' }
-              }
-            >
-              自重
-            </button>
-          </div>
-
-          <StepButton onClick={() => stepWeight(2.5)} disabled={isBodyweight}>
-            <Plus className="w-5 h-5" style={{ color: 'var(--text-med)' }} />
-          </StepButton>
-
-          <div className="flex items-baseline gap-1 min-h-[4rem] items-center justify-center">
-            <span
-              className="font-black tabular-nums leading-none"
-              style={{
-                fontSize: '3rem',
-                letterSpacing: '-0.03em',
-                color: isBodyweight ? 'var(--text-faint)' : 'var(--foreground)',
-              }}
-            >
-              {isBodyweight ? '—' : (weightNum || '0')}
-            </span>
-            {!isBodyweight && (
-              <span className="text-sm font-semibold mb-1" style={{ color: 'var(--text-faint)' }}>
-                kg
-              </span>
-            )}
-          </div>
-
-          <StepButton onClick={() => stepWeight(-2.5)} disabled={isBodyweight}>
-            <Minus className="w-5 h-5" style={{ color: 'var(--text-med)' }} />
-          </StepButton>
-        </div>
-
-        {/* Reps */}
-        <div className="flex flex-col items-center py-6 gap-3">
+      {isTimed ? (
+        /* ── Timed mode: single-column, seconds only ── */
+        <div className="flex flex-col items-center py-6 gap-3" style={{ borderBottom: '1px solid var(--border)' }}>
           <div className="flex items-center justify-start w-full px-4">
-            <span className="text-xs font-bold" style={{ color: 'var(--text-faint)' }}>次数</span>
+            <span className="text-xs font-bold" style={{ color: 'var(--text-faint)' }}>时间（秒）</span>
           </div>
-
           <StepButton onClick={() => stepReps(1)}>
             <Plus className="w-5 h-5" style={{ color: 'var(--text-med)' }} />
           </StepButton>
-
-          <div className="flex items-baseline gap-1 min-h-[4rem] items-center justify-center">
-            <span
-              className="font-black tabular-nums leading-none"
-              style={{ fontSize: '3rem', letterSpacing: '-0.03em', color: 'var(--foreground)' }}
-            >
+          <div className="flex items-baseline gap-1">
+            <span className="font-black tabular-nums leading-none"
+              style={{ fontSize: '3.5rem', letterSpacing: '-0.03em', color: 'var(--foreground)' }}>
               {repsNum || '0'}
             </span>
-            <span className="text-sm font-semibold mb-1" style={{ color: 'var(--text-faint)' }}>
-              次
-            </span>
+            <span className="text-sm font-semibold mb-1" style={{ color: 'var(--text-faint)' }}>秒</span>
           </div>
-
           <StepButton onClick={() => stepReps(-1)}>
             <Minus className="w-5 h-5" style={{ color: 'var(--text-med)' }} />
           </StepButton>
+          <p className="text-xs" style={{ color: 'var(--text-faint)' }}>每次 ±5 秒</p>
         </div>
-      </div>
+      ) : (
+        /* ── Standard mode: weight + reps ── */
+        <div className="grid grid-cols-2" style={{ borderBottom: '1px solid var(--border)' }}>
+          {/* Weight */}
+          <div
+            className="flex flex-col items-center py-6 gap-3"
+            style={{ borderRight: '1px solid var(--border)' }}
+          >
+            <div className="flex items-center justify-between w-full px-4">
+              <span className="text-xs font-bold" style={{ color: 'var(--text-faint)' }}>重量</span>
+              <button
+                onClick={onBodyweightToggle}
+                className="text-xs font-bold px-2 py-0.5 rounded-full transition-all active:scale-95"
+                style={
+                  isBodyweight
+                    ? { background: 'rgb(var(--accent))', color: 'var(--accent-text)' }
+                    : { background: 'var(--surface-3)', color: 'var(--text-faint)' }
+                }
+              >
+                自重
+              </button>
+            </div>
+            <StepButton onClick={() => stepWeight(2.5)} disabled={isBodyweight}>
+              <Plus className="w-5 h-5" style={{ color: 'var(--text-med)' }} />
+            </StepButton>
+            <div className="flex items-baseline gap-1 min-h-[4rem] items-center justify-center">
+              <span
+                className="font-black tabular-nums leading-none"
+                style={{
+                  fontSize: '3rem',
+                  letterSpacing: '-0.03em',
+                  color: isBodyweight ? 'var(--text-faint)' : 'var(--foreground)',
+                }}
+              >
+                {isBodyweight ? '—' : (weightNum || '0')}
+              </span>
+              {!isBodyweight && (
+                <span className="text-sm font-semibold mb-1" style={{ color: 'var(--text-faint)' }}>
+                  kg
+                </span>
+              )}
+            </div>
+            <StepButton onClick={() => stepWeight(-2.5)} disabled={isBodyweight}>
+              <Minus className="w-5 h-5" style={{ color: 'var(--text-med)' }} />
+            </StepButton>
+          </div>
+          {/* Reps */}
+          <div className="flex flex-col items-center py-6 gap-3">
+            <div className="flex items-center justify-start w-full px-4">
+              <span className="text-xs font-bold" style={{ color: 'var(--text-faint)' }}>次数</span>
+            </div>
+            <StepButton onClick={() => stepReps(1)}>
+              <Plus className="w-5 h-5" style={{ color: 'var(--text-med)' }} />
+            </StepButton>
+            <div className="flex items-baseline gap-1 min-h-[4rem] items-center justify-center">
+              <span
+                className="font-black tabular-nums leading-none"
+                style={{ fontSize: '3rem', letterSpacing: '-0.03em', color: 'var(--foreground)' }}
+              >
+                {repsNum || '0'}
+              </span>
+              <span className="text-sm font-semibold mb-1" style={{ color: 'var(--text-faint)' }}>
+                次
+              </span>
+            </div>
+            <StepButton onClick={() => stepReps(-1)}>
+              <Minus className="w-5 h-5" style={{ color: 'var(--text-med)' }} />
+            </StepButton>
+          </div>
+        </div>
+      )}
 
       {/* ── Reference row ── */}
       {(lastRecord || est1RM) && (

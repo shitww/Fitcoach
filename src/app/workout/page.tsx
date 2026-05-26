@@ -94,6 +94,16 @@ const getExerciseMuscleGroup = (exercise: string): string => {
 
 // exerciseNotes removed - now using DB cache
 
+/** Exercises whose "reps" field actually means seconds held. */
+const TIMED_EXERCISES = new Set([
+  '平板支撑', '侧平板支撑', '俯撑', '单臂平板支撑',
+  '靠墙蹲', '靠墙静蹲', '壁坐',
+  '悬挂', '死亡悬挂', '悬垂保持',
+  'L坐', 'L-sit',
+  '超人式保持', 'Superman保持',
+  '单腿平衡', '瑜伽保持',
+]);
+
 const safeJsonParse = (val: string): string[] => {
     try { return JSON.parse(val); } catch { return []; }
   };
@@ -443,6 +453,14 @@ function WorkoutContent() {
   const sessionRestoredRef = useRef(false);
   const [showExitModal, setShowExitModal] = useState(false);
 
+  // True when the current exercise records duration (seconds) instead of weight+reps
+  const isCurrentExerciseTimed = Boolean(
+    currentExercise && (
+      TIMED_EXERCISES.has(currentExercise.split(' (')[0]) ||
+      exerciseCache.get(currentExercise.split(' (')[0])?.category === 'stretching'
+    )
+  );
+
   // ── Phase 4: exercise transition effect ──────────────────────────────────────
   useEffect(() => {
     const prev = prevExerciseRef.current;
@@ -681,6 +699,7 @@ function WorkoutContent() {
         });
         if (response.ok) {
           const data = await response.json();
+          const isTimed = TIMED_EXERCISES.has(exerciseName) || exerciseCache.get(exerciseName)?.category === 'stretching';
           if (data.data) {
             setLastExerciseRecord(data.data);
             setWeight(data.data.weight.toString());
@@ -688,16 +707,17 @@ function WorkoutContent() {
           } else {
             setLastExerciseRecord(null);
             setWeight('');
-            setReps('');
+            setReps(isTimed ? '30' : '');
           }
         } else {
           if (response.status === 401) {
             return;
           }
           logger.warn("API warning:", await response.text());
+          const isTimed2 = TIMED_EXERCISES.has(exerciseName) || exerciseCache.get(exerciseName)?.category === 'stretching';
           setLastExerciseRecord(null);
           setWeight('');
-          setReps('');
+          setReps(isTimed2 ? '30' : '');
         }
       } catch (error) {
         logger.error('Failed to fetch last exercise record:', error);
@@ -1735,6 +1755,7 @@ function WorkoutContent() {
                 onChangeExercise={() => router.push('/exercises?mode=select')}
                 isLoading={isLoading}
                 hint={hint ?? undefined}
+                isTimed={isCurrentExerciseTimed}
               />
             )}
 
