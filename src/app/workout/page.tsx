@@ -474,7 +474,7 @@ function WorkoutContent() {
     if (mg) {
       const label = MG_LABELS[mg] ?? mg;
       storeSetSessionType('strength');
-      // storeStartTraining() deferred — fires when user picks first exercise
+      storeStartTraining();
       startTransition(() => {
         setIntroContent({ emoji: '💪', title: `今天练${label}`, subtitle: '热身后开始正式训练' });
         setIntroVisible(true);
