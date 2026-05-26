@@ -47,8 +47,9 @@ export default function ExerciseQuickLauncher({
           for (const ex of (workout.exercises ?? [])) {
             const name: string = ex.exerciseName ?? ex.name ?? '';
             const exMg: string = (ex.muscleGroup ?? '').toLowerCase();
-            // Only include exercises that match the current muscle group (when known)
-            if (muscleGroup && exMg && exMg !== muscleGroup.toLowerCase()) continue;
+            // Only include exercises that match the current muscle group (when known).
+            // If exMg is empty/null the exercise is unclassified — exclude it too.
+            if (muscleGroup && exMg !== muscleGroup.toLowerCase()) continue;
             if (name && !seen.has(name)) {
               seen.add(name);
               recent.push(name);
