@@ -78,19 +78,24 @@ const ActiveExerciseCard = memo(function ActiveExerciseCard({
   const [cdActive, setCdActive] = useState(false);
   const [cdRemaining, setCdRemaining] = useState(0);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // Signals that the countdown hit 0 — read in a separate effect to trigger onLogSet
+  const cdDoneRef = useRef(false);
 
   const stopCountdown = useCallback(() => {
     if (intervalRef.current) { clearInterval(intervalRef.current); intervalRef.current = null; }
+    cdDoneRef.current = false;
     setCdActive(false);
     setCdRemaining(0);
   }, []);
 
   const startCountdown = useCallback(() => {
     const secs = parseInt(reps) || 30;
+    cdDoneRef.current = false;
     setCdRemaining(secs);
     setCdActive(true);
   }, [reps]);
 
+  // Tick every second while active
   useEffect(() => {
     if (!cdActive) return;
     intervalRef.current = setInterval(() => {
@@ -98,8 +103,7 @@ const ActiveExerciseCard = memo(function ActiveExerciseCard({
         if (prev <= 1) {
           clearInterval(intervalRef.current!);
           intervalRef.current = null;
-          setCdActive(false);
-          onLogSet();
+          cdDoneRef.current = true; // signal — do NOT call setState/onLogSet here
           return 0;
         }
         return prev - 1;
@@ -108,6 +112,16 @@ const ActiveExerciseCard = memo(function ActiveExerciseCard({
     return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cdActive]);
+
+  // Act on completion outside the updater (safe to call onLogSet here)
+  useEffect(() => {
+    if (cdDoneRef.current) {
+      cdDoneRef.current = false;
+      setCdActive(false);
+      onLogSet();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cdRemaining]);
 
   // Reset countdown when exercise changes
   useEffect(() => { stopCountdown(); }, [currentExercise, stopCountdown]);
