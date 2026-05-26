@@ -6,9 +6,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { 
   ArrowLeft, Activity, Trophy, Zap, Target, Clock, 
-  TrendingUp, Dumbbell, Flame, CheckCircle, AlertTriangle,
-  Lightbulb, Calendar, Loader2, BookOpen,
-  Edit2, Save, X, RefreshCw, Sparkles
+  Dumbbell, Flame, CheckCircle, AlertTriangle,
+  Calendar, Loader2, BookOpen,
+  Edit2, Save, X, RefreshCw
 } from 'lucide-react';
 import { logger } from "@/lib/logger";
 import { SkeletonCard } from '@/components/Skeleton';
@@ -36,8 +36,7 @@ interface Workout {
 }
 
 interface AIResponse {
-  summary: string; progress: string; fatigue: string;
-  suggestions: string[]; nextSteps: string[];
+  coach: string;
 }
 
 interface PRRecord {
@@ -47,6 +46,7 @@ interface PRRecord {
   previousMax: number;
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
 const TIMED_EXERCISES = new Set([
   '平板支撑', '侧平板支撑', '俯撑', '单臂平板支撑',
   '靠墙蹲', '靠墙静蹲', '壁坐',
@@ -61,57 +61,6 @@ const formatTime = (seconds: number) => {
   return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
 };
 
-/** 根据文本内容生成自由记录反馈 */
-const generateFreeRecordFeedback = (notes: string, durationSec: number): AIResponse => {
-  const text = notes.toLowerCase();
-  const mins = Math.floor(durationSec / 60);
-  const isStretching = /拉伸|伸展|柔韧|yoga|瑜伽/.test(text);
-  const isCore      = /核心|平板|卷腹|腹肌|普拉提/.test(text);
-  const isRecovery  = /康复|恢复|理疗|放松|泡沫轴/.test(text);
-  const isAerobic   = /跑步|慢跑|骑行|游泳|有氧|爬山/.test(text);
-  const isSports    = /篮球|足球|羽毛球|网球|乒乓|排球/.test(text);
-  let actType = '综合训练'; let tip = '坚持运动，保持健康生活方式。';
-  if (isStretching) { actType = '拉伸 / 柔韧训练'; tip = '规律拉伸可改善柔韧性并降低受伤风险，建议每次训练后保持 10–15 分钟拉伸。'; }
-  else if (isCore)  { actType = '核心训练'; tip = '核心力量是所有运动的基础，每周 2–3 次可有效提升运动表现与姿态。'; }
-  else if (isRecovery) { actType = '康复 / 恢复训练'; tip = '主动恢复与高强度训练同等重要，有助于减少肌肉酸痛和伤病风险。'; }
-  else if (isAerobic)  { actType = '有氧运动'; tip = '有氧训练提升心肺功能和燃脂效率，建议结合力量训练获得更全面效果。'; }
-  else if (isSports)   { actType = '球类 / 运动'; tip = '运动技能训练同样消耗体能，记得补充碳水和蛋白质以促进恢复。'; }
-  const preview = notes.length > 60 ? notes.slice(0, 60) + '…' : notes;
-  return {
-    summary: `本次 ${actType} 持续 ${mins} 分钟。内容摘要：${preview}`,
-    progress: `持续记录每次训练是追踪进步的关键。${tip}`,
-    fatigue: `训练时长 ${mins} 分钟，${mins > 60 ? '时间较长，注意充分补水和休息恢复。' : mins > 30 ? '时间适中，恢复应较快。' : '属短时训练，可适当延长下次时长。'}`,
-    suggestions: [
-      '建议在记录中加入主观感受评分（1–10 分）方便追踪规律',
-      '尝试结合不同类型训练（力量 + 有氧 + 拉伸）获得均衡体能',
-      '保持规律作息与充足睡眠以最大化训练效果',
-      mins < 30 ? '可尝试逐步将训练时长增加至 30–45 分钟' : '当前训练时长合理，保持节奏',
-    ],
-    nextSteps: [
-      '下次可在记录中列出具体动作或组数，方便纵向对比',
-      '每月回顾自由记录，识别训练偏好和改进空间',
-      '考虑为常用的自由训练建立模板以提升记录效率',
-    ],
-  };
-};
-
-const generateSimpleFeedback = (workout: Workout): AIResponse => {
-  const totalSets = workout.exercises.reduce((sum, ex) => sum + ex.sets.length, 0);
-  const failureCount = workout.exercises.reduce((sum, ex) => sum + ex.sets.filter(s => s.isFailure).length, 0);
-  const failureRate = totalSets > 0 ? (failureCount / totalSets) * 100 : 0;
-  const exerciseNames = workout.exercises.map(ex => ex.name.split(' ')[0]).join('、');
-  const muscleGroups = workout.muscleGroups?.join('、') || '多个部位';
-  let fatigueStatus = '恢复良好';
-  if (failureRate > 25) fatigueStatus = '轻度疲劳';
-  else if (failureRate > 35) fatigueStatus = '需要休息';
-  return {
-    summary: `本次训练总训练量 ${workout.totalVolume}kg，完成 ${workout.exercises.length} 个动作（${exerciseNames}），训练时长 ${formatTime(workout.duration)}。主要训练了${muscleGroups}等部位。`,
-    progress: `本次训练共完成 ${totalSets} 组，最大重量 ${workout.maxWeight}kg。训练强度适中，保持规律训练会让你持续进步！`,
-    fatigue: `本次力竭 ${failureCount} 次，力竭占比 ${failureRate.toFixed(1)}%，${fatigueStatus}。`,
-    suggestions: ['保持当前训练节奏，继续稳步提升', '建议每周安排 1-2 天完全休息日', '注意训练后的营养补充和睡眠质量', '可以考虑在下一次训练中适当增加重量'],
-    nextSteps: ['下次训练可以尝试增加 2.5-5kg 重量', '保持每周 3-4 次的训练频率', '记录每次训练数据，追踪进步']
-  };
-};
 
 function SummaryContent() {
   const searchParams = useSearchParams();
@@ -289,11 +238,10 @@ function SummaryContent() {
         credentials: 'include', body: JSON.stringify(buildPayload(w)),
       });
       const data = await r.json();
-      if (data.success && data.feedback) { setAiFeedback(data.feedback); setFeedbackStatus('done'); }
-      else throw new Error('fallback');
+      if (data.success && data.feedback?.coach) { setAiFeedback(data.feedback); setFeedbackStatus('done'); }
+      else setFeedbackStatus('none');
     } catch {
-      const fallback = isFreeRecord ? generateFreeRecordFeedback(w.notes ?? '', w.duration) : generateSimpleFeedback(w);
-      setAiFeedback(fallback); setFeedbackStatus('done');
+      setFeedbackStatus('none');
     }
   };
 
@@ -593,43 +541,22 @@ function SummaryContent() {
             <div>
               <SkeletonCard />
               <p className="text-xs text-center mt-2" style={{ color: 'var(--text-faint)' }}>
-                {feedbackStatus === 'generating' ? 'AI 分析中…' : '检查缓存…'}
+                {feedbackStatus === 'generating' ? 'AI 教练分析中…' : '读取缓存…'}
               </p>
             </div>
-          ) : aiFeedback ? (
-            <div className="space-y-5">
-              {[
-                { icon: Activity, color: '#00D4FF', title: '训练总结', text: aiFeedback.summary },
-                { icon: TrendingUp, color: '#A855F7', title: '进步分析', text: aiFeedback.progress },
-                { icon: Flame, color: '#FFB800', title: '疲劳评估', text: aiFeedback.fatigue },
-              ].map((item, i) => (
-                <div key={i} className="flex items-start gap-3">
-                  <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5" style={{ background: `${item.color}18` }}>
-                    <item.icon className="w-4 h-4" style={{ color: item.color }} />
-                  </div>
-                  <div>
-                    <h4 className="font-bold mb-1" style={{ color: item.color }}>{item.title}</h4>
-                    <p className="text-sm" style={{ color: 'var(--text-med)' }}>{item.text}</p>
-                  </div>
-                </div>
-              ))}
-              <div className="flex items-start gap-3">
-                <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5" style={{ background: 'var(--accent-dim)' }}>
-                  <Lightbulb className="w-4 h-4" style={{ color: 'var(--accent)' }} />
-                </div>
-                <div>
-                  <h4 className="font-bold mb-2" style={{ color: 'var(--accent)' }}>训练建议</h4>
-                  <ul className="space-y-2">
-                    {aiFeedback.suggestions.map((s, i) => (
-                      <li key={i} className="flex items-start gap-2 text-sm" style={{ color: 'var(--text-med)' }}>
-                        <CheckCircle className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: 'var(--accent)' }} />
-                        {s}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
+          ) : feedbackStatus === 'none' ? (
+            <div className="text-center py-4">
+              <p className="text-sm mb-4" style={{ color: 'var(--text-low)' }}>AI 分析暂时不可用</p>
+              <button onClick={handleGenerateFeedback}
+                className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm mx-auto"
+                style={{ background: 'var(--accent)', color: 'var(--accent-text)' }}>
+                <RefreshCw className="w-3.5 h-3.5" />重试
+              </button>
             </div>
+          ) : aiFeedback?.coach ? (
+            <p className="text-sm leading-relaxed whitespace-pre-wrap" style={{ color: 'var(--text-med)' }}>
+              {aiFeedback.coach}
+            </p>
           ) : null}
         </div>
 

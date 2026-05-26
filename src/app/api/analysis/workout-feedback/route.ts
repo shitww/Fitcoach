@@ -48,12 +48,12 @@ export async function POST(request: NextRequest) {
 
     const feedback = await completeJSON({
       messages: [
-        { role: 'system', content: '你是专业私人健身教练，擅长从训练数据中发现用户自己看不到的问题和机会。分析规则：① RIR 0-1 = 接近力竭，神经疲劳高；RIR 4+ = 过于保守，可加重；② 力竭组(isFailure=true)是高压力信号；③ 同组动作量与历史对比判断进步还是退步；④ 每个字段必须结合具体数字，不用泛泛而谈。中文输出，严格JSON格式，无任何额外文字。' },
+        { role: 'system', content: '你是用户的私人健身教练，说话直接、真实、有个性。你看过了用户的训练数据，现在当面给他反馈。不说套话，不说废话，每句话都要有根据。输出严格JSON，coach字段是一段自然流畅的中文教练点评，无其他字段。' },
         { role: 'user', content: prompt },
       ],
-      model: 'qwen-turbo',
-      temperature: 0.75,
-      maxTokens: 700,
+      model: 'qwen-plus',
+      temperature: 0.85,
+      maxTokens: 500,
     });
 
     // Persist to DB (upsert: delete old + insert new)
