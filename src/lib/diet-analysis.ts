@@ -1,6 +1,6 @@
 import { cache } from "react"
 import { prisma } from "./prisma"
-import { getTodayFoodLogs, getNutritionSettings } from "./dashboard"
+import { getNutritionSettings } from "./dashboard"
 
 export interface DietIntake {
   calories: number
@@ -35,12 +35,10 @@ export interface DietAnalysisBootstrap {
 export async function getDietAnalysisBootstrap(userId: string): Promise<DietAnalysisBootstrap> {
   const todayStr = new Date().toISOString().split("T")[0]
 
-  const [{ summary: intake }, goals] = await Promise.all([
-    getTodayFoodLogs(userId),
-    getNutritionSettings(userId),
-  ])
+  // Single query for goals (settings never change per request)
+  const goals = await getNutritionSettings(userId)
 
-  // Fetch weekly data (last 7 days including today)
+  // Single 7-day query — today intake derived from this dataset (eliminates duplicate query)
   const end = new Date()
   end.setHours(23, 59, 59, 999)
   const start = new Date(end)
@@ -63,6 +61,8 @@ export async function getDietAnalysisBootstrap(userId: string): Promise<DietAnal
     dayMap.set(key, { calories: 0, protein: 0, carbs: 0, fat: 0 })
   }
 
+  // Aggregate per-day AND today's intake in one pass
+  let todayCalories = 0, todayProtein = 0, todayCarbs = 0, todayFat = 0
   for (const log of logs) {
     const key = log.date.toISOString().split("T")[0]
     const cur = dayMap.get(key)
@@ -71,6 +71,12 @@ export async function getDietAnalysisBootstrap(userId: string): Promise<DietAnal
       cur.protein += log.protein
       cur.carbs += log.carbs
       cur.fat += log.fat
+    }
+    if (key === todayStr) {
+      todayCalories += log.calories
+      todayProtein += log.protein
+      todayCarbs += log.carbs
+      todayFat += log.fat
     }
   }
 
@@ -90,10 +96,10 @@ export async function getDietAnalysisBootstrap(userId: string): Promise<DietAnal
 
   return {
     intake: {
-      calories: intake?.calories ?? 0,
-      protein: intake?.protein ?? 0,
-      carbs: intake?.carbs ?? 0,
-      fat: intake?.fat ?? 0,
+      calories: Math.round(todayCalories),
+      protein: Math.round(todayProtein),
+      carbs: Math.round(todayCarbs),
+      fat: Math.round(todayFat),
     },
     goals: {
       targetCalories: goals.targetCalories ?? 2000,

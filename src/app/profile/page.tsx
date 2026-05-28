@@ -16,7 +16,6 @@ import { isRunningStandalone, showInstallPrompt } from "@/lib/pwa-utils";
 import { useToast } from "@/components/Toast";
 import { METRICS, type BodyDataRecord, type MetricConfig, findRecordByLocalDay, startOfLocalDay, isSameLocalDay } from "@/lib/body-metrics";
 import { MetricEditorSheet } from "./_components/MetricEditorSheet";
-import BottomTabBar from "@/components/BottomTabBar";
 
 const BODY_CACHE = '/api/body-data?limit=30';
 const PR_CACHE = '/api/analysis/personal-records';
@@ -484,8 +483,6 @@ export default function ProfilePage() {
           </div>
         )}
       </PageContent>
-
-      <BottomTabBar active="profile" />
 
       {activeMetric && (
         <MetricEditorSheet

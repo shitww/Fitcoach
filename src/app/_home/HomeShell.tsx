@@ -2,7 +2,6 @@
 
 import { useRouter } from "next/navigation"
 import { Users } from "lucide-react"
-import BottomTabBar from "@/components/BottomTabBar"
 
 interface Props {
   children: React.ReactNode
@@ -41,7 +40,6 @@ export default function HomeShell({ children }: Props) {
         {children}
       </main>
 
-      <BottomTabBar active="home" />
     </div>
   )
 }

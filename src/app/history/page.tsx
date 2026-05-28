@@ -10,7 +10,6 @@ import { SkeletonList } from '@/components/Skeleton'
 import { EmptyState } from '@/components/EmptyState'
 import { useToast } from '@/components/Toast'
 import { PageShell, PageHeader, PageContent, Section } from "@/components/layout"
-import BottomTabBar from "@/components/BottomTabBar"
 import { WorkoutMonthCalendar } from '@/components/WorkoutMonthCalendar'
 import PullToRefresh from '@/components/PullToRefresh'
 
@@ -294,7 +293,6 @@ export default function HistoryPage() {
         </PageContent>
       </PullToRefresh>
 
-      <BottomTabBar active="history" />
     </PageShell>
   )
 }

@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation"
-import BottomTabBar from "@/components/BottomTabBar";
 import {
   ChevronLeft, ChevronRight, Flame, X, ArrowRight, BarChart2,
 } from "lucide-react";
@@ -511,7 +510,6 @@ export default function CalendarPage() {
         </div>
       )}
 
-      {!hasSheet && !hasRangeCTA && <BottomTabBar />}
     </div>
   );
 }

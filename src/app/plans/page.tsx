@@ -9,7 +9,6 @@ import { SkeletonList } from '@/components/Skeleton';
 import { EmptyState } from '@/components/EmptyState';
 import { useToast } from '@/components/Toast';
 import { PageShell, PageHeader, PageContent } from "@/components/layout";
-import BottomTabBar from "@/components/BottomTabBar";
 
 type CustomPlanDay = { dayName: string; exercises: string[]; newExercise: string };
 type CustomPlanState = { name: string; days: CustomPlanDay[] };
@@ -769,7 +768,6 @@ export default function PlansPage() {
         </div>
       </PageContent>
 
-      <BottomTabBar />
     </PageShell>
   );
 }

@@ -3,6 +3,7 @@ import { Inter, Space_Grotesk } from "next/font/google"
 import { Providers } from "./providers"
 import "./globals.css"
 import ClientProviders from "@/components/ClientProviders"
+import AppShell from "@/components/AppShell"
 import { auth } from "@/lib/auth"
 
 const inter = Inter({
@@ -60,7 +61,9 @@ export default async function RootLayout({
       <body
         className={`${inter.variable} ${spaceGrotesk.variable} min-h-screen antialiased`}
       >
-        <Providers session={session}>{children}</Providers>
+        <Providers session={session}>
+          <AppShell>{children}</AppShell>
+        </Providers>
         <ClientProviders />
       </body>
     </html>

@@ -71,29 +71,6 @@ export default function HomeLoading() {
           <div className="h-3 w-24 rounded-md bg-muted animate-pulse" />
         </div>
       </main>
-
-      {/* ── BottomTabBar skeleton ──────────────────────────────── */}
-      <nav
-        aria-label="底部导航"
-        className="fixed bottom-0 left-0 right-0 z-50 border-t border-border/60 safe-bottom"
-        style={{
-          background: 'color-mix(in srgb, rgb(var(--background)) 85%, transparent)',
-          backdropFilter: 'blur(20px)',
-          WebkitBackdropFilter: 'blur(20px)',
-          paddingBottom: 'env(safe-area-inset-bottom, 0px)',
-        }}
-      >
-        <div className="max-w-2xl mx-auto px-1">
-          <div className="flex items-center justify-around py-1.5">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="flex flex-col items-center gap-0.5 py-1.5 px-3 min-w-[3.5rem]">
-                <div className="w-5 h-5 rounded-md bg-muted animate-pulse" />
-                <div className="h-2 w-6 rounded-md bg-muted animate-pulse mt-0.5" />
-              </div>
-            ))}
-          </div>
-        </div>
-      </nav>
     </div>
   )
 }

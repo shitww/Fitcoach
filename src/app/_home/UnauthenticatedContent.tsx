@@ -2,7 +2,6 @@
 
 import { useRouter } from "next/navigation"
 import { useTheme } from "@/contexts/ThemeContext"
-import BottomTabBar from "@/components/BottomTabBar"
 
 export default function UnauthenticatedContent() {
   const router = useRouter()
@@ -57,7 +56,6 @@ export default function UnauthenticatedContent() {
         </div>
       </div>
 
-      <BottomTabBar active="home" />
     </div>
   )
 }

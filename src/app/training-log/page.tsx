@@ -10,7 +10,6 @@ import {
   ChevronDown, Check, Sparkles, Loader2, CalendarDays, X, ShieldAlert
 } from "lucide-react"
 import { PageShell, PageHeader, PageContent } from "@/components/layout"
-import BottomTabBar from "@/components/BottomTabBar"
 import { logger } from "@/lib/logger"
 
 const MuscleHeatmap = dynamic(
@@ -412,7 +411,6 @@ function TrainingAnalysisContent() {
 
       </PageContent>
 
-      <BottomTabBar active="training" />
     </PageShell>
   )
 }

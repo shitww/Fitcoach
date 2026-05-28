@@ -2,7 +2,6 @@ import { Suspense } from "react"
 import { redirect } from "next/navigation"
 import { auth } from "@/lib/auth"
 import { PageShell, PageHeader, PageContent } from "@/components/layout"
-import BottomTabBar from "@/components/BottomTabBar"
 import QuickStatsIsland from "./_components/QuickStatsIsland"
 import DietClientIsland from "./_components/DietClientIsland"
 import { Utensils } from "lucide-react"
@@ -86,7 +85,6 @@ export default async function DietAnalysisPage() {
           <DietClientIsland />
         </Suspense>
       </PageContent>
-      <BottomTabBar active="diet" />
     </PageShell>
   )
 }
