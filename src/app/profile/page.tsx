@@ -4,48 +4,82 @@ import { useSession, signOut } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import { useState, useEffect } from "react"
 import {
-  User, Mail, Calendar, LogOut, Dumbbell, Clock,
-  TrendingUp, ChevronRight, Loader2, Bell, Shield, Flame, Palette, Download
+  User, Calendar, LogOut, ChevronRight, Loader2, Bell, Shield, Flame, Palette, Download
 } from "lucide-react"
 import { logger } from "@/lib/logger";
 import { clearUserStorage, clearLegacyStorage } from "@/lib/user-storage";
 import { useTheme } from "@/contexts/ThemeContext";
 import { AmbientGlow } from "@/components/AmbientGlow";
 import { isRunningStandalone, showInstallPrompt } from "@/lib/pwa-utils";
+import { useToast } from "@/components/Toast";
+import { METRICS, type BodyDataRecord, type MetricConfig, findRecordByLocalDay, startOfLocalDay, isSameLocalDay, formatMetricValue } from "@/lib/body-metrics";
+import { IdentityCard } from "./_components/IdentityCard";
+import { BodyKpiCard } from "./_components/BodyKpiCard";
+import { MetricCard } from "./_components/MetricCard";
+import { MetricEditorSheet } from "./_components/MetricEditorSheet";
+import BottomTabBar from "@/components/BottomTabBar";
+
+function formatTimeText(dateStr: string): string {
+  const d = new Date(dateStr);
+  const now = new Date();
+  if (isSameLocalDay(d, now)) return "今天";
+  return `${d.getMonth() + 1}月${d.getDate()}日`;
+}
+
+function findLatestMetric(records: BodyDataRecord[], key: keyof BodyDataRecord): { value: number; date: string } | null {
+  for (const r of records) {
+    const v = r[key];
+    if (v != null) {
+      return { value: v as number, date: r.date };
+    }
+  }
+  return null;
+}
+
+function computeWeightDelta(records: BodyDataRecord[]): number | null {
+  const withWeight = records.filter((r) => r.weight != null);
+  if (withWeight.length < 2) return null;
+  const latest = withWeight[0].weight!;
+  const prev = withWeight[1].weight!;
+  return Math.round((latest - prev) * 10) / 10;
+}
 
 export default function ProfilePage() {
   const router = useRouter()
   const { data: session, status } = useSession()
+  const { toast } = useToast()
   const [loggingOut, setLoggingOut] = useState(false)
-  const [profileStats, setProfileStats] = useState<any>(null)
   const [freshAvatar, setFreshAvatar] = useState<string | null>(null)
+
+  const [records, setRecords] = useState<BodyDataRecord[]>([])
+  const [bodyDataLoading, setBodyDataLoading] = useState(false)
+
+  const [activeMetric, setActiveMetric] = useState<MetricConfig | null>(null)
+  const [editorOpen, setEditorOpen] = useState(false)
 
   const user = session?.user
 
-  useEffect(() => {
-    if (status === 'authenticated') {
-      fetch('/api/analysis/summary?period=year', {
-        credentials: "include"
-      })
-        .then(r => {
-          if (r.status === 401) {
-            logger.warn("User not authenticated for profile stats");
-            return null;
-          } else if (r.ok) {
-            return r.json();
-          } else {
-            return r.text().then(text => {
-              logger.warn("Profile stats API warning:", text);
-              return null;
-            });
-          }
-        })
-        .then(data => { if (data) setProfileStats(data); })
-        .catch((error) => {
-          logger.error("Profile stats fetch error:", error);
-        })
+  const reloadBodyData = async () => {
+    if (status !== "authenticated") return;
+    setBodyDataLoading(true);
+    try {
+      const res = await fetch("/api/body-data?limit=30", { credentials: "include" });
+      if (!res.ok) throw new Error("fetch failed");
+      const data = await res.json();
+      setRecords(data.records ?? []);
+    } catch (err) {
+      logger.error("Body data reload error:", err);
+      toast({ message: "身体数据加载失败", type: "error" });
+    } finally {
+      setBodyDataLoading(false);
     }
-  }, [status])
+  };
+
+  useEffect(() => {
+    if (status === "authenticated") {
+      reloadBodyData();
+    }
+  }, [status]);
 
   // 头像更新后，NextAuth JWT 可能需要一段时间才刷新到 session。
   // 为了避免“刷新仍显示旧头像，必须重新登录”，在个人中心额外从 DB 拉一次最新头像。
@@ -65,11 +99,9 @@ export default function ProfilePage() {
   const handleLogout = async () => {
     setLoggingOut(true)
     try {
-      // 清除当前用户的本地缓存数据
       if (user?.id) {
         clearUserStorage(user.id)
       }
-      // 清除旧版非隔离数据
       clearLegacyStorage()
 
       await fetch('/api/auth/logout', {
@@ -95,21 +127,57 @@ export default function ProfilePage() {
     { icon: Calendar, label: '训练目标', desc: '设置周训练计划和目标', path: '/goals' },
   ]
 
-  const formatVol = (v: number) => {
-    if (v >= 1000) return (v / 1000).toFixed(1) + 't'
-    return v + 'kg'
-  }
+  const todayRecord = findRecordByLocalDay(records, new Date());
+  const weightInfo = findLatestMetric(records, "weight");
+  const bodyFatInfo = findLatestMetric(records, "bodyFat");
+  const waistInfo = findLatestMetric(records, "waist");
+  const weightDelta = computeWeightDelta(records);
+
+  const openEditor = (metric: MetricConfig) => {
+    setActiveMetric(metric);
+    setEditorOpen(true);
+  };
+
+  const handleSave = async (value: number) => {
+    if (!activeMetric) return;
+    const metricKey = activeMetric.key as keyof BodyDataRecord;
+    const todayISO = startOfLocalDay(new Date()).toISOString();
+
+    if (todayRecord?.id) {
+      const res = await fetch(`/api/body-data/${todayRecord.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ [metricKey]: value }),
+      });
+      if (!res.ok) throw new Error("PATCH failed");
+    } else {
+      const res = await fetch("/api/body-data", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ date: todayISO, [metricKey]: value }),
+      });
+      if (!res.ok) throw new Error("POST failed");
+    }
+    await reloadBodyData();
+  };
+
+  const latestForMetric = (cfg: MetricConfig) => {
+    const info = findLatestMetric(records, cfg.key as keyof BodyDataRecord);
+    return {
+      value: info?.value ?? null,
+      dateText: info?.date ? formatTimeText(info.date) : null,
+    };
+  };
 
   return (
     <div className="min-h-screen" style={{ background: t.bg, color: t.text }}>
-
-      {/* Ambient glow */}
       <AmbientGlow />
 
-      <div className="relative max-w-5xl mx-auto px-4 sm:px-6 py-6">
-
+      <div className="relative max-w-5xl mx-auto px-4 sm:px-6 py-6 pb-28">
         {/* Header */}
-        <header className="flex items-center justify-between mb-8">
+        <header className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
             <button
               onClick={() => router.back()}
@@ -128,66 +196,58 @@ export default function ProfilePage() {
           </div>
         ) : status === 'authenticated' && user ? (
           <>
+            {/* Identity */}
+            <IdentityCard
+              name={user.name}
+              email={user.email}
+              avatar={(freshAvatar ?? user.avatar) as string | null}
+            />
 
-            {/* User Card */}
-            <div className="rounded-2xl p-6 mb-6" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
-              <div className="flex items-center gap-4">
-                {/* Avatar */}
-                <div className="w-20 h-20 rounded-2xl flex items-center justify-center text-3xl font-black overflow-hidden"
-                  style={{
-                    background: 'linear-gradient(135deg, var(--accent) 0%, var(--accent-dim) 100%)',
-                    boxShadow: '0 0 24px var(--accent-glow)'
-                  }}>
-                  {(freshAvatar ?? user.avatar) ? (
-                    <img
-                      src={(freshAvatar ?? user.avatar) as string}
-                      alt="头像"
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <span style={{ color: 'var(--accent)' }}>{user.name?.charAt(0).toUpperCase() || 'U'}</span>
-                  )}
-                </div>
-                <div className="flex-1">
-                  <h2 className="text-xl font-black">{user.name || '健身爱好者'}</h2>
-                  <p className="text-sm flex items-center gap-1 mt-1" style={{ color: 'var(--text-low)' }}>
-                    <Mail className="w-4 h-4" />
-                    {user.email}
-                  </p>
-                  <div className="flex items-center gap-2 mt-2">
-                    <span className="px-2.5 py-0.5 rounded-full text-xs font-bold"
-                      style={{ background: 'var(--accent-dim)', color: 'var(--accent)', border: '1px solid var(--accent-glow)' }}>
-                      已验证
-                    </span>
-                    <span className="px-2.5 py-0.5 rounded-full text-xs font-bold"
-                      style={{ background: 'var(--surface-2)', color: 'var(--text-low)', border: '1px solid var(--border)' }}>
-                      初级训练者
-                    </span>
-                  </div>
-                </div>
-              </div>
+            {/* Body KPI */}
+            <div className="mt-4">
+              <BodyKpiCard
+                weight={weightInfo?.value ?? null}
+                weightDelta={weightDelta}
+                bodyFat={bodyFatInfo?.value ?? null}
+                waist={waistInfo?.value ?? null}
+                updatedAtText={weightInfo?.date ? formatTimeText(weightInfo.date) : null}
+                onRecordClick={() => {
+                  const w = METRICS.find((m) => m.key === "weight");
+                  if (w) openEditor(w);
+                }}
+                onTrendClick={() => toast({ message: "趋势功能即将上线", type: "info" })}
+              />
             </div>
 
-            {/* Stats */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
-              {[
-                { icon: Flame, label: '训练天数', value: profileStats?.trainingDays ?? '—', color: 'var(--accent)' },
-                { icon: Dumbbell, label: '训练次数', value: profileStats?.totalCount ?? '—', unit: '次', color: 'var(--accent)' },
-                { icon: TrendingUp, label: '累计训练量', value: formatVol(profileStats?.allTotalVolume ?? 0), color: 'var(--accent)' },
-                { icon: Clock, label: '累计组数', value: profileStats?.allTotalSets ?? '—', unit: '组', color: 'var(--accent)' },
-              ].map((stat, i) => (
-                <div key={i} className="rounded-xl p-4 text-center" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
-                  <stat.icon className="w-5 h-5 mx-auto mb-2" style={{ color: stat.color }} />
-                  <div className="text-xl font-black" style={{ color: stat.color }}>
-                    {stat.value}{stat.unit && <span className="text-sm ml-0.5" style={{ color: 'var(--text-faint)' }}>{stat.unit}</span>}
-                  </div>
-                  <div className="text-xs mt-1" style={{ color: 'var(--text-low)' }}>{stat.label}</div>
+            {/* Metrics Grid */}
+            <div className="mt-5">
+              <div className="text-sm font-black mb-3" style={{ color: "var(--text-low)" }}>
+                身体数据
+              </div>
+              {bodyDataLoading && records.length === 0 ? (
+                <div className="flex items-center justify-center py-10">
+                  <Loader2 className="w-6 h-6 animate-spin" style={{ color: 'var(--accent)' }} />
                 </div>
-              ))}
+              ) : (
+                <div className="grid grid-cols-2 gap-3">
+                  {METRICS.filter((m) => m.key !== "weight").map((metric) => {
+                    const { value, dateText } = latestForMetric(metric);
+                    return (
+                      <MetricCard
+                        key={metric.key}
+                        label={metric.label}
+                        valueText={value != null ? formatMetricValue(value, metric.unit) : "未记录"}
+                        timeText={dateText ?? undefined}
+                        onClick={() => openEditor(metric)}
+                      />
+                    );
+                  })}
+                </div>
+              )}
             </div>
 
             {/* Theme Toggle */}
-            <div className="rounded-2xl p-4 mb-4 flex items-center gap-4" style={{ background: t.surface, border: `1px solid ${t.border}` }}>
+            <div className="rounded-2xl p-4 mt-6 mb-4 flex items-center gap-4" style={{ background: t.surface, border: `1px solid ${t.border}` }}>
               <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: t.accentDim }}>
                 <Palette className="w-5 h-5" style={{ color: t.accent }} />
               </div>
@@ -236,7 +296,7 @@ export default function ProfilePage() {
               ))}
             </div>
 
-            {/* Install PWA — only shown when not yet installed */}
+            {/* Install PWA */}
             {!isRunningStandalone() && (
               <div className="rounded-2xl overflow-hidden mb-4" style={{ background: t.surface, border: `1px solid ${t.border}` }}>
                 <button
@@ -292,6 +352,19 @@ export default function ProfilePage() {
           </div>
         )}
       </div>
+
+      <BottomTabBar active="profile" />
+
+      {activeMetric && (
+        <MetricEditorSheet
+          open={editorOpen}
+          onOpenChange={setEditorOpen}
+          metric={activeMetric}
+          latestValue={latestForMetric(activeMetric).value}
+          latestDateText={latestForMetric(activeMetric).dateText}
+          onSave={handleSave}
+        />
+      )}
     </div>
   )
 }
