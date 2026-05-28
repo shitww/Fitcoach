@@ -1,11 +1,9 @@
-import { Suspense } from "react"
 import { auth } from "@/lib/auth"
 import { getDashboardSnapshot } from "@/lib/kv/dashboard"
 import { createDefaultDashboardStatus } from "@/lib/dashboard"
 import HomeShell from "./_home/HomeShell"
 import CriticalBWidgets from "./_home/CriticalBWidgets"
 import ExtendedWidgets from "./_home/ExtendedWidgets"
-import CriticalBSkeleton from "./_home/CriticalBSkeleton"
 import UnauthenticatedContent from "./_home/UnauthenticatedContent"
 import DashboardMeta from "@/components/DashboardMeta"
 import StreakCard from "@/components/StreakCard"
@@ -22,7 +20,7 @@ export default async function HomePage() {
 
   return (
     <HomeShell>
-      {/* Critical-A: instant — no Suspense, no skeleton */}
+      {/* Critical-A: instant — server-rendered streak, no skeleton */}
       <div className="staged-reveal">
         <div className="reveal-item" style={{ "--delay": "0ms" } as React.CSSProperties}>
           {snapshot?.stale && (
@@ -32,15 +30,11 @@ export default async function HomePage() {
         </div>
       </div>
 
-      {/* Critical-B: plans + real status — Suspense with skeleton */}
-      <Suspense fallback={<CriticalBSkeleton />}>
-        <CriticalBWidgets userId={userId} />
-      </Suspense>
+      {/* Critical-B: plans + status — client-side offline-first cache */}
+      <CriticalBWidgets userId={userId} />
 
-      {/* Extended: silent background enrich — no skeleton */}
-      <Suspense>
-        <ExtendedWidgets userId={userId} />
-      </Suspense>
+      {/* Extended: nutrition — client-side offline-first cache */}
+      <ExtendedWidgets userId={userId} />
     </HomeShell>
   )
 }

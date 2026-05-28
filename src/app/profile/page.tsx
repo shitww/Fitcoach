@@ -5,18 +5,20 @@ import { useRouter } from "next/navigation"
 import { useState, useEffect } from "react"
 import {
   User, Mail, Calendar, LogOut, Dumbbell, Clock,
-  TrendingUp, ChevronRight, Loader2, Bell, Shield, Flame, Palette
+  TrendingUp, ChevronRight, Loader2, Bell, Shield, Flame, Palette, Download
 } from "lucide-react"
 import { logger } from "@/lib/logger";
 import { clearUserStorage, clearLegacyStorage } from "@/lib/user-storage";
 import { useTheme } from "@/contexts/ThemeContext";
 import { AmbientGlow } from "@/components/AmbientGlow";
+import { isRunningStandalone, showInstallPrompt } from "@/lib/pwa-utils";
 
 export default function ProfilePage() {
   const router = useRouter()
   const { data: session, status } = useSession()
   const [loggingOut, setLoggingOut] = useState(false)
   const [profileStats, setProfileStats] = useState<any>(null)
+  const [freshAvatar, setFreshAvatar] = useState<string | null>(null)
 
   const user = session?.user
 
@@ -43,6 +45,21 @@ export default function ProfilePage() {
           logger.error("Profile stats fetch error:", error);
         })
     }
+  }, [status])
+
+  // 头像更新后，NextAuth JWT 可能需要一段时间才刷新到 session。
+  // 为了避免“刷新仍显示旧头像，必须重新登录”，在个人中心额外从 DB 拉一次最新头像。
+  useEffect(() => {
+    if (status !== 'authenticated') return
+    fetch('/api/auth/me', { credentials: 'include', cache: 'no-store' as any })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        const a = data?.user?.avatar ?? null
+        setFreshAvatar(a)
+      })
+      .catch(() => {
+        // ignore
+      })
   }, [status])
 
   const handleLogout = async () => {
@@ -121,8 +138,12 @@ export default function ProfilePage() {
                     background: 'linear-gradient(135deg, var(--accent) 0%, var(--accent-dim) 100%)',
                     boxShadow: '0 0 24px var(--accent-glow)'
                   }}>
-                  {user.avatar ? (
-                    <img src={user.avatar} alt="头像" className="w-full h-full object-cover" />
+                  {(freshAvatar ?? user.avatar) ? (
+                    <img
+                      src={(freshAvatar ?? user.avatar) as string}
+                      alt="头像"
+                      className="w-full h-full object-cover"
+                    />
                   ) : (
                     <span style={{ color: 'var(--accent)' }}>{user.name?.charAt(0).toUpperCase() || 'U'}</span>
                   )}
@@ -214,6 +235,26 @@ export default function ProfilePage() {
                 </button>
               ))}
             </div>
+
+            {/* Install PWA — only shown when not yet installed */}
+            {!isRunningStandalone() && (
+              <div className="rounded-2xl overflow-hidden mb-4" style={{ background: t.surface, border: `1px solid ${t.border}` }}>
+                <button
+                  onClick={showInstallPrompt}
+                  className="w-full flex items-center gap-4 p-4 transition-colors"
+                >
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center"
+                    style={{ background: t.accentDim }}>
+                    <Download className="w-5 h-5" style={{ color: t.accent }} />
+                  </div>
+                  <div className="flex-1 text-left">
+                    <div className="font-bold text-sm" style={{ color: t.text }}>添加到主屏幕</div>
+                    <div className="text-xs" style={{ color: t.textMuted }}>像原生App一样快速启动</div>
+                  </div>
+                  <ChevronRight className="w-5 h-5" style={{ color: t.textFaint }} />
+                </button>
+              </div>
+            )}
 
             {/* Logout */}
             <button

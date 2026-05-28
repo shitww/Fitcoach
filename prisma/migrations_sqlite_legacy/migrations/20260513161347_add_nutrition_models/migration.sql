@@ -170,3 +170,4 @@ CREATE INDEX "WaterLog_userId_date_idx" ON "WaterLog"("userId", "date");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "UserSettings_userId_key" ON "UserSettings"("userId");
+

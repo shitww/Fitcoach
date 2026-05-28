@@ -1,43 +1,49 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { RefreshCw, X } from 'lucide-react'
+import { Sparkles, X } from 'lucide-react'
 
+/**
+ * Lightweight update toast.
+ * SW now auto-activates (skipWaiting). This banner just informs the user.
+ * If training is in progress, it shows "将在训练结束后自动更新".
+ */
 export default function PWAUpdateBanner() {
   const [visible, setVisible] = useState(false)
+  const [deferred, setDeferred] = useState(false)
 
   useEffect(() => {
     function onUpdateReady() {
+      setDeferred(false)
       setVisible(true)
     }
-    window.addEventListener('xfitx:sw-update', onUpdateReady)
-    return () => window.removeEventListener('xfitx:sw-update', onUpdateReady)
-  }, [])
-
-  async function handleRefresh() {
-    try {
-      const reg = await navigator.serviceWorker.getRegistration('/')
-      if (reg?.waiting) {
-        // Tell the waiting SW to skip its waiting phase and become active
-        reg.waiting.postMessage({ type: 'SKIP_WAITING' })
+    function onUpdatePending(e: Event) {
+      const detail = (e as CustomEvent).detail
+      if (detail?.reason === 'training-in-progress') {
+        setDeferred(true)
+        setVisible(true)
       }
-      // Reload as soon as the new SW takes control; fallback after 600ms
-      navigator.serviceWorker.addEventListener(
-        'controllerchange',
-        () => window.location.reload(),
-        { once: true },
-      )
-      setTimeout(() => window.location.reload(), 600)
-    } catch {
-      window.location.reload()
     }
-  }
+    window.addEventListener('xfitx:sw-update', onUpdateReady)
+    window.addEventListener('xfitx:sw-update-pending', onUpdatePending)
+
+    // Auto-dismiss after 4 seconds
+    if (visible) {
+      const t = setTimeout(() => setVisible(false), 4000)
+      return () => clearTimeout(t)
+    }
+
+    return () => {
+      window.removeEventListener('xfitx:sw-update', onUpdateReady)
+      window.removeEventListener('xfitx:sw-update-pending', onUpdatePending)
+    }
+  }, [visible])
 
   if (!visible) return null
 
   return (
     <div
-      role="alert"
+      role="status"
       aria-live="polite"
       style={{
         position: 'fixed',
@@ -50,15 +56,15 @@ export default function PWAUpdateBanner() {
         border: '1px solid rgba(204,255,0,0.25)',
         boxShadow:
           '0 0 32px rgba(204,255,0,0.10), 0 16px 48px rgba(0,0,0,0.6)',
-        padding: '12px 14px',
+        padding: '10px 14px',
         display: 'flex',
         alignItems: 'center',
         gap: '10px',
         animation: 'slide-up 0.32s cubic-bezier(0.34,1.26,0.64,1)',
       }}
     >
-      <RefreshCw
-        size={18}
+      <Sparkles
+        size={16}
         style={{ color: '#CCFF00', flexShrink: 0 }}
         aria-hidden="true"
       />
@@ -66,13 +72,12 @@ export default function PWAUpdateBanner() {
       <div style={{ flex: 1, minWidth: 0 }}>
         <div
           style={{
-            fontSize: 13,
+            fontSize: 12,
             fontWeight: 700,
             color: 'var(--foreground, #fff)',
-            marginBottom: 2,
           }}
         >
-          发现新版本
+          {deferred ? '新版本已就绪' : '已自动更新到最新版'}
         </div>
         <div
           style={{
@@ -80,32 +85,15 @@ export default function PWAUpdateBanner() {
             color: 'var(--text-secondary, rgba(255,255,255,0.45))',
           }}
         >
-          刷新后生效，不影响当前操作
+          {deferred
+            ? '训练结束后将自动应用，无需操作'
+            : '下次打开时即可体验新功能'}
         </div>
       </div>
 
       <button
-        onClick={handleRefresh}
-        style={{
-          flexShrink: 0,
-          padding: '7px 14px',
-          borderRadius: 10,
-          background: '#CCFF00',
-          color: '#000',
-          fontSize: 12,
-          fontWeight: 700,
-          border: 'none',
-          cursor: 'pointer',
-          WebkitTapHighlightColor: 'transparent',
-          touchAction: 'manipulation',
-        }}
-      >
-        刷新
-      </button>
-
-      <button
         onClick={() => setVisible(false)}
-        aria-label="暂时关闭更新提示"
+        aria-label="关闭"
         style={{
           flexShrink: 0,
           padding: 6,

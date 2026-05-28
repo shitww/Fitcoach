@@ -23,3 +23,4 @@ ALTER TABLE "new_UserSettings" RENAME TO "UserSettings";
 CREATE UNIQUE INDEX "UserSettings_userId_key" ON "UserSettings"("userId");
 PRAGMA foreign_keys=ON;
 PRAGMA defer_foreign_keys=OFF;
+

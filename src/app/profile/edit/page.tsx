@@ -20,7 +20,7 @@ import { Select } from "@/components/ui/select"
 
 export default function EditProfilePage() {
   const router = useRouter()
-  const { data: session, status } = useSession()
+  const { data: session, status, update } = useSession()
   const { toast } = useToast()
   const [loading, setLoading] = useState(false)
   const [uploadingAvatar, setUploadingAvatar] = useState(false)
@@ -129,6 +129,12 @@ export default function EditProfilePage() {
       if (response.ok) {
         const data = await response.json()
         logger.info('头像上传成功:', data)
+        if (data?.avatar) {
+          // 立即更新 NextAuth session，避免返回个人中心后仍显示旧头像
+          await update({ avatar: data.avatar } as any)
+          // 用线上 URL 覆盖本地预览，确保刷新后也一致
+          setAvatarPreview(data.avatar)
+        }
       } else {
         const errorData = await response.json()
         toast({ message: '头像上传失败：' + (errorData.error || '未知错误'), type: 'error' })
@@ -156,6 +162,11 @@ export default function EditProfilePage() {
         router.push('/auth/signin')
       } else if (response.ok) {
         logger.info('保存成功:', await response.json())
+        // 同步刷新 session 中的用户字段（避免回到个人中心仍显示旧数据）
+        await update({
+          name: updateData.name,
+          email: updateData.email,
+        } as any)
         window.location.href = '/profile'
       } else {
         logger.warn('保存失败:', await response.text())

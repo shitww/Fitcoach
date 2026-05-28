@@ -36,3 +36,4 @@ DROP TABLE "WorkoutSet";
 ALTER TABLE "new_WorkoutSet" RENAME TO "WorkoutSet";
 PRAGMA foreign_keys=ON;
 PRAGMA defer_foreign_keys=OFF;
+

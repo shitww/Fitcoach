@@ -2,11 +2,12 @@
 
 import { useEffect, useState, useRef } from 'react'
 import { X, Share } from 'lucide-react'
+import { isRunningStandalone, detectIOS } from '@/lib/pwa-utils'
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 
 const DISMISS_KEY = 'xfitx-pwa-prompt-dismissed'
-const DISMISS_DURATION_MS = 7 * 24 * 60 * 60 * 1000 // 7 days
+const DISMISS_DURATION_MS = 7 * 24 * 60 * 60_000 // 7 days
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -23,22 +24,6 @@ function saveDismissal() {
   try {
     localStorage.setItem(DISMISS_KEY, String(Date.now()))
   } catch {}
-}
-
-function isRunningStandalone(): boolean {
-  return (
-    window.matchMedia('(display-mode: standalone)').matches ||
-    // iOS Safari reports navigator.standalone when installed
-    (navigator as Navigator & { standalone?: boolean }).standalone === true
-  )
-}
-
-function detectIOS(): boolean {
-  return (
-    /iphone|ipad|ipod/i.test(navigator.userAgent) ||
-    // iPadOS 13+ spoof as "Macintosh" with touch support
-    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
-  )
 }
 
 // ─── Types ──────────────────────────────────────────────────────────────────
@@ -63,11 +48,28 @@ export default function PWAInstallPrompt() {
 
     if (detectIOS()) {
       // iOS: show instructions after 5s — install must be done manually by user
-      const timer = setTimeout(() => {
+      let timer: ReturnType<typeof setTimeout>
+
+      // Also listen for manual trigger from profile/settings pages
+      function onManualTrigger() {
+        clearTimeout(timer)
+        // Clear dismissal so the user can see the prompt immediately
+        try { localStorage.removeItem(DISMISS_KEY) } catch {}
+        setPlatform('ios')
+        setVisible(true)
+      }
+
+      timer = setTimeout(() => {
         setPlatform('ios')
         setVisible(true)
       }, 5000)
-      return () => clearTimeout(timer)
+
+      window.addEventListener('xfitx:trigger-install', onManualTrigger)
+
+      return () => {
+        clearTimeout(timer)
+        window.removeEventListener('xfitx:trigger-install', onManualTrigger)
+      }
     }
 
     // Android / Desktop Chrome: wait for the browser to fire beforeinstallprompt
@@ -86,12 +88,22 @@ export default function PWAInstallPrompt() {
       setVisible(false)
     }
 
+    // Manual trigger from profile/settings — show immediately
+    function onManualTrigger() {
+      clearTimeout(showTimer)
+      try { localStorage.removeItem(DISMISS_KEY) } catch {}
+      setPlatform('android')
+      setVisible(true)
+    }
+
     window.addEventListener('beforeinstallprompt', onBeforeInstall)
     window.addEventListener('appinstalled', onAppInstalled)
+    window.addEventListener('xfitx:trigger-install', onManualTrigger)
 
     return () => {
       window.removeEventListener('beforeinstallprompt', onBeforeInstall)
       window.removeEventListener('appinstalled', onAppInstalled)
+      window.removeEventListener('xfitx:trigger-install', onManualTrigger)
       clearTimeout(showTimer)
     }
   }, [])

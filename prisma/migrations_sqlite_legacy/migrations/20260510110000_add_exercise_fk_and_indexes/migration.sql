@@ -42,3 +42,4 @@ CREATE INDEX "Exercise_userId_idx" ON "Exercise"("userId");
 
 -- CreateIndex
 CREATE INDEX "Workout_userId_date_idx" ON "Workout"("userId", "date");
+

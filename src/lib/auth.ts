@@ -43,7 +43,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     })
   ],
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger, session }) {
       if (user) {
         // 首次登录时把用户信息存入 JWT，后续请求不再查数据库
         token.userId = user.id;
@@ -51,6 +51,15 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         token.name = user.name;
         token.email = user.email;
         token.avatar = user.avatar;
+      }
+
+      // 允许客户端通过 useSession().update() 刷新 session 中的用户字段
+      // 用于头像/昵称更新后不必重新登录即可生效（最小变更，避免额外查询）
+      if (trigger === "update" && session?.user) {
+        const u = session.user as any;
+        if (u.name !== undefined) token.name = u.name;
+        if (u.email !== undefined) token.email = u.email;
+        if (u.avatar !== undefined) token.avatar = u.avatar;
       }
       return token;
     },

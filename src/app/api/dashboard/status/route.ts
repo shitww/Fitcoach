@@ -20,7 +20,7 @@ export interface DashboardStatus {
   fatigueLevel: FatigueLevel
 }
 
-export function deriveCoachInsight(
+function deriveCoachInsight(
   status: UserStatus,
   streak: number,
   daysSince: number,

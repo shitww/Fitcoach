@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { ArrowLeft, Dumbbell, Calendar, Clock, TrendingUp, Trash2, Flame, AlertCircle, Check, Zap, Trophy } from 'lucide-react'
@@ -12,57 +12,60 @@ import { useToast } from '@/components/Toast'
 import { AmbientGlow } from "@/components/AmbientGlow"
 import BottomTabBar from "@/components/BottomTabBar"
 import { WorkoutMonthCalendar } from '@/components/WorkoutMonthCalendar'
+import PullToRefresh from '@/components/PullToRefresh'
 
 export default function HistoryPage() {
   const router = useRouter()
-  const { status } = useSession()
+  const { status, data: sessionData } = useSession()
+  const userId = sessionData?.user?.id ?? ''
   const { isTrainingActive, isPaused } = useWorkoutTimer()
   const hasActiveSession = isTrainingActive || isPaused
+
   const [workouts, setWorkouts] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<Error | null>(null)
   const [deleting, setDeleting] = useState<string | null>(null)
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
   const { toast } = useToast()
 
-  useEffect(() => {
-    if (status === 'authenticated') {
-      fetchWorkouts()
-    } else {
-      setLoading(false)
-    }
-  }, [status])
-
-  const fetchWorkouts = async () => {
-    setError(false)
+  const fetchHistory = useCallback(async () => {
+    setIsLoading(true)
     try {
-      const res = await fetch('/api/workout?limit=100', { credentials: "include" })
-      if (res.status === 401) { logger.warn("User not authenticated"); setLoading(false); return; }
+      const res = await fetch('/api/workout?limit=100', { credentials: 'include' })
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
-      const data = await res.json()
-      setWorkouts(data.data || [])
+      const json = await res.json()
+      setWorkouts(json.data ?? [])
+      setError(null)
     } catch (err) {
-      logger.error('Error:', err)
-      setError(true)
+      setError(err instanceof Error ? err : new Error(String(err)))
     } finally {
-      setLoading(false)
+      setIsLoading(false)
     }
-  }
+  }, [])
+
+  const refresh = useCallback(() => { void fetchHistory() }, [fetchHistory])
+
+  useEffect(() => {
+    if (userId) void fetchHistory()
+  }, [userId, fetchHistory])
 
   const handleDelete = async (id: string) => {
     if (confirmDeleteId !== id) { setConfirmDeleteId(id); return; }
     setConfirmDeleteId(null);
     setDeleting(id)
+    // Optimistic local removal
+    setWorkouts((prev) => prev.filter((w) => w.id !== id))
     try {
       const res = await fetch(`/api/workout?id=${id}`, { method: 'DELETE', credentials: 'include' })
-      if (res.ok) {
-        setWorkouts(workouts.filter(w => w.id !== id))
-      } else {
+      if (!res.ok) {
         toast({ message: '删除失败', type: 'error' })
+        // Revert optimistic removal by refreshing cache
+        void refresh()
       }
-    } catch (error) {
-      logger.error('Delete error:', error)
+    } catch (err) {
+      logger.error('Delete error:', err)
       toast({ message: '删除失败', type: 'error' })
+      void refresh()
     } finally {
       setDeleting(null)
     }
@@ -160,9 +163,10 @@ export default function HistoryPage() {
   return (
     <div className="min-h-screen pb-28" style={{ background: 'var(--background)', color: 'var(--foreground)' }}>
       <AmbientGlow />
-      <div className="relative max-w-3xl mx-auto px-4 py-6">
+      <PullToRefresh onRefresh={refresh}>
+        <div className="relative max-w-3xl mx-auto px-4 py-6">
 
-        {/* Header */}
+          {/* Header */}
         <div className="flex items-center gap-4 mb-6">
           <button
             onClick={() => router.back()}
@@ -179,7 +183,7 @@ export default function HistoryPage() {
 
         {/* Workout day map for calendar */}
         {/* Stats strip */}
-        {!loading && !error && workouts.length > 0 && (
+        {!isLoading && !error && workouts.length > 0 && (
           <>
             <div className="grid grid-cols-4 gap-2 mb-4">
               {[
@@ -201,10 +205,10 @@ export default function HistoryPage() {
         )}
 
         {/* Loading / error / empty */}
-        {loading ? (
+        {isLoading ? (
           <SkeletonList rows={4} />
         ) : error ? (
-          <EmptyState icon={<AlertCircle className="w-8 h-8" />} title="加载失败" description="请检查网络后重试" action={{ label: '重新加载', onClick: fetchWorkouts }} />
+          <EmptyState icon={<AlertCircle className="w-8 h-8" />} title="加载失败" description="请检查网络后重试" action={{ label: '重新加载', onClick: refresh }} />
         ) : workouts.length === 0 ? (
           <EmptyState icon={<Dumbbell className="w-8 h-8" />} title="还没有训练记录" description="完成第一次训练后，这里会显示你的历史记录" action={{ label: hasActiveSession ? '继续训练' : '开始训练', onClick: () => router.push('/workout') }} />
         ) : (
@@ -309,9 +313,10 @@ export default function HistoryPage() {
             })}
           </div>
         )}
-      </div>
+        </div>
+      </PullToRefresh>
 
-      <BottomTabBar active="training" />
+      <BottomTabBar active="history" />
     </div>
   )
 }

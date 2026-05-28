@@ -8,12 +8,18 @@ export async function GET(request: NextRequest) {
   try {
     const session = await auth();
     if (!session?.user) {
-      return NextResponse.json({ user: null });
+      return NextResponse.json(
+        { user: null },
+        { headers: { 'Cache-Control': 'no-store, max-age=0' } }
+      );
     }
 
     const userId = await getDbUserId();
     if (!userId) {
-      return NextResponse.json({ user: null });
+      return NextResponse.json(
+        { user: null },
+        { headers: { 'Cache-Control': 'no-store, max-age=0' } }
+      );
     }
 
     const dbUser = await prisma.user.findUnique({
@@ -30,11 +36,15 @@ export async function GET(request: NextRequest) {
       }
     });
 
-    return NextResponse.json({
-      user: dbUser
-    });
+    return NextResponse.json(
+      { user: dbUser },
+      { headers: { 'Cache-Control': 'no-store, max-age=0' } }
+    );
   } catch (error) {
-    return NextResponse.json({ user: null });
+    return NextResponse.json(
+      { user: null },
+      { headers: { 'Cache-Control': 'no-store, max-age=0' } }
+    );
   }
 }
 

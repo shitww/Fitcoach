@@ -1,9 +1,20 @@
-// XFITX Service Worker — Phase 3.5
+// XFITX Service Worker — Phase 4 (Silent Auto-Update)
 // Strategy: Cache-First (static), Stale-While-Revalidate (assets), Network-First (pages)
 // Strictly NO caching of API routes, auth, or user data.
-// Phase 3.5: user-controlled update activation; HTML cache eviction (max 20 entries).
+// New: install → skipWaiting immediately → clientsClaim on activate.
 
-const CACHE_NAME = 'xfitx-sw-v2'
+const CACHE_NAME = 'xfitx-sw-v3'
+
+// Dev safety:
+// Service Workers are scoped per-origin. If you ever ran a production build on
+// http://localhost:3000, the SW can keep controlling pages when you later run
+// `next dev` on the same origin and serve stale cached /_next/static assets.
+//
+// That commonly manifests as cryptic webpack runtime errors like:
+// "Cannot read properties of undefined (reading 'call')".
+//
+// To prevent dev breakage, we completely bypass SW caching on localhost/127.
+const DEV_HOSTS = new Set(['localhost', '127.0.0.1'])
 
 // Resources that must be available offline from the very first SW activation.
 // Keep this list minimal — only truly static files with stable URLs.
@@ -17,17 +28,17 @@ const PRECACHE_URLS = [
 const HTML_CACHE_MAX = 20
 
 // ─── Install ───────────────────────────────────────────────────────────────
-// NOTE: skipWaiting is NOT called automatically here.
-// A new SW waits in 'installed' state until PWAUpdateBanner sends {type:'SKIP_WAITING'}.
-// First-time installs activate immediately (no existing controller to displace).
+// Auto-activate: new SW takes over immediately. No user action required.
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(PRECACHE_URLS)),
+    caches.open(CACHE_NAME)
+      .then((cache) => cache.addAll(PRECACHE_URLS))
+      .then(() => self.skipWaiting())
   )
 })
 
 // ─── Message ───────────────────────────────────────────────────────────────
-// PWAUpdateBanner sends this after the user clicks "刷新" on the update prompt.
+// Legacy: still accept SKIP_WAITING from any old client code.
 self.addEventListener('message', (event) => {
   if (event.data?.type === 'SKIP_WAITING') self.skipWaiting()
 })
@@ -54,6 +65,9 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const { request } = event
   const url = new URL(request.url)
+
+  // Never interfere with local development.
+  if (DEV_HOSTS.has(url.hostname)) return
 
   // PASSTHROUGH — never cache these:
   //  · Non-GET requests (POST, PUT, DELETE, etc.)

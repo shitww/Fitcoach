@@ -15,6 +15,8 @@ import { useShallow } from 'zustand/shallow';
 import { useWorkoutTimer, selectTrainingSeconds, selectRestSecondsRemaining } from '@/stores/workoutTimer';
 import { logger } from '@/lib/logger';
 import { MUSCLE_GROUP_MAP } from '@/lib/exercise-constants';
+import { suppressSWReload, allowSWReload } from '@/lib/sw-reload';
+import { saveWorkoutOffline } from '@/lib/offline/workout-save';
 import { getUserStorageItem, setUserStorageItem, removeUserStorageItem } from '@/lib/user-storage';
 import { useToast } from '@/components/Toast';
 import { useWorkoutEffects } from '@/hooks/useWorkoutEffects';
@@ -452,6 +454,15 @@ function WorkoutContent() {
   const [showExitModal, setShowExitModal] = useState(false);
   const [isTimedCdActive, setIsTimedCdActive] = useState(false);
   const [cdGuardPending, setCdGuardPending] = useState<string | null>(null); // exercise name to switch to after confirm
+
+  // Suppress SW auto-reload while training to avoid interrupting active sessions
+  useEffect(() => {
+    if (storeSessionPhase === 'active' || storeSessionPhase === 'paused') {
+      suppressSWReload();
+    } else if (storeSessionPhase === 'idle' || storeSessionPhase === 'done') {
+      allowSWReload();
+    }
+  }, [storeSessionPhase]);
 
   // Keep store's nextExercise in sync so RestBar can read it globally
   useEffect(() => {
@@ -957,8 +968,30 @@ function WorkoutContent() {
       router.push(cardioWorkoutId ? `/summary?id=${cardioWorkoutId}` : '/');
       return;
     } catch (e) {
-      logger.error('保存有氧训练失败:', e);
-      toast({ message: '保存失败，请重试', type: 'error' });
+      logger.error('保存有氧训练失败 (network), falling back to offline:', e);
+      try {
+        const activityName = CARDIO_LABELS[trainingType] || trainingType;
+        const hr = parseInt(cardioAvgHR) || 0;
+        const dist = trainingType === 'treadmill'
+          ? liveTreadmillDistance(cardioParams.speed, snapshotDuration)
+          : 0;
+        const calories = trainingType === 'treadmill'
+          ? calcTreadmillCalories(cardioParams.speed, cardioParams.incline, snapshotDuration)
+          : calcStairCalories(cardioParams.level, snapshotDuration);
+        await saveWorkoutOffline({
+          userId, durationSec: snapshotDuration, totalVolume: 0,
+          notes: JSON.stringify({ type: 'cardio', activity: trainingType, distance: dist, avgHR: hr, calories, speed: cardioParams.speed, incline: cardioParams.incline, level: cardioParams.level, memo: cardioNotes }),
+          type: 'cardio',
+          exercises: [{ name: activityName, muscleGroup: 'cardio', sets: [{ weight: dist, reps: hr, rir: calories, isCardio: true }] }],
+        });
+        if (userId) removeUserStorageItem(userId, 'pending_workout');
+        toast({ message: '已离线保存，联网后自动同步', type: 'success' });
+        router.push('/');
+        return;
+      } catch (offlineErr) {
+        logger.error('Offline cardio save also failed:', offlineErr);
+        toast({ message: '保存失败，请重试', type: 'error' });
+      }
     } finally {
       setIsLoading(false);
     }
@@ -997,8 +1030,20 @@ function WorkoutContent() {
       }
       router.push(workoutId ? `/summary?id=${workoutId}` : '/summary');
     } catch (e) {
-      logger.error('保存自由记录失败:', e);
-      toast({ message: '保存失败，请重试', type: 'error' });
+      logger.error('保存自由记录失败 (network), falling back to offline:', e);
+      try {
+        await saveWorkoutOffline({
+          userId, durationSec: snapshotDuration, totalVolume: 0,
+          notes: freeNotes, type: 'free', exercises: [],
+        });
+        if (userId) removeUserStorageItem(userId, 'pending_workout');
+        toast({ message: '已离线保存，联网后自动同步', type: 'success' });
+        router.push('/');
+        return;
+      } catch (offlineErr) {
+        logger.error('Offline free save also failed:', offlineErr);
+        toast({ message: '保存失败，请重试', type: 'error' });
+      }
     } finally {
       setIsLoading(false);
     }
@@ -1029,8 +1074,21 @@ function WorkoutContent() {
       router.push(recoveryWorkoutId ? `/summary?id=${recoveryWorkoutId}` : '/');
       return;
     } catch (e) {
-      logger.error('保存恢复训练失败:', e);
-      toast({ message: '保存失败，请重试', type: 'error' });
+      logger.error('保存恢复训练失败 (network), falling back to offline:', e);
+      try {
+        await saveWorkoutOffline({
+          userId, durationSec: snapshotDuration, totalVolume: 0,
+          notes: `恢复训练：${recoveryPlan?.focusLabel ?? '放松恢复'}`,
+          type: 'recovery', exercises: [],
+        });
+        if (userId) removeUserStorageItem(userId, 'pending_workout');
+        toast({ message: '已离线保存，联网后自动同步', type: 'success' });
+        router.push('/');
+        return;
+      } catch (offlineErr) {
+        logger.error('Offline recovery save also failed:', offlineErr);
+        toast({ message: '保存失败，请重试', type: 'error' });
+      }
     } finally {
       setIsLoading(false);
     }
@@ -1181,8 +1239,43 @@ function WorkoutContent() {
         return;
       }
     } catch (error) {
-      logger.error('Error finishing workout:', error);
-      toast({ message: '保存训练记录失败，请重试', type: 'error' });
+      logger.error('Error finishing workout (network), falling back to offline save:', error);
+      // ── Offline fallback: save locally and let sync engine handle it later ──
+      try {
+        const offlineExercises = exercises
+          .filter(e => e.sets.length > 0)
+          .map(ex => ({
+            name: ex.name,
+            muscleGroup: getExerciseMuscleGroup(ex.name),
+            sets: ex.sets.map(s => ({
+              weight: s.weight,
+              reps: s.reps,
+              rir: s.rir,
+              isWarmup: false,
+              isCardio: false,
+              isFailure: s.isFailure ?? false,
+              restTime: ex.restTime,
+            })),
+          }));
+        const offlineVolume = exercises.reduce((sum, e) => sum + e.totalVolume, 0);
+        await saveWorkoutOffline({
+          userId,
+          durationSec: snapshotDuration,
+          totalVolume: offlineVolume,
+          notes: trainingNotes,
+          type: 'strength',
+          exercises: offlineExercises,
+        });
+        if (userId) removeUserStorageItem(userId, 'pending_workout');
+        if (userId) removeUserStorageItem(userId, 'workout_session');
+        toast({ message: '已离线保存，联网后自动同步', type: 'success' });
+        setIsLoading(false);
+        router.push('/');
+        return;
+      } catch (offlineErr) {
+        logger.error('Offline save also failed:', offlineErr);
+        toast({ message: '保存失败，请重试', type: 'error' });
+      }
     } finally {
       setIsLoading(false);
     }

@@ -1,9 +1,9 @@
 'use client'
 
 import { useRouter, usePathname } from 'next/navigation'
-import { TrendingUp, Home, Utensils } from 'lucide-react'
+import { Home, Dumbbell, Utensils, Clock, User } from 'lucide-react'
 
-export type BottomTab = 'home' | 'training' | 'diet'
+export type BottomTab = 'home' | 'training' | 'diet' | 'history' | 'profile'
 
 interface BottomTabBarProps {
   /** Explicitly set the active tab. If omitted, inferred from the current pathname. */
@@ -12,9 +12,24 @@ interface BottomTabBarProps {
   style?: React.CSSProperties
 }
 
+const TABS: Array<{
+  id: BottomTab
+  label: string
+  icon: typeof Home
+  /** Route the tab navigates to */
+  path: string
+  /** Pathname prefix for auto-detection when active is not explicitly set */
+  matchPrefix: string
+}> = [
+  { id: 'home',    label: '首页', icon: Home,     path: '/',              matchPrefix: '/' },
+  { id: 'training',label: '训练', icon: Dumbbell,  path: '/training-log',  matchPrefix: '/training-log' },
+  { id: 'diet',    label: '饮食', icon: Utensils,  path: '/diet-analysis', matchPrefix: '/diet-analysis' },
+  { id: 'history', label: '历史', icon: Clock,     path: '/history',       matchPrefix: '/history' },
+  { id: 'profile', label: '我的', icon: User,      path: '/profile',       matchPrefix: '/profile' },
+]
+
 /**
- * Shared bottom navigation bar used by: homepage, training-log, diet-analysis, calendar.
- * All tab routing and active-state styling is handled here.
+ * Shared 5-tab bottom navigation bar.
  * Pages only need: <BottomTabBar active="training" />
  */
 export default function BottomTabBar({ active, style }: BottomTabBarProps) {
@@ -23,19 +38,11 @@ export default function BottomTabBar({ active, style }: BottomTabBarProps) {
 
   const resolved: BottomTab | undefined =
     active ??
-    (pathname === '/'
-      ? 'home'
-      : pathname.startsWith('/training-log')
-        ? 'training'
-        : pathname.startsWith('/diet-analysis')
-          ? 'diet'
-          : undefined)
-
-  const tabColor = (tab: BottomTab) =>
-    resolved === tab ? 'var(--accent)' : 'var(--text-low)'
-
-  const tabWeight = (tab: BottomTab) =>
-    resolved === tab ? 600 : 400
+    TABS
+      .slice()
+      // Sort by matchPrefix length descending so longer (more specific) prefixes win
+      .sort((a, b) => b.matchPrefix.length - a.matchPrefix.length)
+      .find((t) => pathname.startsWith(t.matchPrefix))?.id
 
   function go(path: string, tab: BottomTab) {
     if (resolved !== tab) router.push(path)
@@ -58,80 +65,34 @@ export default function BottomTabBar({ active, style }: BottomTabBarProps) {
         ...style,
       }}
     >
-      <div className="max-w-5xl mx-auto px-6">
-        <div className="flex items-end justify-between py-2">
+      <div className="max-w-5xl mx-auto px-2">
+        <div className="flex items-end justify-around py-2">
+          {TABS.map((tab) => {
+            const isActive = resolved === tab.id
+            const color = isActive ? 'var(--accent)' : 'var(--text-low)'
+            const weight = isActive ? 600 : 400
 
-          {/* 训练分析 */}
-          <button
-            onClick={() => go('/training-log', 'training')}
-            className="flex flex-col items-center gap-0.5 py-2 px-6 transition-colors"
-            aria-label="训练分析"
-            aria-current={resolved === 'training' ? 'page' : undefined}
-          >
-            <TrendingUp className="w-6 h-6" style={{ color: tabColor('training') }} />
-            <span
-              className="text-xs"
-              style={{ color: tabColor('training'), fontWeight: tabWeight('training') }}
-            >
-              训练分析
-            </span>
-          </button>
-
-          {/* 首页 FAB */}
-          <button
-            onClick={() => go('/', 'home')}
-            className="flex flex-col items-center gap-0.5"
-            style={{ marginTop: '-24px' }}
-            aria-label="首页"
-            aria-current={resolved === 'home' ? 'page' : undefined}
-          >
-            <div
-              className="w-14 h-14 rounded-full flex items-center justify-center"
-              style={
-                resolved === 'home'
-                  ? {
-                      background: 'var(--accent)',
-                      boxShadow:
-                        '0 0 28px var(--accent-glow), 0 8px 32px rgba(0,0,0,0.5)',
-                    }
-                  : {
-                      background: 'var(--surface-2)',
-                      border: '2px solid var(--border)',
-                      boxShadow: '0 8px 32px rgba(0,0,0,0.15)',
-                    }
-              }
-            >
-              <Home
-                className="w-6 h-6"
-                style={{
-                  color: resolved === 'home' ? 'rgb(var(--primary-foreground))' : 'var(--text-med)',
-                }}
-              />
-            </div>
-            <span
-              className="text-xs mt-1"
-              style={{ color: tabColor('home'), fontWeight: tabWeight('home') }}
-            >
-              首页
-            </span>
-          </button>
-
-          {/* 饮食分析 */}
-          <button
-            onClick={() => go('/diet-analysis', 'diet')}
-            className="flex flex-col items-center gap-0.5 py-2 px-6 transition-colors"
-            aria-label="饮食分析"
-            aria-current={resolved === 'diet' ? 'page' : undefined}
-          >
-            <Utensils className="w-6 h-6" style={{ color: tabColor('diet') }} />
-            <span
-              className="text-xs"
-              style={{ color: tabColor('diet'), fontWeight: tabWeight('diet') }}
-            >
-              饮食分析
-            </span>
-          </button>
-
+            return (
+              <button
+                key={tab.id}
+                onClick={() => go(tab.path, tab.id)}
+                className="flex flex-col items-center gap-0.5 py-1 px-2 transition-colors"
+                aria-label={tab.label}
+                aria-current={isActive ? 'page' : undefined}
+              >
+                <tab.icon
+                  className="w-6 h-6"
+                  style={{ color }}
+                />
+                <span
+                  className="text-xs"
+                  style={{ color, fontWeight: weight }}
+                >
+                  {tab.label}
+                </span>
+              </button>
+            )
+          })}
         </div>
       </div>
     </nav>
