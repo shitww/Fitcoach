@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { getDbUserId } from '@/lib/get-db-user';
 import { logger } from '@/lib/logger';
 import { getPeriodDateRange } from '@/lib/date-range';
+import { CACHE_30S } from '@/lib/api-cache';
 
 export async function GET(request: NextRequest) {
   try {
@@ -84,7 +85,7 @@ export async function GET(request: NextRequest) {
       trainingDays: uniqueDays.size,
       allTotalVolume: Math.round(allTotalVolume),
       allTotalSets,
-    });
+    }, { headers: CACHE_30S });
   } catch (error) {
     logger.error('Error:', error);
     return NextResponse.json({ error: '获取摘要失败，请稍后重试' }, { status: 500 });

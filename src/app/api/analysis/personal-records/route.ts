@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { getDbUserId } from '@/lib/get-db-user';
 import { logger } from '@/lib/logger';
 import { calculate1RM } from '@/core/calc';
+import { CACHE_2MIN } from '@/lib/api-cache';
 
 export async function GET(request: NextRequest) {
   try {
@@ -78,7 +79,7 @@ export async function GET(request: NextRequest) {
       .sort((a, b) => b.estimated1RM - a.estimated1RM)
       .slice(0, 200);
 
-    return NextResponse.json({ records, meta: { total } });
+    return NextResponse.json({ records, meta: { total } }, { headers: CACHE_2MIN });
   } catch (error) {
     logger.error('Error:', error);
     return NextResponse.json({ error: '获取PR记录失败，请稍后重试' }, { status: 500 });

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { CACHE_2MIN } from '@/lib/api-cache';
 import { prisma } from '@/lib/prisma';
 import { getDbUserId } from '@/lib/get-db-user';
 import { logger } from '@/lib/logger';
@@ -40,7 +41,7 @@ export async function GET(request: NextRequest) {
       };
     });
 
-    return NextResponse.json({ trends });
+    return NextResponse.json({ trends }, { headers: CACHE_2MIN });
   } catch (error) {
     logger.error('Error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

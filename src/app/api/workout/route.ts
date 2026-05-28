@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { CACHE_30S } from '@/lib/api-cache';
 import { getDbUserId } from '@/lib/get-db-user';
 import { logger } from '@/lib/logger';
 import { prisma } from '@/lib/prisma';
@@ -54,11 +55,11 @@ export async function GET(request: NextRequest) {
       if (!summary) {
         return NextResponse.json({ error: 'Workout not found' }, { status: 404 });
       }
-      return NextResponse.json({ data: summary });
+      return NextResponse.json({ data: summary }, { headers: CACHE_30S });
     }
 
     const result = await listWorkouts(userId, { limit, offset });
-    return NextResponse.json(result);
+    return NextResponse.json(result, { headers: CACHE_30S });
   } catch (error) {
     logger.error('Workout GET error:', error);
     return NextResponse.json({ error: '获取训练记录失败，请稍后重试' }, { status: 500 });
