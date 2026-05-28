@@ -1,6 +1,11 @@
+import { Agent } from 'undici';
 import { LLMMessage, LLMRequest, LLMResponse, ModelId } from '../types';
 
 const DASHSCOPE_BASE = 'https://dashscope.aliyuncs.com/compatible-mode/v1';
+
+// Bypass system HTTP proxy (e.g. Clash/V2Ray) — DashScope is a domestic CN service
+// that must be reached directly, not via a foreign VPN exit node.
+const directAgent = new Agent();
 
 export async function dashscopeComplete(
   request: LLMRequest,
@@ -28,6 +33,8 @@ export async function dashscopeComplete(
     },
     body: JSON.stringify(body),
     signal: AbortSignal.timeout(timeoutMs),
+    // @ts-expect-error undici dispatcher — bypasses HTTP_PROXY / HTTPS_PROXY env
+    dispatcher: directAgent,
   });
 
   if (!res.ok) {
@@ -72,5 +79,7 @@ export function dashscopeStream(
       stream: true,
     }),
     signal: opts.signal ?? AbortSignal.timeout(25_000),
+    // @ts-expect-error undici dispatcher — bypasses HTTP_PROXY / HTTPS_PROXY env
+    dispatcher: directAgent,
   });
 }

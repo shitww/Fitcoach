@@ -1,14 +1,13 @@
 'use client'
 
+import { useEffect, useRef, useState } from 'react'
 import { WifiOff, CloudSync, AlertCircle } from 'lucide-react'
 import { useOfflineStatus } from '@/hooks/useOfflineStatus'
 
 /**
  * Floating offline/sync status indicator.
- * Renders at the top of the screen when:
- * - User is offline
- * - Sync is in progress
- * - Operations failed and need retry
+ * Auto-dismisses after 5 s to avoid permanently blocking content.
+ * Re-appears briefly whenever status changes.
  */
 export default function OfflineStatusBar() {
   const { isOnline, syncInProgress, pendingCount, lastSyncAt, syncNow } = useOfflineStatus()
@@ -17,7 +16,27 @@ export default function OfflineStatusBar() {
   const showSyncing = isOnline && syncInProgress && pendingCount > 0
   const showFailed = isOnline && !syncInProgress && pendingCount > 0 && lastSyncAt && Date.now() - lastSyncAt > 60_000
 
-  if (!showOffline && !showSyncing && !showFailed) return null
+  const shouldShow = showOffline || showSyncing || showFailed
+  const [visible, setVisible] = useState(false)
+  const dismissTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const prevKey = useRef('')
+
+  const stateKey = `${showOffline}-${showSyncing}-${showFailed}`
+
+  useEffect(() => {
+    if (!shouldShow) { setVisible(false); return }
+    if (stateKey === prevKey.current) return
+    prevKey.current = stateKey
+    setVisible(true)
+    if (dismissTimer.current) clearTimeout(dismissTimer.current)
+    // Failed-sync bar stays until user taps; offline/syncing auto-dismiss after 5 s
+    if (!showFailed) {
+      dismissTimer.current = setTimeout(() => setVisible(false), 5000)
+    }
+    return () => { if (dismissTimer.current) clearTimeout(dismissTimer.current) }
+  }, [shouldShow, stateKey, showFailed])
+
+  if (!visible) return null
 
   const meta = showOffline
     ? {
