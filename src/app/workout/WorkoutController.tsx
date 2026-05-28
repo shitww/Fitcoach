@@ -19,7 +19,6 @@ import { getUserStorageItem, setUserStorageItem, removeUserStorageItem } from '@
 import { useToast } from '@/components/Toast';
 import { useWorkoutEffects } from '@/hooks/useWorkoutEffects';
 import { useWorkoutHint } from '@/hooks/useWorkoutHint';
-import { useHydrationGate } from '@/hooks/useHydrationGate';
 import { AmbientGlow } from "@/components/AmbientGlow";
 import type { RecoveryWorkoutPlan } from '@/types/workout-plan';
 import RestTimerPill from '@/components/workout/RestTimerPill';
@@ -362,9 +361,6 @@ const CompletionSummaryOverlay = memo(function CompletionSummaryOverlay({
 });
 
 export default function WorkoutController() {
-  // Trigger deferred zustand rehydration after first paint
-  useHydrationGate();
-
   const router = useRouter();
   const searchParams = useSearchParams();
   const { data: session } = useSession();

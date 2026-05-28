@@ -1,29 +1,31 @@
 "use client";
 
 /**
- * InstantShell — Pure static first-render shell for /workout
+ * InstantShell — The ONLY first-render content for /workout
  *
- * Rules:
- * - No Zustand
+ * Strict rules:
+ * - No React hooks (useState, useEffect, etc.)
+ * - No Zustand stores
  * - No AI / intelligence imports
- * - No fetch
- * - No useEffect
- * - No heavy context
+ * - No fetch / network calls
+ * - No loading states
+ * - No hydration logic
  *
- * Goal: < 200ms visible UI on first paint.
- * This component renders instantly while WorkoutController (heavy logic)
- * is being loaded via dynamic import.
+ * This component must render pure static JSX instantly.
+ * Goal: 0ms JS blocking on first paint.
  */
 
-import { memo } from "react";
+interface InstantShellProps {
+  onStart: () => void;
+}
 
-const InstantShell = memo(function InstantShell() {
+export default function InstantShell({ onStart }: InstantShellProps) {
   return (
     <div
       className="min-h-screen flex flex-col"
       style={{ background: "var(--background)", color: "var(--foreground)" }}
     >
-      {/* Ambient glow background (CSS-only, no JS calc) */}
+      {/* Ambient glow — CSS only, no JS calc */}
       <div
         className="fixed inset-0 pointer-events-none"
         style={{
@@ -39,18 +41,8 @@ const InstantShell = memo(function InstantShell() {
             className="p-2.5 rounded-xl"
             style={{ background: "var(--surface-2)", border: "1px solid var(--border)" }}
           >
-            <svg
-              className="w-5 h-5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M10 19l-7-7m0 0l7-7m-7 7h18"
-              />
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
             </svg>
           </div>
           <div>
@@ -61,11 +53,12 @@ const InstantShell = memo(function InstantShell() {
           </div>
         </div>
 
-        {/* Skeleton cards — visually identical to selection screen */}
-        <div className="flex flex-col gap-4 flex-1 animate-pulse">
-          {/* Strength card skeleton */}
-          <div
-            className="w-full rounded-3xl p-6"
+        {/* Entry cards — fully interactive, no loading */}
+        <div className="flex flex-col gap-4 flex-1">
+          {/* Strength */}
+          <button
+            onClick={onStart}
+            className="w-full text-left rounded-3xl p-6 transition-all active:scale-[0.98]"
             style={{ background: "var(--accent-dim)", border: "1px solid var(--border)" }}
           >
             <div className="flex items-center gap-4">
@@ -76,12 +69,14 @@ const InstantShell = memo(function InstantShell() {
                 💪
               </div>
               <div className="flex-1">
-                <div className="h-5 w-24 rounded" style={{ background: "var(--surface-3)" }} />
-                <div
-                  className="h-4 w-40 rounded mt-1.5"
-                  style={{ background: "var(--surface-3)" }}
-                />
+                <p className="text-lg font-black">力量训练</p>
+                <p className="text-sm mt-0.5" style={{ color: "var(--text-low)" }}>
+                  组数 · 次数 · 重量 · RIR
+                </p>
               </div>
+              <svg className="w-5 h-5 shrink-0" style={{ color: "var(--accent-glow)" }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
             </div>
             <div className="mt-4 flex gap-2 flex-wrap">
               {["胸部", "背部", "腿部", "肩膀", "手臂"].map((g) => (
@@ -94,11 +89,12 @@ const InstantShell = memo(function InstantShell() {
                 </span>
               ))}
             </div>
-          </div>
+          </button>
 
-          {/* Cardio card skeleton */}
-          <div
-            className="w-full rounded-3xl p-6"
+          {/* Cardio */}
+          <button
+            onClick={onStart}
+            className="w-full text-left rounded-3xl p-6 transition-all active:scale-[0.98]"
             style={{
               background: "rgba(96,165,250,0.06)",
               border: "1px solid rgba(96,165,250,0.2)",
@@ -112,12 +108,14 @@ const InstantShell = memo(function InstantShell() {
                 🏃
               </div>
               <div className="flex-1">
-                <div className="h-5 w-24 rounded" style={{ background: "var(--surface-3)" }} />
-                <div
-                  className="h-4 w-48 rounded mt-1.5"
-                  style={{ background: "var(--surface-3)" }}
-                />
+                <p className="text-lg font-black">有氧训练</p>
+                <p className="text-sm mt-0.5" style={{ color: "var(--text-low)" }}>
+                  自动计算距离与卡路里消耗
+                </p>
               </div>
+              <svg className="w-5 h-5 shrink-0" style={{ color: "rgba(96,165,250,0.5)" }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
             </div>
             <div className="mt-4 flex gap-2">
               <span
@@ -139,11 +137,12 @@ const InstantShell = memo(function InstantShell() {
                 🧗 爬楼机
               </span>
             </div>
-          </div>
+          </button>
 
-          {/* Free card skeleton */}
-          <div
-            className="w-full rounded-3xl p-6"
+          {/* Free */}
+          <button
+            onClick={onStart}
+            className="w-full text-left rounded-3xl p-6 transition-all active:scale-[0.98]"
             style={{
               background: "rgba(168,85,247,0.06)",
               border: "1px solid rgba(168,85,247,0.2)",
@@ -157,12 +156,14 @@ const InstantShell = memo(function InstantShell() {
                 📝
               </div>
               <div className="flex-1">
-                <div className="h-5 w-24 rounded" style={{ background: "var(--surface-3)" }} />
-                <div
-                  className="h-4 w-40 rounded mt-1.5"
-                  style={{ background: "var(--surface-3)" }}
-                />
+                <p className="text-lg font-black">自由记录</p>
+                <p className="text-sm mt-0.5" style={{ color: "var(--text-low)" }}>
+                  自由填写内容，灵活记录
+                </p>
               </div>
+              <svg className="w-5 h-5 shrink-0" style={{ color: "rgba(168,85,247,0.5)" }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
             </div>
             <div className="mt-4 flex gap-2 flex-wrap">
               {["拉伸", "康复训练", "体能测试", "其他运动"].map((t) => (
@@ -178,11 +179,9 @@ const InstantShell = memo(function InstantShell() {
                 </span>
               ))}
             </div>
-          </div>
+          </button>
         </div>
       </div>
     </div>
   );
-});
-
-export default InstantShell;
+}
