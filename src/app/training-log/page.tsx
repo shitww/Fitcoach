@@ -16,6 +16,7 @@ import { logger } from "@/lib/logger"
 import { EmptyState } from "@/components/EmptyState"
 import { useWorkoutTimer } from "@/stores/workoutTimer"
 import { SkeletonStatGrid } from "@/components/Skeleton"
+import { cachedFetch, getCached, setCached, invalidateCache } from "@/lib/client-cache"
 
 const ProgressiveOverloadPanel = dynamic(
   () => import('@/components/ai-coaching/ProgressiveOverloadPanel').then(m => ({ default: m.ProgressiveOverloadPanel })),
@@ -43,11 +44,13 @@ function TrainingAnalysisContent() {
   const { isTrainingActive, isPaused } = useWorkoutTimer()
   const hasActiveSession = isTrainingActive || isPaused
   const { status } = useSession()
-  const [summary, setSummary] = useState<any>(null)
-  const [records, setRecords] = useState<any[]>([])
-  const [recentWorkouts, setRecentWorkouts] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
   const [timeRange, setTimeRange] = useState('month')
+  const cacheKey = `training-analysis:${timeRange}`
+  const cached = getCached<any>(cacheKey)
+  const [summary, setSummary] = useState<any>(() => getCached<any>(`training-analysis:month`)?.summary ?? null)
+  const [records, setRecords] = useState<any[]>(() => getCached<any>(`training-analysis:month`)?.records ?? [])
+  const [recentWorkouts, setRecentWorkouts] = useState<any[]>(() => getCached<any>(`training-analysis:month`)?.recentWorkouts ?? [])
+  const [loading, setLoading] = useState(() => !getCached<any>(`training-analysis:month`))
   const [showTimeDropdown, setShowTimeDropdown] = useState(false)
   const [weeklyReport, setWeeklyReport] = useState<any>(null)
   const [weeklyLoading, setWeeklyLoading] = useState(false)
@@ -69,16 +72,22 @@ function TrainingAnalysisContent() {
       const periodParam = hasCustomRange
         ? `custom&start=${customStart}&end=${customEnd}`
         : timeRange
-      const [sumRes, recRes, wRes, trendsRes] = await Promise.all([
-        fetch(`/api/analysis/summary?period=${periodParam}`, { credentials: "include" }),
-        fetch("/api/analysis/personal-records", { credentials: "include" }),
-        fetch("/api/workout?limit=5", { credentials: "include" }),
-        fetch(`/api/analysis/trends?period=${periodParam}`, { credentials: "include" }),
+      const [sumResult, recResult, wResult, trendsResult] = await Promise.all([
+        cachedFetch(`/api/analysis/summary?period=${periodParam}`, { credentials: "include" }),
+        cachedFetch("/api/analysis/personal-records", { credentials: "include" }),
+        cachedFetch("/api/workout?limit=5", { credentials: "include" }),
+        cachedFetch(`/api/analysis/trends?period=${periodParam}`, { credentials: "include" }),
       ])
-      if (sumRes.ok) setSummary(await sumRes.json())
-      if (recRes.ok) { const d = await recRes.json(); setRecords((d.records || []).slice(0, 5)) }
-      if (wRes.ok) { const d = await wRes.json(); setRecentWorkouts(d.data || []) }
-      if (trendsRes.ok) { const d = await trendsRes.json(); setTrendsData(d.trends || []) }
+      const sumData = sumResult.data as any
+      const recData = recResult.data as any
+      const wData = wResult.data as any
+      const trendsData = trendsResult.data as any
+      setSummary(sumData)
+      setRecords((recData?.records || []).slice(0, 5))
+      setRecentWorkouts(wData?.data || [])
+      setTrendsData(trendsData?.trends || [])
+      // Persist to session cache keyed by time range
+      setCached(cacheKey, { summary: sumData, records: (recData?.records || []).slice(0, 5), recentWorkouts: wData?.data || [] })
     } catch (e) {
       logger.warn("[TrainingAnalysis] fetch error:", e)
     } finally {
