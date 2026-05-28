@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, ChevronRight } from 'lucide-react';
-import { AmbientGlow } from '@/components/AmbientGlow';
+import { PageShell, PageHeader, PageContent } from '@/components/layout';
 
 type Section = 'strength' | 'cardio' | 'recovery' | null;
 
@@ -36,23 +36,9 @@ export default function IntentPage() {
   const toggle = (s: Section) => setOpen(prev => (prev === s ? null : s));
 
   return (
-    <div className="min-h-screen flex flex-col"
-      style={{ background: 'var(--background)', color: 'var(--foreground)' }}>
-      <AmbientGlow />
-      <div className="relative flex flex-col flex-1 px-4 pt-5 pb-10 max-w-sm md:max-w-md mx-auto w-full">
-
-        <div className="flex items-center gap-3 mb-8">
-          <button onClick={() => router.push('/')} className="p-2.5 rounded-xl"
-            style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
-            <ArrowLeft className="w-5 h-5" />
-          </button>
-          <div>
-            <h1 className="text-xl font-black">今天练什么？</h1>
-            <p className="text-xs mt-0.5" style={{ color: 'var(--text-low)' }}>
-              选择后直接进入训练
-            </p>
-          </div>
-        </div>
+    <PageShell>
+      <PageHeader title="今天练什么？" onBack={() => router.push('/')} />
+      <PageContent>
 
         <div className="flex flex-col gap-3">
 
@@ -159,7 +145,7 @@ export default function IntentPage() {
           </div>
 
         </div>
-      </div>
-    </div>
+      </PageContent>
+    </PageShell>
   );
 }

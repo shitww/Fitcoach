@@ -5,7 +5,6 @@ import { signIn } from "next-auth/react"
 import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { Dumbbell, Mail, Lock, Loader2, CheckCircle, ArrowLeft } from "lucide-react"
-import { AmbientGlow } from "@/components/AmbientGlow"
 
 function SignInContent() {
   const router = useRouter()
@@ -47,10 +46,6 @@ function SignInContent() {
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
-
-      {/* Ambient */}
-      <AmbientGlow />
-
       <div className="relative w-full max-w-md">
 
         {/* Back */}
@@ -151,7 +146,7 @@ export default function SignInPage() {
     <Suspense
       fallback={
         <div className="min-h-screen bg-background flex items-center justify-center">
-          <Loader2 className="w-8 h-8 animate-spin" style={{ color: 'var(--accent)' }} />
+          <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
         </div>
       }
     >

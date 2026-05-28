@@ -10,7 +10,7 @@ import {
 import { logger } from '@/lib/logger';
 import { SkeletonChart, SkeletonStatGrid } from '@/components/Skeleton';
 import { EmptyState } from '@/components/EmptyState';
-import { AmbientGlow } from "@/components/AmbientGlow";
+import { PageShell, PageHeader, PageContent } from "@/components/layout";
 
 interface TrendData {
   date: string;
@@ -55,21 +55,9 @@ export default function StrengthTrendsPage() {
   const latest = trendData[trendData.length - 1];
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <AmbientGlow />
-      <div className="relative max-w-2xl mx-auto px-4 py-6 pb-20">
-
-        <header className="flex items-center gap-3 mb-6">
-          <button onClick={() => router.back()}
-            className="p-2 rounded-xl transition-all hover:bg-white/5"
-            style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
-            <ArrowLeft className="w-5 h-5" />
-          </button>
-          <div>
-            <h1 className="text-xl font-black">力量趋势</h1>
-            <p className="text-xs" style={{ color: 'rgba(255,255,255,0.35)' }}>单个动作 1RM 及最大重量趋势</p>
-          </div>
-        </header>
+    <PageShell>
+      <PageHeader title="力量趋势" onBack={() => router.back()} />
+      <PageContent>
 
         <div className="flex flex-wrap gap-3 mb-6">
           <div className="flex gap-2">
@@ -158,7 +146,7 @@ export default function StrengthTrendsPage() {
             </div>
           </>
         )}
-      </div>
-    </div>
+      </PageContent>
+    </PageShell>
   );
 }

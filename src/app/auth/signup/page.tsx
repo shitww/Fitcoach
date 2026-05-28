@@ -4,7 +4,6 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { Mail, Lock, User, Loader2, ArrowLeft } from "lucide-react"
-import { AmbientGlow } from "@/components/AmbientGlow"
 
 export default function SignUpPage() {
   const router = useRouter()
@@ -38,10 +37,6 @@ export default function SignUpPage() {
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
-
-      {/* Ambient */}
-      <AmbientGlow />
-
       <div className="relative w-full max-w-md">
 
         {/* Logo: X-FIT-X 居中 */}

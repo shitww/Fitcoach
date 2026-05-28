@@ -11,7 +11,7 @@ import {
 import { logger } from '@/lib/logger'
 import { useEffect } from 'react'
 import { useTheme } from "@/contexts/ThemeContext"
-import { AmbientGlow } from "@/components/AmbientGlow"
+import { PageShell, PageHeader, PageContent } from "@/components/layout"
 
 function SettingsContent() {
   const router = useRouter()
@@ -207,48 +207,36 @@ function SettingsContent() {
 
   if (status === 'loading') {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background: t.bg, color: t.text }}>
-        <Loader2 className="w-8 h-8 animate-spin" style={{ color: 'var(--accent)' }} />
-      </div>
+      <PageShell>
+        <div className="flex-1 flex items-center justify-center">
+          <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+        </div>
+      </PageShell>
     )
   }
 
   if (!user) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background: t.bg, color: t.text }}>
-        <div className="text-center">
-          <p className="mb-6" style={{ color: t.textMuted }}>请先登录</p>
-          <button
-            onClick={() => router.push('/auth/signin')}
-            className="px-8 py-3 font-bold rounded-xl text-black"
-            style={{ background: 'var(--accent)' }}
-          >
-            立即登录
-          </button>
+      <PageShell>
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <p className="mb-6 text-muted-foreground">请先登录</p>
+            <button
+              onClick={() => router.push('/auth/signin')}
+              className="px-8 py-3 font-bold rounded-xl text-primary-foreground bg-primary hover:bg-primary/90"
+            >
+              立即登录
+            </button>
+          </div>
         </div>
-      </div>
+      </PageShell>
     )
   }
 
   return (
-    <div className="min-h-screen" style={{ background: t.bg, color: t.text }}>
-      {/* Ambient glow */}
-      <AmbientGlow />
-
-      <div className="relative max-w-5xl mx-auto px-4 sm:px-6 py-6">
-        {/* Header */}
-        <header className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => router.back()}
-              className="p-2.5 rounded-xl transition-all"
-              style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}
-            >
-              <ChevronRight className="w-5 h-5 rotate-180" />
-            </button>
-            <h1 className="text-xl font-black">设置</h1>
-          </div>
-        </header>
+    <PageShell>
+      <PageHeader title="设置" onBack={() => router.back()} />
+      <PageContent>
 
         {/* Tabs */}
         <div className="flex gap-2 mb-6">
@@ -711,18 +699,17 @@ function SettingsContent() {
             </>
           )}
         </div>
-      </div>
-    </div>
+      </PageContent>
+    </PageShell>
   )
 }
 
 export default function SettingsPage() {
-  const { t } = useTheme()
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen flex items-center justify-center" style={{ background: t.bg }}>
-          <Loader2 className="w-8 h-8 animate-spin" style={{ color: 'var(--accent)' }} />
+        <div className="page-shell items-center justify-center">
+          <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
         </div>
       }
     >

@@ -4,7 +4,6 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { ArrowLeft, Send, Loader2, Sparkles } from "lucide-react";
-import { AmbientGlow } from "@/components/AmbientGlow";
 
 interface Message {
   role: "user" | "assistant";
@@ -139,23 +138,20 @@ export default function ChatPage() {
   };
 
   return (
-    <div className="flex flex-col min-h-screen" style={{ background: 'var(--background)', color: 'var(--foreground)', fontFamily: "Inter, Space Grotesk, sans-serif" }}>
-      {/* Fixed ambient glow */}
-      <AmbientGlow />
+    <div className="flex flex-col min-h-screen bg-background text-foreground">
 
       {/* Header */}
-      <header className="sticky top-0 z-20 flex items-center gap-4 px-4 py-3"
-        style={{ background: 'var(--top-bg)', backdropFilter: "blur(16px)", borderBottom: "1px solid var(--border)" }}>
-        <button onClick={() => router.back()} className="p-2 rounded-xl" style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
+      <header className="sticky top-0 z-20 flex items-center gap-4 px-4 py-3 bg-background/80 backdrop-blur-xl border-b border-border">
+        <button onClick={() => router.back()} className="p-2 rounded-xl bg-secondary border border-border">
           <ArrowLeft className="w-5 h-5" />
         </button>
         <div className="flex items-center gap-3 flex-1">
-          <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: 'var(--accent-dim)', border: '1px solid var(--accent-glow)' }}>
-            <Sparkles className="w-4 h-4" style={{ color: 'var(--accent)' }} />
+          <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-primary/10 border border-primary/20">
+            <Sparkles className="w-4 h-4 text-primary" />
           </div>
           <div>
-            <div className="text-sm font-black" style={{ color: 'var(--accent)' }}>XFITX Coach</div>
-            <div className="text-xs" style={{ color: streaming ? "var(--accent)" : 'var(--text-low)' }}>
+            <div className="text-sm font-black text-primary">XFITX Coach</div>
+            <div className={`text-xs ${streaming ? 'text-primary' : 'text-muted-foreground'}`}>
               {streaming ? "正在思考…" : "你的专属私教"}
             </div>
           </div>
@@ -166,13 +162,13 @@ export default function ChatPage() {
       <div className="flex-1 overflow-y-auto px-4 py-6 space-y-4 pb-36">
         {messages.length === 0 && (
           <div className="flex flex-col items-center justify-center h-48 gap-3">
-            <div className="w-14 h-14 rounded-2xl flex items-center justify-center" style={{ background: "var(--accent-dim)", border: "1px solid var(--accent-glow)" }}>
-              <Sparkles className="w-7 h-7" style={{ color: "var(--accent)" }} />
+            <div className="w-14 h-14 rounded-2xl flex items-center justify-center bg-primary/10 border border-primary/20">
+              <Sparkles className="w-7 h-7 text-primary" />
             </div>
             <div className="flex items-center gap-1.5">
-              <div className="w-1.5 h-1.5 rounded-full animate-bounce" style={{ background: "var(--accent)", animationDelay: "0ms" }} />
-              <div className="w-1.5 h-1.5 rounded-full animate-bounce" style={{ background: "var(--accent)", animationDelay: "150ms" }} />
-              <div className="w-1.5 h-1.5 rounded-full animate-bounce" style={{ background: "var(--accent)", animationDelay: "300ms" }} />
+              <div className="w-1.5 h-1.5 rounded-full animate-bounce bg-primary" style={{ animationDelay: "0ms" }} />
+              <div className="w-1.5 h-1.5 rounded-full animate-bounce bg-primary" style={{ animationDelay: "150ms" }} />
+              <div className="w-1.5 h-1.5 rounded-full animate-bounce bg-primary" style={{ animationDelay: "300ms" }} />
             </div>
           </div>
         )}
@@ -180,24 +176,23 @@ export default function ChatPage() {
         {messages.map((msg, i) => (
           <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
             {msg.role === "assistant" && (
-              <div className="w-7 h-7 rounded-xl flex items-center justify-center mr-2 mt-0.5 shrink-0"
-                style={{ background: "var(--accent-dim)", border: "1px solid var(--accent-glow)" }}>
-                <Sparkles className="w-3.5 h-3.5" style={{ color: "var(--accent)" }} />
+              <div className="w-7 h-7 rounded-xl flex items-center justify-center mr-2 mt-0.5 shrink-0 bg-primary/10 border border-primary/20">
+                <Sparkles className="w-3.5 h-3.5 text-primary" />
               </div>
             )}
             <div
-              className="max-w-[78%] rounded-2xl px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap"
-              style={msg.role === "user"
-                ? { background: 'var(--accent)', color: 'var(--accent-text)', fontWeight: 600, borderBottomRightRadius: 6 }
-                : { background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--text-high)', borderBottomLeftRadius: 6 }
-              }
+              className={`max-w-[78%] rounded-2xl px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap ${
+                msg.role === 'user'
+                  ? 'bg-primary text-primary-foreground font-semibold rounded-br-sm'
+                  : 'bg-secondary border border-border text-foreground rounded-bl-sm'
+              }`}
             >
               {msg.role === "assistant"
                 ? <MessageContent content={msg.content} />
                 : msg.content
               }
               {streaming && i === messages.length - 1 && msg.role === "assistant" && (
-                <span className="inline-block w-0.5 h-4 ml-0.5 align-middle animate-pulse" style={{ background: "var(--accent)" }} />
+                <span className="inline-block w-0.5 h-4 ml-0.5 align-middle animate-pulse bg-primary" />
               )}
             </div>
           </div>
@@ -206,8 +201,7 @@ export default function ChatPage() {
       </div>
 
       {/* Input bar */}
-      <div className="fixed bottom-0 left-0 right-0 px-4 py-4"
-        style={{ background: 'var(--top-bg)', backdropFilter: "blur(20px)", borderTop: '1px solid var(--border)' }}>
+      <div className="fixed bottom-0 left-0 right-0 px-4 py-4 bg-background/80 backdrop-blur-xl border-t border-border">
         <div className="max-w-2xl mx-auto flex items-center gap-3">
           <input
             ref={inputRef}
@@ -216,15 +210,13 @@ export default function ChatPage() {
             onKeyDown={handleKey}
             placeholder="问问你的私教…"
             disabled={streaming}
-            className="flex-1 rounded-2xl px-4 py-3 text-sm outline-none"
-            style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--text-high)' }}
+            className="flex-1 rounded-2xl px-4 py-3 text-sm outline-none bg-secondary border border-border text-foreground"
           />
           <button onClick={send} disabled={!input.trim() || streaming}
-            className="w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 transition-all active:scale-95"
-            style={{ background: input.trim() && !streaming ? 'var(--accent)' : 'var(--surface-3)' }}>
+            className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 transition-all active:scale-95 ${input.trim() && !streaming ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}>
             {streaming
-              ? <Loader2 className="w-4 h-4 animate-spin" style={{ color: 'var(--text-low)' }} />
-              : <Send className="w-4 h-4" style={{ color: input.trim() ? 'var(--accent-text)' : 'var(--text-faint)' }} />
+              ? <Loader2 className="w-4 h-4 animate-spin" />
+              : <Send className="w-4 h-4" />
             }
           </button>
         </div>

@@ -9,7 +9,7 @@ import {
 } from "lucide-react"
 import { logger } from '@/lib/logger'
 import { useToast } from '@/components/Toast'
-import { AmbientGlow } from "@/components/AmbientGlow"
+import { PageShell, PageHeader, PageContent } from "@/components/layout"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -184,40 +184,40 @@ export default function EditProfilePage() {
 
   if (status === 'loading') {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-      </div>
+      <PageShell>
+        <div className="flex-1 flex items-center justify-center">
+          <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+        </div>
+      </PageShell>
     )
   }
 
   if (!user) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center space-y-6">
-          <p>请先登录</p>
-          <Button onClick={() => router.push('/auth/signin')} size="lg">立即登录</Button>
+      <PageShell>
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center space-y-6">
+            <p className="text-muted-foreground">请先登录</p>
+            <Button onClick={() => router.push('/auth/signin')} size="lg">立即登录</Button>
+          </div>
         </div>
-      </div>
+      </PageShell>
     )
   }
 
   return (
-    <div className="min-h-screen">
-      <AmbientGlow />
-      <div className="relative max-w-5xl mx-auto px-4 sm:px-6 py-6">
-        {/* Header */}
-        <header className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-3">
-            <Button variant="secondary" size="icon" onClick={() => router.back()}>
-              <ChevronRight className="w-5 h-5 rotate-180" />
-            </Button>
-            <h1 className="text-xl font-black">编辑个人资料</h1>
-          </div>
-          <Button onClick={handleSave} disabled={loading}>
+    <PageShell>
+      <PageHeader
+        title="编辑个人资料"
+        onBack={() => router.back()}
+        action={
+          <Button onClick={handleSave} disabled={loading} size="sm">
             {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
             保存
           </Button>
-        </header>
+        }
+      />
+      <PageContent>
 
         {/* Profile Form */}
         <Card className="mb-6">
@@ -257,7 +257,7 @@ export default function EditProfilePage() {
                 <div className="space-y-3 p-5 pt-0">
                   <Button onClick={handleUploadClick} className="w-full">上传头像</Button>
                   <Button onClick={handleResetAvatar} variant="secondary" className="w-full">恢复默认头像</Button>
-                  <Button onClick={() => setShowAvatarModal(false)} variant="outline" className="w-full">取消</Button>
+                  <Button onClick={() => setShowAvatarModal(false)} variant="ghost" className="w-full">取消</Button>
                 </div>
               </DialogContent>
             </Dialog>
@@ -321,7 +321,7 @@ export default function EditProfilePage() {
             </div>
           </CardContent>
         </Card>
-      </div>
-    </div>
+      </PageContent>
+    </PageShell>
   )
 }

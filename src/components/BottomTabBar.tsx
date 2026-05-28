@@ -47,45 +47,37 @@ export default function BottomTabBar({ active, style }: BottomTabBarProps) {
   return (
     <nav
       aria-label="底部导航"
+      className="fixed bottom-0 left-0 right-0 z-50 border-t border-border/60 safe-bottom"
       style={{
-        position: 'fixed',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        zIndex: 50,
-        background: 'var(--nav-bg)',
+        background: 'color-mix(in srgb, rgb(var(--background)) 85%, transparent)',
         backdropFilter: 'blur(20px)',
         WebkitBackdropFilter: 'blur(20px)',
-        borderTop: '1px solid var(--border)',
         paddingBottom: 'env(safe-area-inset-bottom, 0px)',
         ...style,
       }}
     >
-      <div className="max-w-5xl mx-auto px-2">
-        <div className="flex items-end justify-around py-2">
+      <div className="max-w-2xl mx-auto px-1">
+        <div className="flex items-center justify-around py-1.5">
           {TABS.map((tab) => {
             const isActive = resolved === tab.id
-            const color = isActive ? 'var(--accent)' : 'var(--text-low)'
-            const weight = isActive ? 600 : 400
-
             return (
               <Link
                 key={tab.id}
                 href={tab.path}
                 prefetch
-                className="flex flex-col items-center gap-0.5 py-1 px-2 transition-colors"
+                className={`flex flex-col items-center gap-0.5 py-1.5 px-3 rounded-xl transition-colors min-w-[3.5rem] ${
+                  isActive
+                    ? 'text-primary'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
                 aria-label={tab.label}
                 aria-current={isActive ? 'page' : undefined}
-                style={{ textDecoration: 'none' }}
               >
                 <tab.icon
-                  className="w-6 h-6"
-                  style={{ color }}
+                  className={`w-5 h-5 transition-transform ${isActive ? 'scale-110' : ''}`}
+                  strokeWidth={isActive ? 2.5 : 1.75}
                 />
-                <span
-                  className="text-xs"
-                  style={{ color, fontWeight: weight }}
-                >
+                <span className={`text-[10px] leading-tight font-${isActive ? 'bold' : 'medium'}`}>
                   {tab.label}
                 </span>
               </Link>

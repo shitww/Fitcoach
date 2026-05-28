@@ -1,11 +1,17 @@
 @import "tailwindcss";
 
 /* =====================================================
-   XFITX — Semantic Design Token System
+   FitCoach VNext Design Token System
    Tailwind v4 · next-themes · RGB space-separated vars
+   Rules:
+   - All colors are semantic. Never use text-black/text-white.
+   - All surfaces use card tokens. Never use #111, #0a0a0a.
+   - All radius uses token. Never use arbitrary rounded values.
+   - All spacing uses token scale. Never use random padding.
    ===================================================== */
 
 @theme inline {
+  /* ── Core palette ── */
   --color-background: rgb(var(--background));
   --color-foreground: rgb(var(--foreground));
   --color-card: rgb(var(--card));
@@ -25,97 +31,121 @@
   --color-border: rgb(var(--border));
   --color-input: rgb(var(--input));
   --color-ring: rgb(var(--ring));
-  --color-success: rgb(var(--success));
-  --color-danger: rgb(var(--danger));
 
+  /* ── Semantic states ── */
+  --color-success: rgb(var(--success));
+  --color-success-foreground: rgb(var(--success-foreground));
+  --color-warning: rgb(var(--warning));
+  --color-warning-foreground: rgb(var(--warning-foreground));
+  --color-danger: rgb(var(--danger));
+  --color-danger-foreground: rgb(var(--danger-foreground));
+  --color-recovery: rgb(var(--recovery));
+  --color-recovery-foreground: rgb(var(--recovery-foreground));
+  --color-inactive: rgb(var(--inactive));
+  --color-inactive-foreground: rgb(var(--inactive-foreground));
+
+  /* ── Radius ── */
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius));
   --radius-lg: calc(var(--radius) + 4px);
   --radius-xl: calc(var(--radius) + 8px);
+
+  /* ── Typography (font-size tokens) ── */
+  --font-size-hero: 2.5rem;
+  --font-size-section: 1.25rem;
+  --font-size-metric: 0.875rem;
+  --font-size-secondary: 0.8125rem;
+  --font-size-caption: 0.6875rem;
+
+  /* ── Spacing tokens (semantic) ── */
+  --space-page: 1.5rem;
+  --space-section: 1rem;
+  --space-card: 1.25rem;
+  --space-inner: 0.75rem;
+  --space-tight: 0.5rem;
 }
 
 /* ── Dark theme (default) ───────────────────────────── */
 :root, .dark {
   --radius: 0.75rem;
 
+  /* Page chrome */
   --background: 0 0 0;
   --foreground: 245 245 245;
+
+  /* Surfaces (WCAG-compliant hierarchy) */
   --card: 10 10 10;
   --card-foreground: 235 235 235;
   --popover: 10 10 10;
   --popover-foreground: 235 235 235;
-  --primary: 204 255 0;
-  --primary-foreground: 0 0 0;
   --secondary: 22 22 22;
   --secondary-foreground: 220 220 220;
   --muted: 32 32 32;
-  --muted-foreground: 175 175 175;
+  --muted-foreground: 160 160 160; /* 3.0:1 on card, 4.5:1 intended for large text only */
+
+  /* Brand / accent — electric lime for power feel */
+  --primary: 204 255 0;
+  --primary-foreground: 0 0 0;
   --accent: 204 255 0;
   --accent-foreground: 0 0 0;
-  --destructive: 239 68 68;
+
+  /* Feedback (WCAG AA on dark surfaces) */
+  --destructive: 255 59 92;
   --destructive-foreground: 255 255 255;
+  --success: 52 211 153;
+  --success-foreground: 0 0 0;
+  --warning: 251 191 36;
+  --warning-foreground: 0 0 0;
+  --danger: 255 59 92;
+  --danger-foreground: 255 255 255;
+  --recovery: 52 211 153;
+  --recovery-foreground: 0 0 0;
+  --inactive: 120 120 120;
+  --inactive-foreground: 0 0 0;
+
+  /* Borders & forms */
   --border: 50 50 50;
   --input: 50 50 50;
   --ring: 204 255 0;
-  --success: 74 222 128;
-  --danger: 239 68 68;
 
-  /* Legacy app-specific tokens (kept for backward compat during migration) */
-  --surface: #0a0a0a;
-  --surface-2: #111111;
-  --surface-3: #1a1a1a;
-  --accent-dim: rgba(204,255,0,0.12);
-  --accent-glow: rgba(204,255,0,0.25);
-  --accent-text: #000000;
-  --text-secondary: rgba(255,255,255,0.65);
-  --text-muted: rgba(255,255,255,0.50);
-  --text-high: rgba(255,255,255,0.92);
-  --text-med: rgba(255,255,255,0.70);
-  --text-low: rgba(255,255,255,0.55);
-  --text-faint: rgba(255,255,255,0.40);
-  --nav-bg: rgba(0,0,0,0.92);
-  --top-bg: rgba(0,0,0,0.95);
+  /* VNext semantic overlays (no legacy hex/rgba) */
+  --overlay: 0 0 0;
+  --overlay-foreground: 245 245 245;
 }
 
 /* ── Light theme ─────────────────────────────────────── */
 .light {
-  --background: 244 244 245;
-  --foreground: 24 24 27;
+  --background: 250 250 250;
+  --foreground: 18 18 22;
   --card: 255 255 255;
-  --card-foreground: 24 24 27;
+  --card-foreground: 18 18 22;
   --popover: 255 255 255;
-  --popover-foreground: 24 24 27;
-  --primary: 37 99 235;
-  --primary-foreground: 255 255 255;
+  --popover-foreground: 18 18 22;
   --secondary: 240 240 240;
   --secondary-foreground: 24 24 27;
   --muted: 228 228 231;
-  --muted-foreground: 113 113 122;
-  --accent: 37 99 235;
+  --muted-foreground: 100 100 108; /* 4.5:1 on white */
+  --primary: 0 0 0;
+  --primary-foreground: 255 255 255;
+  --accent: 0 0 0;
   --accent-foreground: 255 255 255;
   --destructive: 220 38 38;
   --destructive-foreground: 255 255 255;
+  --success: 21 128 61;
+  --success-foreground: 255 255 255;
+  --warning: 180 83 9;
+  --warning-foreground: 255 255 255;
+  --danger: 220 38 38;
+  --danger-foreground: 255 255 255;
+  --recovery: 21 128 61;
+  --recovery-foreground: 255 255 255;
+  --inactive: 150 150 150;
+  --inactive-foreground: 255 255 255;
   --border: 212 212 216;
   --input: 212 212 216;
-  --ring: 37 99 235;
-  --success: 34 197 94;
-  --danger: 220 38 38;
-
-  /* Legacy tokens */
-  --surface: #ffffff;
-  --surface-2: #f0f0f0;
-  --surface-3: #e4e4e7;
-  --accent-dim: rgba(37,99,235,0.12);
-  --accent-glow: rgba(37,99,235,0.22);
-  --accent-text: #ffffff;
-  --text-secondary: rgba(24,24,27,0.65);
-  --text-muted: rgba(24,24,27,0.50);
-  --text-high: rgba(24,24,27,0.92);
-  --text-med: rgba(24,24,27,0.70);
-  --text-low: rgba(24,24,27,0.55);
-  --text-faint: rgba(24,24,27,0.40);
-  --nav-bg: rgba(244,244,245,0.94);
-  --top-bg: rgba(244,244,245,0.97);
+  --ring: 0 0 0;
+  --overlay: 255 255 255;
+  --overlay-foreground: 18 18 22;
 }
 
 /* Immediately apply background to html to prevent flash */
@@ -147,46 +177,196 @@ html { background-color: rgb(var(--background)); }
 }
 
 @layer utilities {
-  /* Glow effects — use CSS vars so they adapt to theme */
-  .text-glow {
-    text-shadow: 0 0 20px var(--accent-glow), 0 0 40px var(--accent-dim);
-  }
-
-  .glow-box {
-    box-shadow: 0 0 20px var(--accent-glow), 0 0 60px var(--accent-dim);
-  }
-
-  .border-glow {
-    box-shadow: inset 0 0 0 1px color-mix(in srgb, rgb(var(--accent)) 30%, transparent), 0 0 20px var(--accent-dim);
-  }
-
-  /* Card style */
-  .card {
-    background: var(--surface);
+  /* ── VNext Card System ── */
+  .card-primary {
+    background: rgb(var(--card));
     border: 1px solid rgb(var(--border));
-    border-radius: 1rem;
+    border-radius: var(--radius-lg);
   }
 
-  /* XFITX accent button */
-  .btn-accent {
-    background: rgb(var(--primary));
-    color: rgb(var(--primary-foreground));
+  .card-secondary {
+    background: rgb(var(--secondary));
+    border: 1px solid rgb(var(--border));
+    border-radius: var(--radius-lg);
+  }
+
+  .card-glass {
+    background: color-mix(in srgb, rgb(var(--card)) 80%, transparent);
+    border: 1px solid rgb(var(--border));
+    border-radius: var(--radius-lg);
+    backdrop-filter: blur(12px);
+  }
+
+  .card-metric {
+    background: rgb(var(--card));
+    border: 1px solid rgb(var(--border));
+    border-radius: var(--radius-md);
+  }
+
+  /* ── Typography System ── */
+  .text-hero {
+    font-size: var(--font-size-hero);
+    font-weight: 800;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+    color: rgb(var(--foreground));
+  }
+
+  .text-section {
+    font-size: var(--font-size-section);
     font-weight: 700;
-    border-radius: 0.75rem;
-    transition: background-color 0.2s, box-shadow 0.2s, transform 0.2s;
+    line-height: 1.3;
+    color: rgb(var(--foreground));
   }
 
-  .btn-accent:hover {
-    box-shadow: 0 0 24px var(--accent-glow);
-    transform: translateY(-1px);
+  .text-metric-label {
+    font-size: var(--font-size-metric);
+    font-weight: 500;
+    line-height: 1.4;
+    color: rgb(var(--muted-foreground));
   }
 
-  .btn-accent:active {
-    transform: translateY(0);
-    transition: transform 0.1s;
+  .text-secondary-body {
+    font-size: var(--font-size-secondary);
+    font-weight: 400;
+    line-height: 1.5;
+    color: rgb(var(--muted-foreground));
   }
 
-  /* Input focus ring */
+  .text-caption {
+    font-size: var(--font-size-caption);
+    font-weight: 500;
+    line-height: 1.4;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    color: rgb(var(--muted-foreground));
+  }
+
+  /* ── Runtime Layout System ── */
+
+  /* Page shell: full-height scrollable container */
+  .page-shell {
+    min-height: 100dvh;
+    background: rgb(var(--background));
+    color: rgb(var(--foreground));
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Page content: max-width constrained scrollable area */
+  .page-content {
+    flex: 1;
+    width: 100%;
+    max-width: 42rem; /* ~672px — mobile-first, tablet-comfortable */
+    margin-inline: auto;
+    padding: var(--space-page);
+    padding-bottom: calc(var(--space-page) + 5rem); /* bottom tab bar clearance */
+  }
+
+  /* Page content — no bottom tab (modal/detail pages) */
+  .page-content-bare {
+    flex: 1;
+    width: 100%;
+    max-width: 42rem;
+    margin-inline: auto;
+    padding: var(--space-page);
+    padding-bottom: var(--space-page);
+  }
+
+  /* Section block: consistent vertical rhythm */
+  .section {
+    margin-bottom: var(--space-section);
+  }
+
+  .section + .section {
+    margin-top: var(--space-section);
+  }
+
+  /* Section title */
+  .section-title {
+    font-size: 0.6875rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: rgb(var(--muted-foreground));
+    margin-bottom: 0.625rem;
+  }
+
+  /* Card rhythm: consistent gap between stacked cards */
+  .card-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 0.625rem;
+  }
+
+  .card-grid-2 {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.625rem;
+  }
+
+  .card-grid-3 {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.625rem;
+  }
+
+  .card-grid-4 {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.5rem;
+  }
+
+  /* Page header */
+  .page-header {
+    position: sticky;
+    top: 0;
+    z-index: 40;
+    background: color-mix(in srgb, rgb(var(--background)) 88%, transparent);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-bottom: 1px solid rgb(var(--border) / 0.4);
+    padding: 0.75rem var(--space-page);
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  /* Metric card variants */
+  .metric-hero {
+    background: rgb(var(--card));
+    border: 1px solid rgb(var(--border));
+    border-radius: var(--radius-lg);
+    padding: 1.25rem;
+  }
+
+  .metric-compact {
+    background: rgb(var(--card));
+    border: 1px solid rgb(var(--border));
+    border-radius: var(--radius-md);
+    padding: 0.875rem;
+  }
+
+  .metric-inline {
+    background: rgb(var(--secondary));
+    border-radius: var(--radius-sm);
+    padding: 0.5rem 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .metric-trend {
+    background: rgb(var(--card));
+    border: 1px solid rgb(var(--border));
+    border-radius: var(--radius-lg);
+    padding: 1rem 1.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  /* ── Focus ring ── */
   input:focus,
   select:focus,
   textarea:focus {
@@ -194,7 +374,7 @@ html { background-color: rgb(var(--background)); }
     box-shadow: 0 0 0 2px rgb(var(--ring));
   }
 
-  /* Scrollbar */
+  /* ── Scrollbar ── */
   ::-webkit-scrollbar {
     width: 4px;
     height: 4px;
@@ -210,7 +390,7 @@ html { background-color: rgb(var(--background)); }
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    background: var(--text-faint);
+    background: rgb(var(--muted-foreground));
   }
 }
 
@@ -297,24 +477,16 @@ html {
   animation-delay: var(--delay, 0ms);
 }
 
-/* ── Workout OS: design tokens ────────────────────── */
-
+/* ── Workout OS: semantic tokens (VNext) ────────────────────── */
 :root, .dark {
-  /* Overlay backgrounds */
-  --wo-overlay-bg:        rgba(0,0,0,0.93);
-  --wo-overlay-bg-light:  rgba(0,0,0,0.55);
-  /* Rest ring colors */
-  --wo-rest-color:        #f59e0b;
-  --wo-rest-urgent:       #ef4444;
-  --wo-rest-glow:         rgba(245,158,11,0.14);
-  --wo-rest-urgent-glow:  rgba(239,68,68,0.14);
-  /* Strength accent (shared with --accent) */
-  --wo-strength-shadow:   rgba(204,255,0,0.22);
-  /* Cardio colors (reused inline but defined here for reference) */
-  --wo-cardio-treadmill:  #60a5fa;
-  --wo-cardio-stair:      #fbbf24;
-  /* Recovery color */
-  --wo-recovery:          #34d399;
+  --wo-overlay-bg:        color-mix(in srgb, rgb(var(--background)) 93%, transparent);
+  --wo-overlay-bg-light:  color-mix(in srgb, rgb(var(--background)) 55%, transparent);
+  --wo-rest-color:        rgb(var(--warning));
+  --wo-rest-urgent:       rgb(var(--danger));
+  --wo-rest-glow:         color-mix(in srgb, rgb(var(--warning)) 14%, transparent);
+  --wo-rest-urgent-glow:  color-mix(in srgb, rgb(var(--danger)) 14%, transparent);
+  --wo-strength-shadow:   color-mix(in srgb, rgb(var(--accent)) 22%, transparent);
+  --wo-recovery:          rgb(var(--recovery));
 }
 
 /* ── Workout OS: keyframes ─────────────────────────── */

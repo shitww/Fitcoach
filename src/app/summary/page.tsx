@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import { logger } from "@/lib/logger";
 import { SkeletonCard } from '@/components/Skeleton';
-import { AmbientGlow } from "@/components/AmbientGlow";
+import { PageShell, PageHeader, PageContent } from "@/components/layout";
 
 interface Set {
   id: string; weight: number; reps: number; rir: number | null;
@@ -284,18 +284,9 @@ function SummaryContent() {
 
   if (showWorkoutSelection) {
     return (
-      <div className="min-h-screen bg-background text-foreground p-6">
-        <AmbientGlow />
-        <div className="relative max-w-3xl mx-auto">
-          <div className="flex items-center gap-4 mb-8">
-            <Link href="/" className="p-2.5 rounded-xl" style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
-              <ArrowLeft className="w-5 h-5" />
-            </Link>
-            <div>
-              <h1 className="text-2xl font-black">选择训练记录</h1>
-              <div className="text-sm" style={{ color: 'var(--text-low)' }}>请从历史记录中选择一次训练</div>
-            </div>
-          </div>
+      <PageShell>
+        <PageHeader title="选择训练记录" onBack={() => router.push('/')} />
+        <PageContent>
 
           <div className="space-y-4">
             {workouts.map((workout) => {
@@ -304,33 +295,32 @@ function SummaryContent() {
               return (
                 <div 
                   key={workout.id} 
-                  className="rounded-2xl p-5 cursor-pointer transition-all hover:border-blue-500"
-                  style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}
+                  className="rounded-2xl p-5 bg-card border border-border cursor-pointer transition-all hover:border-primary/50"
                   onClick={() => router.push(`/summary?id=${workout.id}`)}
                 >
                   <div className="flex items-start justify-between mb-3">
                     <div>
                       <h3 className="font-bold mb-1">{new Date(workout.date).toLocaleDateString('zh-CN', { weekday: 'short', month: 'short', day: 'numeric' })}</h3>
-                      <div className="text-sm flex items-center gap-3" style={{ color: 'var(--text-faint)' }}>
+                      <div className="text-sm flex items-center gap-3 text-muted-foreground">
                         <span>{exerciseCount} 个动作</span>
                         <span>{totalSets} 组</span>
                         <span>{workout.totalVolume} kg</span>
                       </div>
                     </div>
-                    <div className="text-sm font-semibold" style={{ color: 'var(--accent)' }}>
+                    <div className="text-sm font-semibold text-primary">
                       查看详情 →
                     </div>
                   </div>
                   <div className="space-y-2">
                     {workout.exercises?.slice(0, 3).map((ex: any, index: number) => (
-                      <div key={index} className="flex items-center gap-3 p-2 rounded-xl" style={{ background: 'var(--surface-2)' }}>
-                        <Dumbbell className="w-4 h-4" style={{ color: 'var(--accent-glow)' }} />
+                      <div key={index} className="flex items-center gap-3 p-2 rounded-xl bg-secondary">
+                        <Dumbbell className="w-4 h-4 text-primary" />
                         <span className="text-sm">{ex.name}</span>
-                        <span className="ml-auto text-sm" style={{ color: 'var(--text-faint)' }}>{ex.sets.length} 组</span>
+                        <span className="ml-auto text-sm text-muted-foreground">{ex.sets.length} 组</span>
                       </div>
                     ))}
                     {workout.exercises?.length > 3 && (
-                      <div className="text-center text-sm" style={{ color: 'var(--text-faint)' }}>
+                      <div className="text-center text-sm text-muted-foreground">
                         还有 {workout.exercises.length - 3} 个动作...
                       </div>
                     )}
@@ -341,91 +331,84 @@ function SummaryContent() {
           </div>
 
           <div className="flex justify-center mt-8">
-            <Link href="/workout" className="flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-black" style={{ background: 'var(--accent)' }}>
+            <Link href="/workout" className="flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-primary-foreground bg-primary hover:bg-primary/90">
               <Zap className="w-4 h-4" />开始新训练
             </Link>
           </div>
-        </div>
-      </div>
+        </PageContent>
+      </PageShell>
     );
   }
 
   if (!workout) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
+      <PageShell>
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center">
           <div className="w-16 h-16 rounded-2xl mx-auto mb-4 flex items-center justify-center"><svg width="44" height="44" viewBox="0 0 70 44" fill="none">
               <text x="0" y="36" fontFamily="'Space Grotesk', sans-serif" fontSize="36" fontWeight="900" fill="#000">
                 <tspan>X</tspan><tspan fontWeight="800" fontSize="30">FIT</tspan><tspan>X</tspan>
               </text>
             </svg></div>
           <h1 className="text-2xl font-black mb-4">没有找到训练记录</h1>
-          <p className="mb-6" style={{ color: 'var(--text-low)' }}>暂无训练记录，请先开始一次训练</p>
+          <p className="mb-6 text-muted-foreground">暂无训练记录，请先开始一次训练</p>
           <div className="flex gap-4 justify-center mt-6">
-            <Link href="/workout" className="text-sm font-semibold px-4 py-2 rounded-xl text-black" style={{ background: 'var(--accent)' }}>去开始一次训练</Link>
+            <Link href="/workout" className="text-sm font-semibold px-4 py-2 rounded-xl text-primary-foreground bg-primary">去开始一次训练</Link>
+          </div>
           </div>
         </div>
-      </div>
+      </PageShell>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background text-foreground p-6">
-      <AmbientGlow />
-      <div className="relative max-w-3xl mx-auto">
-
-        {/* Header */}
-        <div className="flex items-center gap-4 mb-8">
-          <Link href="/" className="p-2.5 rounded-xl" style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
-            <ArrowLeft className="w-5 h-5" />
-          </Link>
-          <div className="flex-1">
-            <h1 className="text-2xl font-black">训练总结</h1>
-            <div className="flex items-center gap-2 text-sm" style={{ color: 'var(--text-low)' }}>
-              <Calendar className="w-4 h-4" />
-              {new Date(date).toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' })}
-            </div>
-          </div>
-          {!isFreeRecord && !isCardioRecord && (
+    <PageShell>
+      <PageHeader
+        title="训练总结"
+        onBack={() => router.push('/')}
+        action={
+          !isFreeRecord && !isCardioRecord ? (
             editMode ? (
               <div className="flex gap-2">
-                <button onClick={() => setEditMode(false)} className="px-3 py-2 rounded-xl text-sm flex items-center gap-1.5" style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--text-low)' }}>
+                <button onClick={() => setEditMode(false)} className="px-3 py-2 rounded-xl text-sm flex items-center gap-1.5 bg-secondary border border-border text-muted-foreground">
                   <X className="w-3.5 h-3.5" />取消
                 </button>
-                <button onClick={saveEdit} disabled={saveLoading} className="px-3 py-2 rounded-xl text-sm font-bold flex items-center gap-1.5" style={{ background: 'var(--accent)', color: 'var(--accent-text)' }}>
+                <button onClick={saveEdit} disabled={saveLoading} className="px-3 py-2 rounded-xl text-sm font-bold flex items-center gap-1.5 bg-primary text-primary-foreground hover:bg-primary/90">
                   {saveLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}保存
                 </button>
               </div>
             ) : (
-              <button onClick={enterEdit} className="px-3 py-2 rounded-xl text-sm flex items-center gap-1.5" style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--text-med)' }}>
+              <button onClick={enterEdit} className="px-3 py-2 rounded-xl text-sm flex items-center gap-1.5 bg-secondary border border-border text-foreground">
                 <Edit2 className="w-3.5 h-3.5" />编辑
               </button>
             )
-          )}
-        </div>
+          ) : undefined
+        }
+      />
+      <PageContent>
 
         {/* PR Banner */}
         {newPRs.length > 0 && (
-          <div className="mb-6 p-4 rounded-2xl" style={{ background: 'linear-gradient(135deg, rgba(255,215,0,0.15) 0%, rgba(255,165,0,0.08) 100%)', border: '1px solid rgba(255,215,0,0.3)' }}>
+          <div className="mb-6 p-4 rounded-2xl bg-warning/10 border border-warning/30">
             <div className="flex items-center gap-3 mb-3">
-              <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ background: 'rgba(255,215,0,0.2)' }}>
-                <Trophy className="w-5 h-5" style={{ color: '#FFD700' }} />
+              <div className="w-10 h-10 rounded-full flex items-center justify-center bg-warning/20">
+                <Trophy className="w-5 h-5 text-warning" />
               </div>
               <div>
-                <div className="text-lg font-bold" style={{ color: '#FFD700' }}>🏆 新纪录！</div>
-                <div className="text-sm" style={{ color: 'var(--text-med)' }}>恭喜打破个人最佳！</div>
+                <div className="text-lg font-bold text-warning">新纪录！</div>
+                <div className="text-sm text-foreground">恭喜打破个人最佳！</div>
               </div>
             </div>
             <div className="space-y-2">
               {newPRs.map((pr, index) => (
-                <div key={index} className="flex items-center justify-between p-2 rounded-lg" style={{ background: 'rgba(0,0,0,0.3)' }}>
+                <div key={index} className="flex items-center justify-between p-2 rounded-lg bg-secondary">
                   <div className="flex items-center gap-2">
-                    <Dumbbell className="w-4 h-4" style={{ color: '#FFD700' }} />
+                    <Dumbbell className="w-4 h-4 text-warning" />
                     <span className="font-medium">{pr.exerciseName}</span>
                   </div>
                   <div className="flex items-center gap-3">
-                    <span className="text-sm" style={{ color: 'var(--text-low)' }}>上次: {pr.previousMax}kg</span>
-                    <span className="font-bold" style={{ color: '#FFD700' }}>
+                    <span className="text-sm text-muted-foreground">上次: {pr.previousMax}kg</span>
+                    <span className="font-bold text-warning">
                       {pr.weight}kg × {pr.reps}次
                       <span className="ml-2 text-sm">(+{pr.weight - pr.previousMax}kg)</span>
                     </span>
@@ -438,56 +421,55 @@ function SummaryContent() {
 
         {/* Save status */}
         {fetching ? (
-          <div className="mb-6 p-4 rounded-2xl flex items-center gap-3" style={{ background: 'rgba(0,212,255,0.08)', border: '1px solid rgba(0,212,255,0.2)' }}>
-            <Loader2 className="w-5 h-5 animate-spin" style={{ color: '#00D4FF' }} />
-            <span className="text-sm" style={{ color: '#00D4FF' }}>正在加载训练记录...</span>
+          <div className="mb-6 p-4 rounded-2xl flex items-center gap-3 bg-primary/10 border border-primary/20">
+            <Loader2 className="w-5 h-5 animate-spin text-primary" />
+            <span className="text-sm text-primary">正在加载训练记录...</span>
           </div>
         ) : workout ? (
-          <div className="mb-6 p-4 rounded-2xl flex items-center gap-3" style={{ background: 'var(--accent-dim)', border: '1px solid var(--accent-glow)' }}>
-            <CheckCircle className="w-5 h-5" style={{ color: 'var(--accent)' }} />
-            <span className="text-sm" style={{ color: 'var(--accent)' }}>✅ 训练记录已保存</span>
+          <div className="mb-6 p-4 rounded-2xl flex items-center gap-3 bg-success/10 border border-success/20">
+            <CheckCircle className="w-5 h-5 text-success" />
+            <span className="text-sm text-success">训练记录已保存</span>
           </div>
         ) : (
-          <div className="mb-6 p-4 rounded-2xl flex items-center gap-3" style={{ background: 'rgba(255,184,0,0.08)', border: '1px solid rgba(255,184,0,0.2)' }}>
-            <AlertTriangle className="w-5 h-5" style={{ color: '#FFB800' }} />
-            <span className="text-sm" style={{ color: '#FFB800' }}>⚠️ 记录加载失败，请检查登录状态</span>
+          <div className="mb-6 p-4 rounded-2xl flex items-center gap-3 bg-warning/10 border border-warning/20">
+            <AlertTriangle className="w-5 h-5 text-warning" />
+            <span className="text-sm text-warning">记录加载失败，请检查登录状态</span>
           </div>
         )}
 
         {/* Stats */}
         <div className={`grid gap-3 mb-8 ${isFreeRecord ? 'grid-cols-2' : 'grid-cols-2 md:grid-cols-4'}`}>
           {(isFreeRecord ? [
-            { icon: Clock, label: '训练时长', value: formatTime(duration), unit: '', color: '#A855F7' },
-            { icon: BookOpen, label: '记录类型', value: '自由记录', unit: '', color: '#A855F7' },
+            { icon: Clock, label: '训练时长', value: formatTime(duration), unit: '', colorClass: 'text-recovery' },
+            { icon: BookOpen, label: '记录类型', value: '自由记录', unit: '', colorClass: 'text-recovery' },
           ] : isCardioRecord ? [
-            { icon: Clock, label: '训练时长', value: formatTime(duration), unit: '', color: '#60A5FA' },
-            { icon: Flame, label: '消耗热量', value: (exercises[0]?.sets[0] as any)?.rir ?? 0, unit: 'kcal', color: '#f97316' },
-            { icon: Activity, label: '距离', value: (exercises[0]?.sets[0] as any)?.weight ?? 0, unit: 'km', color: '#60A5FA' },
-            { icon: Target, label: '平均心率', value: (exercises[0]?.sets[0] as any)?.reps ?? 0, unit: 'bpm', color: '#ef4444' },
+            { icon: Clock, label: '训练时长', value: formatTime(duration), unit: '', colorClass: 'text-blue-400' },
+            { icon: Flame, label: '消耗热量', value: (exercises[0]?.sets[0] as any)?.rir ?? 0, unit: 'kcal', colorClass: 'text-warning' },
+            { icon: Activity, label: '距离', value: (exercises[0]?.sets[0] as any)?.weight ?? 0, unit: 'km', colorClass: 'text-blue-400' },
+            { icon: Target, label: '平均心率', value: (exercises[0]?.sets[0] as any)?.reps ?? 0, unit: 'bpm', colorClass: 'text-danger' },
           ] : [
-            { icon: Activity, label: '训练总量', value: workout.totalVolume, unit: 'kg', color: 'var(--accent)' },
-            { icon: Clock, label: '训练时长', value: formatTime(duration), unit: '', color: '#00D4FF' },
-            { icon: Target, label: '完成组数', value: stats.totalSets, unit: '组', color: '#A855F7' },
-            { icon: Trophy, label: '最大重量', value: stats.maxWeight, unit: 'kg', color: '#FFB800' },
+            { icon: Activity, label: '训练总量', value: workout.totalVolume, unit: 'kg', colorClass: 'text-primary' },
+            { icon: Clock, label: '训练时长', value: formatTime(duration), unit: '', colorClass: 'text-primary' },
+            { icon: Target, label: '完成组数', value: stats.totalSets, unit: '组', colorClass: 'text-recovery' },
+            { icon: Trophy, label: '最大重量', value: stats.maxWeight, unit: 'kg', colorClass: 'text-warning' },
           ]).map((stat, i) => (
-            <div key={i} className="rounded-2xl p-5" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
+            <div key={i} className="rounded-2xl p-5 bg-card border border-border">
               <div className="flex items-center gap-1.5 mb-2">
-                <stat.icon className="w-4 h-4" style={{ color: stat.color }} />
-                <span className="text-xs" style={{ color: 'var(--text-faint)' }}>{stat.label}</span>
+                <stat.icon className={`w-4 h-4 ${stat.colorClass}`} />
+                <span className="text-xs text-muted-foreground">{stat.label}</span>
               </div>
-              <div className="text-2xl font-black" style={{ color: stat.color }}>{stat.value}<span className="text-sm text-foreground/30 ml-0.5">{stat.unit}</span></div>
+              <div className={`text-2xl font-black ${stat.colorClass}`}>{stat.value}<span className="text-sm text-muted-foreground ml-0.5">{stat.unit}</span></div>
             </div>
           ))}
         </div>
 
         {/* Free-record notes display */}
         {isFreeRecord && workout.notes && (
-          <div className="rounded-2xl p-5 mb-8" style={{ background: 'var(--surface)', border: '1px solid rgba(168,85,247,0.25)' }}>
+          <div className="rounded-2xl p-5 mb-8 bg-card border border-border">
             <div className="flex items-center gap-2 mb-3">
-              <span className="text-xl">📝</span>
               <h3 className="text-base font-bold text-foreground">训练记录</h3>
             </div>
-            <p className="text-sm leading-relaxed whitespace-pre-wrap" style={{ color: 'var(--text-med)' }}>
+            <p className="text-sm leading-relaxed whitespace-pre-wrap text-foreground">
               {workout.notes}
             </p>
           </div>
@@ -495,14 +477,14 @@ function SummaryContent() {
 
         {/* Muscle Groups */}
         {workout.muscleGroups && workout.muscleGroups.length > 0 && (
-          <div className="rounded-2xl p-5 mb-8" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
+          <div className="rounded-2xl p-5 mb-8 bg-card border border-border">
             <div className="flex items-center gap-2 mb-4">
-              <Dumbbell className="w-5 h-5" style={{ color: 'var(--accent)' }} />
+              <Dumbbell className="w-5 h-5 text-primary" />
               <h3 className="text-lg font-bold">训练部位</h3>
             </div>
             <div className="flex flex-wrap gap-2">
               {workout.muscleGroups.map((group, index) => (
-                <span key={index} className="px-3 py-1.5 rounded-lg text-sm font-semibold transition-all" style={{ background: 'var(--accent-dim)', color: 'var(--accent)' }}>
+                <span key={index} className="px-3 py-1.5 rounded-lg text-sm font-semibold transition-all bg-primary/10 text-primary">
                   {group}
                 </span>
               ))}
@@ -511,28 +493,23 @@ function SummaryContent() {
         )}
 
         {/* AI Feedback */}
-        <div className="rounded-2xl p-6 mb-8" style={{
-          background: 'var(--surface)',
-          border: `1px solid ${isFreeRecord ? 'rgba(168,85,247,0.2)' : isCardioRecord ? 'rgba(96,165,250,0.2)' : 'var(--accent-dim)'}`
-        }}>
+        <div className="rounded-2xl p-6 mb-8 bg-card border border-border">
           <div className="flex items-center justify-between gap-3 mb-6">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{
-                background: isFreeRecord ? 'rgba(168,85,247,0.1)' : isCardioRecord ? 'rgba(96,165,250,0.1)' : 'var(--accent-dim)'
-              }}>
-                {isFreeRecord ? <span className="text-lg">🧠</span> : isCardioRecord ? <Flame className="w-5 h-5" style={{ color: '#60A5FA' }} /> : <Zap className="w-5 h-5" style={{ color: 'var(--accent)' }} />}
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-primary/10">
+                {isFreeRecord ? <BookOpen className="w-5 h-5 text-primary" /> : isCardioRecord ? <Flame className="w-5 h-5 text-primary" /> : <Zap className="w-5 h-5 text-primary" />}
               </div>
               <div>
-                <h3 className="text-lg font-black" style={{ color: isFreeRecord ? '#A855F7' : isCardioRecord ? '#60A5FA' : 'var(--accent)' }}>
+                <h3 className="text-lg font-black text-primary">
                   {isFreeRecord ? 'AI 智能解读' : 'AI 教练反馈'}
                 </h3>
                 {feedbackStatus === 'done' && (
-                  <div className="text-[11px] mt-0.5" style={{ color: 'var(--text-faint)' }}>已缓存 · 编辑后可重新生成</div>
+                  <div className="text-[11px] mt-0.5 text-muted-foreground">已缓存 · 编辑后可重新生成</div>
                 )}
               </div>
             </div>
             {feedbackStatus === 'done' && (
-              <button onClick={handleGenerateFeedback} className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold" style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--text-low)' }}>
+              <button onClick={handleGenerateFeedback} className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-secondary border border-border text-muted-foreground hover:bg-muted transition-colors">
                 <RefreshCw className="w-3 h-3" />重新生成
               </button>
             )}
@@ -540,21 +517,20 @@ function SummaryContent() {
           {(feedbackStatus === 'checking' || feedbackStatus === 'generating' || fetching) ? (
             <div>
               <SkeletonCard />
-              <p className="text-xs text-center mt-2" style={{ color: 'var(--text-faint)' }}>
+              <p className="text-xs text-center mt-2 text-muted-foreground">
                 {feedbackStatus === 'generating' ? 'AI 教练分析中…' : '读取缓存…'}
               </p>
             </div>
           ) : feedbackStatus === 'none' ? (
             <div className="text-center py-4">
-              <p className="text-sm mb-4" style={{ color: 'var(--text-low)' }}>AI 分析暂时不可用</p>
+              <p className="text-sm mb-4 text-muted-foreground">AI 分析暂时不可用</p>
               <button onClick={handleGenerateFeedback}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm mx-auto"
-                style={{ background: 'var(--accent)', color: 'var(--accent-text)' }}>
+                className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm mx-auto text-primary-foreground bg-primary hover:bg-primary/90">
                 <RefreshCw className="w-3.5 h-3.5" />重试
               </button>
             </div>
           ) : aiFeedback?.coach ? (
-            <p className="text-sm leading-relaxed whitespace-pre-wrap" style={{ color: 'var(--text-med)' }}>
+            <p className="text-sm leading-relaxed whitespace-pre-wrap text-foreground">
               {aiFeedback.coach}
             </p>
           ) : null}
@@ -562,12 +538,12 @@ function SummaryContent() {
 
         {/* Training Notes — hide for free records (already shown in the record card above) */}
         {(workout.notes || editMode) && !isFreeRecord && (
-          <div className="rounded-2xl p-6 mb-8" style={{ background: 'var(--surface)', border: `1px solid ${editMode ? 'rgba(0,212,255,0.3)' : '#1e1e1e'}` }}>
+          <div className={`rounded-2xl p-6 mb-8 bg-card border ${editMode ? 'border-primary/30' : 'border-border'}`}>
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: 'rgba(0,212,255,0.1)' }}>
-                <BookOpen className="w-5 h-5" style={{ color: '#00D4FF' }} />
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-primary/10">
+                <BookOpen className="w-5 h-5 text-primary" />
               </div>
-              <h3 className="text-lg font-black" style={{ color: '#00D4FF' }}>训练心得</h3>
+              <h3 className="text-lg font-black text-primary">训练心得</h3>
             </div>
             {editMode ? (
               <textarea
@@ -575,11 +551,10 @@ function SummaryContent() {
                 onChange={e => setEditedNotes(e.target.value)}
                 rows={4}
                 placeholder="写下本次训练感受、注意事项…"
-                className="w-full rounded-xl px-4 py-3 text-sm outline-none resize-none"
-                style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--text-med)' }}
+                className="w-full rounded-xl px-4 py-3 text-sm outline-none resize-none bg-secondary border border-border text-foreground"
               />
             ) : (
-              <div className="text-sm" style={{ color: 'var(--text-med)' }}>{workout.notes}</div>
+              <div className="text-sm text-foreground">{workout.notes}</div>
             )}
           </div>
         )}
@@ -587,8 +562,8 @@ function SummaryContent() {
         {/* Detail — compact history style matching workout recording */}
         {exercises.length > 0 && (
         <div className="mb-8">
-          <h3 className="text-base font-black mb-3 flex items-center gap-2" style={{ color: 'var(--text-high)' }}>
-            <Dumbbell className="w-4 h-4" style={{ color: 'var(--accent)' }} />
+          <h3 className="text-base font-black mb-3 flex items-center gap-2 text-foreground">
+            <Dumbbell className="w-4 h-4 text-primary" />
             训练详情
           </h3>
           <div className="space-y-2">
@@ -600,35 +575,31 @@ function SummaryContent() {
                 ? 0
                 : ex.sets.reduce((s: number, st: any) => s + (st.isBodyweight ? 0 : st.weight * st.reps), 0);
               return (
-                <div key={ei} className="flex items-center gap-3 px-4 py-2.5 rounded-xl"
-                  style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
-                  <div className="w-6 h-6 rounded-full flex items-center justify-center shrink-0"
-                    style={{ background: isWarmupEx ? 'rgba(251,146,60,0.12)' : 'rgba(52,211,153,0.12)' }}>
-                    <span className="text-xs" style={{ color: isWarmupEx ? '#fb923c' : '#34D399' }}>
+                <div key={ei} className="flex items-center gap-3 px-4 py-2.5 rounded-xl bg-card border border-border">
+                  <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 ${isWarmupEx ? 'bg-warning/12' : 'bg-success/12'}`}>
+                    <span className={`text-xs font-bold ${isWarmupEx ? 'text-warning' : 'text-success'}`}>
                       {isWarmupEx ? '热' : isCardioEx ? '氧' : '✓'}
                     </span>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="text-sm font-semibold truncate" style={{ color: 'var(--text-med)' }}>
+                    <div className="text-sm font-semibold truncate text-foreground">
                       {ex.name.split(' (')[0]}
                     </div>
-                    <div className="text-xs mt-0.5 truncate" style={{ color: 'var(--text-low)' }}>
+                    <div className="text-xs mt-0.5 truncate text-muted-foreground">
                       {editMode && !isWarmupEx && !isCardioEx ? (
                         ex.sets.map((set: any, si: number) => {
                           const draft = editedSets[set.id] ?? { weight: set.weight, reps: set.reps, rir: set.rir ?? 0, isFailure: set.isFailure };
                           return (
                             <span key={si} className="inline-flex items-center gap-1 mr-2">
-                              <span style={{ color: 'var(--text-faint)' }}>{si + 1}.</span>
+                              <span className="text-muted-foreground">{si + 1}.</span>
                               {!set.isBodyweight && (
                                 <input type="text" inputMode="decimal" value={draft.weight}
                                   onChange={e => setEditedSets(p => ({ ...p, [set.id]: { ...p[set.id], weight: Number(e.target.value) } }))}
-                                  className="w-12 text-xs text-center font-bold bg-transparent outline-none border-b"
-                                  style={{ borderColor: 'var(--color-accent)', color: 'var(--foreground)' }} />
+                                  className="w-12 text-xs text-center font-bold bg-transparent outline-none border-b border-primary text-foreground" />
                               )}
                               <input type="text" inputMode="numeric" value={draft.reps}
                                 onChange={e => setEditedSets(p => ({ ...p, [set.id]: { ...p[set.id], reps: Number(e.target.value) } }))}
-                                className="w-10 text-xs text-center font-bold bg-transparent outline-none border-b"
-                                style={{ borderColor: 'var(--color-accent)', color: 'var(--foreground)' }} />
+                                className="w-10 text-xs text-center font-bold bg-transparent outline-none border-b border-primary text-foreground" />
                             </span>
                           );
                         })
@@ -645,14 +616,14 @@ function SummaryContent() {
                         ex.sets.map((s: any, i: number) => (
                           <span key={i}>{i > 0 ? ' · ' : ''}
                             {exIsTimed ? `${s.reps}秒` : (s.isBodyweight ? `${s.reps}次` : `${s.weight}×${s.reps}`)}
-                            {s.isFailure ? '🔥' : ''}
+                            {s.isFailure ? ' ⚡' : ''}
                           </span>
                         ))
                       )}
                     </div>
                   </div>
                   {vol > 0 && !editMode && (
-                    <div className="text-xs font-bold shrink-0" style={{ color: 'var(--text-faint)' }}>
+                    <div className="text-xs font-bold shrink-0 text-muted-foreground">
                       {vol}kg
                     </div>
                   )}
@@ -663,8 +634,7 @@ function SummaryContent() {
                       if (!d) return p;
                       return { ...p, [s0.id]: { ...d, isFailure: !d.isFailure } };
                     })}
-                      className="px-2 py-0.5 rounded-full text-xs shrink-0"
-                      style={{ background: 'var(--surface-2)', color: 'var(--text-low)', border: '1px solid var(--border)' }}>
+                      className="px-2 py-0.5 rounded-full text-xs shrink-0 bg-secondary text-muted-foreground border border-border">
                       力竭
                     </button>
                   )}
@@ -677,25 +647,25 @@ function SummaryContent() {
 
         {/* Bottom */}
         <div className="flex justify-center gap-4">
-          <Link href="/" className="flex items-center gap-2 px-6 py-3 rounded-xl font-bold" style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
+          <Link href="/" className="flex items-center gap-2 px-6 py-3 rounded-xl font-bold bg-secondary border border-border text-foreground hover:bg-muted">
             <ArrowLeft className="w-4 h-4" />返回首页
           </Link>
-          <Link href="/workout" className="flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-black" style={{ background: 'var(--accent)' }}>
+          <Link href="/workout" className="flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-primary-foreground bg-primary hover:bg-primary/90">
             <Zap className="w-4 h-4" />开始新训练
           </Link>
         </div>
-      </div>
-    </div>
+      </PageContent>
+    </PageShell>
   );
 }
 
 export default function SummaryPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="page-shell items-center justify-center">
         <div className="text-center">
-          <div className="w-16 h-16 rounded-full animate-spin mx-auto mb-4" style={{ border: '4px solid var(--accent)', borderTopColor: 'transparent' }} />
-          <p style={{ color: 'var(--text-low)' }}>加载中...</p>
+          <div className="w-16 h-16 rounded-full animate-spin mx-auto mb-4 border-4 border-primary border-t-transparent" />
+          <p className="text-muted-foreground">加载中...</p>
         </div>
       </div>
     }

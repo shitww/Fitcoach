@@ -7,7 +7,7 @@ import { useSession } from 'next-auth/react';
 import {
   ArrowLeft, Dumbbell, Clock, Check,
   X, Flame, Activity, Target,
-  BookOpen, Loader2, ChevronRight
+  BookOpen, Loader2, ChevronRight, FileText, Timer, Footprints
 } from 'lucide-react';
 import { useShallow } from 'zustand/shallow';
 import { useWorkoutTimer, selectTrainingSeconds, selectRestSecondsRemaining } from '@/stores/workoutTimer';
@@ -19,7 +19,6 @@ import { getUserStorageItem, setUserStorageItem, removeUserStorageItem } from '@
 import { useToast } from '@/components/Toast';
 import { useWorkoutEffects } from '@/hooks/useWorkoutEffects';
 import { useWorkoutHint } from '@/hooks/useWorkoutHint';
-import { AmbientGlow } from "@/components/AmbientGlow";
 import type { RecoveryWorkoutPlan } from '@/types/workout-plan';
 import RestTimerPill from '@/components/workout/RestTimerPill';
 import ActiveExerciseCard from '@/components/workout/ActiveExerciseCard';
@@ -265,16 +264,16 @@ const CardioTimerDisplay = memo(function CardioTimerDisplay({
 
 /** Full-screen mode-entry overlay, auto-dismissed by caller after ~1.6s. */
 const IntroOverlay = memo(function IntroOverlay({
-  visible, emoji, title, subtitle,
-}: { visible: boolean; emoji: string; title: string; subtitle: string }) {
+  visible, icon, title, subtitle,
+}: { visible: boolean; icon: React.ReactNode; title: string; subtitle: string }) {
   if (!visible) return null;
   return (
     <div className="fixed inset-0 z-[95] flex items-center justify-center pointer-events-none"
-      style={{ background: 'rgba(0,0,0,0.92)', backdropFilter: 'blur(14px)' }}>
+      style={{ background: 'color-mix(in srgb, rgb(var(--background)) 92%, transparent)', backdropFilter: 'blur(14px)' }}>
       <div className="text-center px-8">
-        <div className="text-7xl mb-5">{emoji}</div>
-        <h2 className="text-2xl font-black mb-2" style={{ color: '#ffffff' }}>{title}</h2>
-        <p className="text-sm" style={{ color: 'rgba(255,255,255,0.65)' }}>{subtitle}</p>
+        <div className="mb-5 flex items-center justify-center">{icon}</div>
+        <h2 className="text-2xl font-black mb-2 text-foreground">{title}</h2>
+        <p className="text-sm text-muted-foreground">{subtitle}</p>
       </div>
     </div>
   );
@@ -469,7 +468,7 @@ export default function WorkoutController() {
 
   // ── Phase 2: UX separation state ─────────────────────────────────────────────
   const [introVisible, setIntroVisible] = useState(false);
-  const [introContent, setIntroContent] = useState<{ emoji: string; title: string; subtitle: string } | null>(null);
+  const [introContent, setIntroContent] = useState<{ icon: React.ReactNode; title: string; subtitle: string } | null>(null);
   const [setFeedback, setSetFeedback] = useState<string | null>(null);
   const [planHeaderCollapsed, setPlanHeaderCollapsed] = useState(false);
   const [cardioTargetMin, setCardioTargetMin] = useState(30);
@@ -547,7 +546,7 @@ export default function WorkoutController() {
       storeSetSessionType('strength');
       storeStartTraining();
       startTransition(() => {
-        setIntroContent({ emoji: '💪', title: `今天练${label}`, subtitle: '热身后开始正式训练' });
+        setIntroContent({ icon: <Dumbbell className="w-16 h-16 text-primary" />, title: `今天练${label}`, subtitle: '热身后开始正式训练' });
         setIntroVisible(true);
       });
       setTimeout(() => startTransition(() => setIntroVisible(false)), 1600);
@@ -559,7 +558,7 @@ export default function WorkoutController() {
       storeStartTraining();
       startTransition(() => {
         setTrainingType(ct);
-        setIntroContent({ emoji: ct === 'treadmill' ? '🏃' : '🧗', title: `开始${ctLabel}`, subtitle: '记录时间、速度和消耗' });
+        setIntroContent({ icon: ct === 'treadmill' ? <Footprints className="w-16 h-16 text-blue-400" /> : <Activity className="w-16 h-16 text-blue-400" />, title: `开始${ctLabel}`, subtitle: '记录时间、速度和消耗' });
         setIntroVisible(true);
       });
       setTimeout(() => startTransition(() => setIntroVisible(false)), 1600);
@@ -587,7 +586,7 @@ export default function WorkoutController() {
           steps,
         });
         setTrainingType('free');
-        setIntroContent({ emoji: '🧘', title: `开始${focusLabel}`, subtitle: '跟随节奏，慢慢放松' });
+        setIntroContent({ icon: <Timer className="w-16 h-16 text-recovery" />, title: `开始${focusLabel}`, subtitle: '跟随节奏，慢慢放松' });
         setIntroVisible(true);
       });
       setTimeout(() => startTransition(() => setIntroVisible(false)), 1600);
@@ -1397,8 +1396,7 @@ export default function WorkoutController() {
 
   if (showSelectionScreen) {
     return (
-      <div className="min-h-screen flex flex-col" style={{ background: 'var(--background)', color: 'var(--foreground)' }}>
-        <AmbientGlow />
+      <div className="min-h-screen flex flex-col bg-background text-foreground">
         <div className="relative flex flex-col flex-1 px-4 pt-5 pb-8 sm:max-w-sm md:max-w-md mx-auto w-full">
           {/* Header */}
           <div className="flex items-center gap-3 mb-10">
@@ -1421,8 +1419,9 @@ export default function WorkoutController() {
               style={{ background: 'var(--accent-dim)', border: '1px solid var(--border)' }}
             >
               <div className="flex items-center gap-4">
-                <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-3xl shrink-0"
-                  style={{ background: 'var(--accent-dim)' }}>💪</div>
+                <div className="w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 bg-primary/10">
+                  <Dumbbell className="w-8 h-8 text-primary" />
+                </div>
                 <div className="flex-1">
                   <p className="text-lg font-black">力量训练</p>
                   <p className="text-sm mt-0.5" style={{ color: 'var(--text-low)' }}>
@@ -1446,8 +1445,9 @@ export default function WorkoutController() {
               style={{ background: 'rgba(96,165,250,0.06)', border: '1px solid rgba(96,165,250,0.2)' }}
             >
               <div className="flex items-center gap-4">
-                <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-3xl shrink-0"
-                  style={{ background: 'rgba(96,165,250,0.1)' }}>🏃</div>
+                <div className="w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 bg-blue-500/10">
+                  <Activity className="w-8 h-8 text-blue-400" />
+                </div>
                 <div className="flex-1">
                   <p className="text-lg font-black">有氧训练</p>
                   <p className="text-sm mt-0.5" style={{ color: 'var(--text-low)' }}>
@@ -1457,10 +1457,8 @@ export default function WorkoutController() {
                 <ChevronRight className="w-5 h-5 shrink-0" style={{ color: 'rgba(96,165,250,0.5)' }} />
               </div>
               <div className="mt-4 flex gap-2">
-                <span className="text-xs px-2.5 py-1 rounded-full font-medium"
-                  style={{ background: 'rgba(96,165,250,0.1)', color: 'rgba(96,165,250,0.8)' }}>🏃 跑步机</span>
-                <span className="text-xs px-2.5 py-1 rounded-full font-medium"
-                  style={{ background: 'rgba(96,165,250,0.1)', color: 'rgba(96,165,250,0.8)' }}>🧗 爬楼机</span>
+                <span className="text-xs px-2.5 py-1 rounded-full font-medium bg-blue-500/10 text-blue-400">跑步机</span>
+                <span className="text-xs px-2.5 py-1 rounded-full font-medium bg-blue-500/10 text-blue-400">爬楼机</span>
               </div>
             </button>
 
@@ -1471,8 +1469,9 @@ export default function WorkoutController() {
               style={{ background: 'rgba(168,85,247,0.06)', border: '1px solid rgba(168,85,247,0.2)' }}
             >
               <div className="flex items-center gap-4">
-                <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-3xl shrink-0"
-                  style={{ background: 'rgba(168,85,247,0.1)' }}>📝</div>
+                <div className="w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 bg-purple-500/10">
+                  <FileText className="w-8 h-8 text-purple-400" />
+                </div>
                 <div className="flex-1">
                   <p className="text-lg font-black">自由记录</p>
                   <p className="text-sm mt-0.5" style={{ color: 'var(--text-low)' }}>
@@ -1503,10 +1502,7 @@ export default function WorkoutController() {
   }
 
   return (
-    <div className="min-h-screen px-4 py-5 sm:p-6 safe-bottom" style={{ background: 'var(--background)', color: 'var(--foreground)' }}>
-
-      {/* Ambient glow */}
-      <AmbientGlow />
+    <div className="min-h-screen px-4 py-5 sm:p-6 safe-bottom bg-background text-foreground">
 
       <div className="relative max-w-3xl mx-auto"
         style={{ animation: 'page-enter 0.35s cubic-bezier(0.22,1,0.36,1) both' }}>
@@ -2325,7 +2321,7 @@ export default function WorkoutController() {
       {introContent && (
         <IntroOverlay
           visible={introVisible}
-          emoji={introContent.emoji}
+          icon={introContent.icon}
           title={introContent.title}
           subtitle={introContent.subtitle}
         />

@@ -3,13 +3,13 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Dumbbell, Calendar, Clock, TrendingUp, Trash2, Flame, AlertCircle, Check, Zap, Trophy } from 'lucide-react'
+import { Dumbbell, Calendar, Clock, TrendingUp, Trash2, Flame, AlertCircle, Check, Zap, Trophy, Activity } from 'lucide-react'
 import { logger } from "@/lib/logger";
 import { useWorkoutTimer } from '@/stores/workoutTimer';
 import { SkeletonList } from '@/components/Skeleton'
 import { EmptyState } from '@/components/EmptyState'
 import { useToast } from '@/components/Toast'
-import { AmbientGlow } from "@/components/AmbientGlow"
+import { PageShell, PageHeader, PageContent, Section } from "@/components/layout"
 import BottomTabBar from "@/components/BottomTabBar"
 import { WorkoutMonthCalendar } from '@/components/WorkoutMonthCalendar'
 import PullToRefresh from '@/components/PullToRefresh'
@@ -71,7 +71,6 @@ export default function HistoryPage() {
     }
   }
 
-  const CARDIO_ICONS: Record<string, string> = { '跑步机': '🏃', '爬楼机': '🧗', '跑步': '🏃', '骑行': '🚴', '爬坡登山': '🧗' };
 
   // 统计数据
   const workoutDates = workouts.map(w => new Date(w.date).toISOString().slice(0, 10));
@@ -141,70 +140,55 @@ export default function HistoryPage() {
 
   if (status === 'unauthenticated') {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-16 h-16 rounded-2xl mx-auto mb-4 flex items-center justify-center"><svg width="44" height="44" viewBox="0 0 70 44" fill="none">
-              <text x="0" y="36" fontFamily="'Space Grotesk', sans-serif" fontSize="36" fontWeight="900" fill="var(--accent)">
-                <tspan>X</tspan><tspan fontWeight="800" fontSize="30">FIT</tspan><tspan>X</tspan>
-              </text>
-            </svg></div>
-          <p className="mb-4" style={{ color: 'rgba(255,255,255,0.3)' }}>请先登录</p>
-          <button
-            onClick={() => router.push('/auth/signin')}
-            className="px-6 py-2.5 rounded-xl font-bold text-black"
-            style={{ background: 'var(--accent)' }}>
-            登录
-          </button>
+      <PageShell>
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center p-6">
+            <p className="mb-4 text-muted-foreground">请先登录</p>
+            <button
+              onClick={() => router.push('/auth/signin')}
+              className="px-6 py-2.5 rounded-xl font-bold text-primary-foreground bg-primary hover:bg-primary/90">
+              登录
+            </button>
+          </div>
         </div>
-      </div>
+      </PageShell>
     )
   }
 
   return (
-    <div className="min-h-screen pb-28" style={{ background: 'var(--background)', color: 'var(--foreground)' }}>
-      <AmbientGlow />
+    <PageShell>
+      <PageHeader
+        title="训练历史"
+        subtitle={workouts.length > 0 ? `${workouts.length} 条记录` : undefined}
+        onBack={() => router.back()}
+      />
       <PullToRefresh onRefresh={refresh}>
-        <div className="relative max-w-3xl mx-auto px-4 py-6">
+        <PageContent>
 
-          {/* Header */}
-        <div className="flex items-center gap-4 mb-6">
-          <button
-            onClick={() => router.back()}
-            className="p-2.5 rounded-xl transition-all active:scale-95"
-            style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}
-          >
-            <ArrowLeft className="w-5 h-5" style={{ color: 'var(--text-med)' }} />
-          </button>
-          <div>
-            <h1 className="text-2xl font-black">训练历史</h1>
-            <p className="text-sm" style={{ color: 'var(--text-faint)' }}>{workouts.length} 条记录</p>
-          </div>
-        </div>
-
-        {/* Workout day map for calendar */}
         {/* Stats strip */}
         {!isLoading && !error && workouts.length > 0 && (
-          <>
-            <div className="grid grid-cols-4 gap-2 mb-4">
+          <Section>
+            <div className="card-grid-4 mb-3">
               {[
-                { label: '总训练', value: workouts.length, icon: <Dumbbell className="w-3.5 h-3.5" />, color: 'var(--accent)' },
-                { label: '本月', value: thisMonthCount, icon: <Calendar className="w-3.5 h-3.5" />, color: '#A855F7' },
-                { label: '连续', value: `${currentStreak}天`, icon: <Zap className="w-3.5 h-3.5" />, color: '#F59E0B' },
-                { label: '最长', value: `${maxStreak}天`, icon: <Trophy className="w-3.5 h-3.5" />, color: '#3B82F6' },
+                { label: '总训练', value: workouts.length, icon: <Dumbbell className="w-3.5 h-3.5 text-primary" /> },
+                { label: '本月', value: thisMonthCount, icon: <Calendar className="w-3.5 h-3.5 text-recovery" /> },
+                { label: '连续', value: `${currentStreak}天`, icon: <Zap className="w-3.5 h-3.5 text-warning" /> },
+                { label: '最长', value: `${maxStreak}天`, icon: <Trophy className="w-3.5 h-3.5 text-primary" /> },
               ].map(s => (
-                <div key={s.label} className="rounded-2xl p-3 text-center" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
-                  <div className="flex items-center justify-center gap-1 mb-1" style={{ color: s.color }}>{s.icon}</div>
-                  <div className="text-lg font-black" style={{ color: s.color }}>{s.value}</div>
-                  <div className="text-xs" style={{ color: 'var(--text-faint)' }}>{s.label}</div>
+                <div key={s.label} className="metric-compact text-center">
+                  <div className="flex items-center justify-center gap-1 mb-1">{s.icon}</div>
+                  <div className="text-lg font-black text-foreground">{s.value}</div>
+                  <div className="text-xs text-muted-foreground">{s.label}</div>
                 </div>
               ))}
             </div>
 
             <WorkoutMonthCalendar dayMap={workoutDayMap} />
-          </>
+          </Section>
         )}
 
         {/* Loading / error / empty */}
+        <Section>
         {isLoading ? (
           <SkeletonList rows={4} />
         ) : error ? (
@@ -212,26 +196,24 @@ export default function HistoryPage() {
         ) : workouts.length === 0 ? (
           <EmptyState icon={<Dumbbell className="w-8 h-8" />} title="还没有训练记录" description="完成第一次训练后，这里会显示你的历史记录" action={{ label: hasActiveSession ? '继续训练' : '开始训练', onClick: () => router.push('/workout') }} />
         ) : (
-          <div className="space-y-3">
+          <div className="card-stack">
             {workouts.map(workout => {
               const groupedExercises = exercisesToGroupedRows(workout.exercises || [])
               return (
-                <div key={workout.id} className="rounded-2xl p-4 cursor-pointer transition-all active:scale-[0.99]"
-                  style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}
+                <div key={workout.id} className="rounded-2xl p-4 bg-card border border-border cursor-pointer transition-all active:scale-[0.99]"
                   onClick={() => router.push(`/workout/${workout.id}`)}>
 
                   {/* Card header row */}
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-                        style={{ background: 'var(--accent-dim)' }}>
-                        <Calendar className="w-5 h-5" style={{ color: 'var(--accent)' }} />
+                      <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 bg-primary/10">
+                        <Calendar className="w-5 h-5 text-primary" />
                       </div>
                       <div>
                         <div className="font-bold text-sm">
                           {new Date(workout.date).toLocaleDateString('zh-CN', { weekday: 'short', month: 'short', day: 'numeric' })}
                         </div>
-                        <div className="text-xs flex items-center gap-2.5 mt-0.5" style={{ color: 'var(--text-low)' }}>
+                        <div className="text-xs flex items-center gap-2.5 mt-0.5 text-muted-foreground">
                           <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{Math.round((workout.duration || 0) / 60)}分钟</span>
                           {workout.totalVolume > 0 && (
                             <span className="flex items-center gap-1"><TrendingUp className="w-3 h-3" />{(workout.totalVolume / 1000).toFixed(1)}t</span>
@@ -245,10 +227,10 @@ export default function HistoryPage() {
                           const hasWarmup = groupedExercises.some((l: any) => l.isWarmup)
                           return (strengthGroups.length > 0 || hasCardio || hasWarmup) ? (
                             <div className="flex flex-wrap gap-1 mt-1.5">
-                              {hasCardio && <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold" style={{ background: 'var(--accent-dim)', color: 'var(--accent)' }}>有氧</span>}
-                              {hasWarmup && <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold" style={{ background: 'var(--surface-2)', color: 'var(--text-low)' }}>热身</span>}
+                              {hasCardio && <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold bg-primary/10 text-primary">有氧</span>}
+                              {hasWarmup && <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold bg-secondary text-muted-foreground">热身</span>}
                               {strengthGroups.map((g: any, i) => (
-                                <span key={i} className="text-[10px] px-2 py-0.5 rounded-full font-semibold" style={{ background: 'var(--surface-2)', color: 'var(--text-med)' }}>{g}</span>
+                                <span key={i} className="text-[10px] px-2 py-0.5 rounded-full font-semibold bg-secondary text-foreground">{g}</span>
                               ))}
                             </div>
                           ) : null
@@ -258,11 +240,7 @@ export default function HistoryPage() {
                     <button
                       onClick={(e) => { e.stopPropagation(); handleDelete(workout.id) }}
                       disabled={deleting === workout.id}
-                      className="p-2 rounded-xl transition-all shrink-0"
-                      style={{
-                        color: confirmDeleteId === workout.id ? '#ef4444' : 'var(--text-faint)',
-                        background: confirmDeleteId === workout.id ? 'rgba(239,68,68,0.1)' : 'transparent',
-                      }}
+                      className={`p-2 rounded-xl transition-all shrink-0 ${confirmDeleteId === workout.id ? 'bg-danger/10 text-danger' : 'text-muted-foreground bg-transparent'}`}
                       title={confirmDeleteId === workout.id ? '再次点击确认删除' : '删除'}
                     >
                       {confirmDeleteId === workout.id ? <Check className="w-4 h-4" /> : <Trash2 className="w-4 h-4" />}
@@ -273,39 +251,38 @@ export default function HistoryPage() {
                   {groupedExercises.length > 0 ? (
                     <div className="space-y-1.5">
                       {groupedExercises.map((log: any, idx: number) => (
-                        <div key={idx} className="flex items-center gap-2.5 px-3 py-2 rounded-xl"
-                          style={{ background: 'var(--surface-2)' }}>
+                        <div key={idx} className="flex items-center gap-2.5 px-3 py-2 rounded-xl bg-secondary">
                           {log.isCardio
-                            ? <span className="text-sm w-4 text-center shrink-0">{CARDIO_ICONS[log.exercise] ?? '🏃'}</span>
+                            ? <Activity className="w-3.5 h-3.5 shrink-0 text-primary" />
                             : log.isWarmup
-                              ? <Flame className="w-3.5 h-3.5 shrink-0" style={{ color: '#fb923c' }} />
-                              : <Dumbbell className="w-3.5 h-3.5 shrink-0" style={{ color: 'var(--text-low)' }} />}
+                              ? <Flame className="w-3.5 h-3.5 shrink-0 text-warning" />
+                              : <Dumbbell className="w-3.5 h-3.5 shrink-0 text-muted-foreground" />}
                           <span className="flex-1 text-sm font-medium truncate">{log.exercise}</span>
                           {log.isCardio && log.sets[0] ? (
-                            <span className="text-sm font-semibold tabular-nums" style={{ color: 'var(--accent)' }}>
+                            <span className="text-sm font-semibold tabular-nums text-primary">
                               {log.sets[0].weight > 0 ? `${log.sets[0].weight}km` : ''}
                             </span>
                           ) : log.isWarmup ? (
-                            <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: 'rgba(251,146,60,0.1)', color: '#fb923c' }}>热身</span>
+                            <span className="text-xs px-2 py-0.5 rounded-full bg-warning/10 text-warning">热身</span>
                           ) : (
-                            <span className="text-sm font-bold tabular-nums" style={{ color: 'var(--accent)' }}>
+                            <span className="text-sm font-bold tabular-nums text-primary">
                               {log.sets.filter((s: any) => !s.isWarmup && !s.isCardio).reduce((sum: number, s: any) => sum + s.weight * s.reps, 0)}kg
-                              <span className="text-xs font-normal ml-1" style={{ color: 'var(--text-faint)' }}>{log.sets.length}组</span>
+                              <span className="text-xs font-normal ml-1 text-muted-foreground">{log.sets.length}组</span>
                             </span>
                           )}
                         </div>
                       ))}
                     </div>
                   ) : (
-                    <p className="text-sm px-1" style={{ color: 'var(--text-faint)' }}>暂无动作数据</p>
+                    <p className="text-sm px-1 text-muted-foreground">暂无动作数据</p>
                   )}
 
                   {workout.notes && (() => {
                     try {
                       const parsed = JSON.parse(workout.notes)
-                      return parsed.memo ? <p className="mt-2.5 text-xs italic px-1" style={{ color: 'var(--text-faint)' }}>{parsed.memo}</p> : null
+                      return parsed.memo ? <p className="mt-2.5 text-xs italic px-1 text-muted-foreground">{parsed.memo}</p> : null
                     } catch {
-                      return <p className="mt-2.5 text-xs italic px-1" style={{ color: 'var(--text-faint)' }}>{workout.notes}</p>
+                      return <p className="mt-2.5 text-xs italic px-1 text-muted-foreground">{workout.notes}</p>
                     }
                   })()}
                 </div>
@@ -313,10 +290,11 @@ export default function HistoryPage() {
             })}
           </div>
         )}
-        </div>
+        </Section>
+        </PageContent>
       </PullToRefresh>
 
       <BottomTabBar active="history" />
-    </div>
+    </PageShell>
   )
 }

@@ -3,12 +3,12 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Trophy, Search, TrendingUp, ChevronDown, ChevronUp, AlertCircle, Loader2 } from 'lucide-react'
+import { Trophy, Search, TrendingUp, ChevronDown, ChevronUp, AlertCircle, Loader2 } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts'
 import { logger } from '@/lib/logger'
 import { SkeletonStatGrid, SkeletonList } from '@/components/Skeleton'
 import { EmptyState } from '@/components/EmptyState'
-import { AmbientGlow } from "@/components/AmbientGlow"
+import { PageShell, PageHeader, PageContent, Section } from "@/components/layout"
 
 interface PRRecord {
   exercise: string
@@ -92,73 +92,67 @@ export default function PersonalBestPage() {
 
   const topRM = records[0]?.estimated1RM ?? 0
 
-  const medalColor = (i: number) =>
-    i === 0 ? '#FFD700' : i === 1 ? '#C0C0C0' : i === 2 ? '#CD7F32' : '#FFB800'
+  const medalClass = (i: number) =>
+    i === 0 ? 'text-warning bg-warning/15' : i === 1 ? 'text-muted-foreground bg-muted' : i === 2 ? 'text-warning/80 bg-warning/10' : 'text-warning/70 bg-warning/8'
 
   return (
-    <div className="min-h-screen" style={{ background: 'var(--background)', color: 'var(--foreground)', fontFamily: 'Inter, Space Grotesk, sans-serif' }}>
-      <AmbientGlow />
-
-      <div className="relative max-w-2xl mx-auto px-4 py-6 pb-20">
-
-        {/* Header */}
-        <header className="flex items-center gap-3 mb-6">
-          <button onClick={() => router.back()}
-            className="p-2 rounded-xl transition-all active:scale-95"
-            style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
-            <ArrowLeft className="w-5 h-5" style={{ color: 'var(--text-med)' }} />
-          </button>
-          <div>
-            <h1 className="text-xl font-black">个人最佳</h1>
-            <p className="text-xs" style={{ color: 'var(--text-low)' }}>点击动作查看完整训练历史</p>
-          </div>
-        </header>
+    <PageShell>
+      <PageHeader
+        title="个人最佳"
+        subtitle="点击动作查看完整训练历史"
+        onBack={() => router.back()}
+      />
+      <PageContent bare>
 
         {/* Summary cards */}
-        {loading && <SkeletonStatGrid cols={3} className="mb-6" />}
-        {!loading && records.length > 0 && (
-          <div className="grid grid-cols-3 gap-3 mb-6">
-            <div className="rounded-2xl p-4" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
-              <div className="flex items-center gap-1.5 mb-1">
-                <Trophy className="w-3.5 h-3.5" style={{ color: '#FFB800' }} />
-                <span className="text-xs" style={{ color: 'var(--text-low)' }}>动作总数</span>
+        <Section>
+          {loading && <SkeletonStatGrid cols={3} />}
+          {!loading && records.length > 0 && (
+            <div className="card-grid-3">
+              <div className="metric-compact">
+                <div className="flex items-center gap-1.5 mb-1">
+                  <Trophy className="w-3.5 h-3.5 text-warning" />
+                  <span className="text-xs text-muted-foreground">动作总数</span>
+                </div>
+                <div className="text-2xl font-black text-warning">{records.length}</div>
               </div>
-              <div className="text-2xl font-black" style={{ color: '#FFB800' }}>{records.length}</div>
+              <div className="metric-compact">
+                <div className="flex items-center gap-1.5 mb-1">
+                  <TrendingUp className="w-3.5 h-3.5 text-primary" />
+                  <span className="text-xs text-muted-foreground">最强 1RM</span>
+                </div>
+                <div className="text-2xl font-black text-primary">
+                  {Math.round(topRM)}<span className="text-xs ml-0.5">kg</span>
+                </div>
+              </div>
+              <div className="metric-compact">
+                <div className="flex items-center gap-1.5 mb-1">
+                  <Trophy className="w-3.5 h-3.5 text-recovery" />
+                  <span className="text-xs text-muted-foreground">最强动作</span>
+                </div>
+                <div className="text-xs font-black leading-snug text-recovery">{records[0]?.exercise ?? '—'}</div>
+              </div>
             </div>
-            <div className="rounded-2xl p-4" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
-              <div className="flex items-center gap-1.5 mb-1">
-                <TrendingUp className="w-3.5 h-3.5" style={{ color: 'var(--accent)' }} />
-                <span className="text-xs" style={{ color: 'var(--text-low)' }}>最强 1RM</span>
-              </div>
-              <div className="text-2xl font-black" style={{ color: 'var(--accent)' }}>
-                {Math.round(topRM)}<span className="text-xs ml-0.5">kg</span>
-              </div>
-            </div>
-            <div className="rounded-2xl p-4" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
-              <div className="flex items-center gap-1.5 mb-1">
-                <Trophy className="w-3.5 h-3.5" style={{ color: '#A855F7' }} />
-                <span className="text-xs" style={{ color: 'var(--text-low)' }}>最强动作</span>
-              </div>
-              <div className="text-xs font-black leading-snug" style={{ color: '#A855F7' }}>{records[0]?.exercise ?? '—'}</div>
-            </div>
-          </div>
-        )}
+          )}
+        </Section>
 
         {/* Search */}
         {records.length > 5 && (
-          <div className="relative mb-4">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: 'var(--text-faint)' }} />
-            <input
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              placeholder="搜索动作…"
-              className="w-full pl-9 pr-4 py-2.5 rounded-xl text-sm outline-none transition-colors"
-              style={{ background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--foreground)' }}
-            />
-          </div>
+          <Section>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <input
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                placeholder="搜索动作…"
+                className="w-full pl-9 pr-4 py-2.5 rounded-xl text-sm outline-none transition-colors bg-card border border-border text-foreground"
+              />
+            </div>
+          </Section>
         )}
 
         {/* Records list */}
+        <Section>
         {loading ? (
           <SkeletonList rows={5} />
         ) : error ? (
@@ -184,8 +178,7 @@ export default function PersonalBestPage() {
 
               return (
                 <div key={rec.exercise}
-                  className="rounded-2xl overflow-hidden"
-                  style={{ background: 'var(--surface)', border: isExpanded ? '1px solid var(--accent-glow)' : '1px solid var(--border)' }}>
+                  className={`rounded-2xl overflow-hidden bg-card border ${isExpanded ? 'border-primary/40' : 'border-border'}`}>
 
                   {/* Summary row — clickable */}
                   <button
@@ -193,48 +186,44 @@ export default function PersonalBestPage() {
                     className="w-full flex items-center gap-3 p-3.5 text-left transition-colors hover:bg-white/[0.02]"
                   >
                     {/* Rank badge */}
-                    <div className="w-9 h-9 rounded-xl flex items-center justify-center font-black text-sm shrink-0"
-                      style={{
-                        background: rank < 3 ? `${medalColor(rank)}18` : 'rgba(255,184,0,0.08)',
-                        color: medalColor(rank)
-                      }}>
+                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center font-black text-sm shrink-0 ${medalClass(rank)}`}>
                       {rank + 1}
                     </div>
 
                     {/* Exercise info */}
                     <div className="flex-1 min-w-0">
                       <div className="font-bold text-sm leading-snug">{rec.exercise}</div>
-                      <div className="text-xs mt-0.5" style={{ color: 'var(--text-low)' }}>
+                      <div className="text-xs mt-0.5 text-muted-foreground">
                         PR: {rec.date}
                       </div>
                     </div>
 
                     {/* Best stats */}
                     <div className="text-right shrink-0">
-                      <div className="font-black text-sm" style={{ color: '#FFB800' }}>
+                      <div className="font-black text-sm text-warning">
                         {rec.weight}kg × {rec.reps}次
                       </div>
-                      <div className="text-xs mt-0.5" style={{ color: 'var(--text-low)' }}>
-                        1RM ≈ <span style={{ color: 'var(--accent)' }}>{Math.round(rec.estimated1RM)} kg</span>
+                      <div className="text-xs mt-0.5 text-muted-foreground">
+                        1RM ≈ <span className="text-primary">{Math.round(rec.estimated1RM)} kg</span>
                       </div>
                     </div>
 
                     {/* Expand icon */}
-                    <div className="shrink-0 ml-1" style={{ color: 'var(--text-faint)' }}>
+                    <div className="shrink-0 ml-1 text-muted-foreground">
                       {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                     </div>
                   </button>
 
                   {/* Expanded: trend chart + history list */}
                   {isExpanded && (
-                    <div className="border-t px-4 pb-4 pt-3" style={{ borderColor: 'var(--border)' }}>
+                    <div className="border-t border-border px-4 pb-4 pt-3">
                       {isLoadingHistory ? (
                         <div className="flex items-center justify-center py-8 gap-2">
-                          <Loader2 className="w-4 h-4 animate-spin" style={{ color: 'var(--accent)' }} />
-                          <span className="text-xs" style={{ color: 'var(--text-low)' }}>加载历史…</span>
+                          <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                          <span className="text-xs text-muted-foreground">加载历史…</span>
                         </div>
                       ) : exHistory.length === 0 ? (
-                        <p className="text-center py-6 text-xs" style={{ color: 'var(--text-low)' }}>
+                        <p className="text-center py-6 text-xs text-muted-foreground">
                           暂无历史记录
                         </p>
                       ) : (
@@ -243,8 +232,8 @@ export default function PersonalBestPage() {
                           {exHistory.length >= 2 && (
                             <div className="mb-4">
                               <div className="flex items-center gap-1.5 mb-2">
-                                <TrendingUp className="w-3.5 h-3.5" style={{ color: 'var(--accent)' }} />
-                                <span className="text-xs font-semibold" style={{ color: 'var(--text-med)' }}>
+                                <TrendingUp className="w-3.5 h-3.5 text-primary" />
+                                <span className="text-xs font-semibold text-foreground">
                                   1RM 进步曲线
                                 </span>
                               </div>
@@ -253,28 +242,28 @@ export default function PersonalBestPage() {
                                   <LineChart data={exHistory} margin={{ top: 4, right: 4, left: -24, bottom: 0 }}>
                                     <XAxis
                                       dataKey="date"
-                                      stroke="var(--text-faint)"
+                                      stroke="rgb(var(--muted-foreground))"
                                       fontSize={9}
                                       tickFormatter={d => d.slice(5)}
                                     />
                                     <YAxis
-                                      stroke="var(--text-faint)"
+                                      stroke="rgb(var(--muted-foreground))"
                                       fontSize={9}
                                       tickFormatter={v => `${v}kg`}
                                       domain={['auto', 'auto']}
                                     />
                                     <Tooltip
-                                      contentStyle={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '10px', fontSize: '11px' }}
+                                      contentStyle={{ backgroundColor: 'rgb(var(--card))', border: '1px solid rgb(var(--border))', borderRadius: '10px', fontSize: '11px' }}
                                       formatter={(val) => [`${val} kg`, '估算1RM']}
-                                      labelFormatter={l => `📅 ${l}`}
+                                      labelFormatter={l => `${l}`}
                                     />
-                                    <ReferenceLine y={Math.round(rec.estimated1RM)} stroke="var(--accent-glow)" strokeDasharray="4 4" />
+                                    <ReferenceLine y={Math.round(rec.estimated1RM)} stroke="rgb(var(--primary) / 0.4)" strokeDasharray="4 4" />
                                     <Line
                                       type="monotone"
                                       dataKey="estimated1RM"
-                                      stroke="var(--accent)"
+                                      stroke="rgb(var(--primary))"
                                       strokeWidth={2}
-                                      dot={{ fill: 'var(--accent)', r: 3, strokeWidth: 0 }}
+                                      dot={{ fill: 'rgb(var(--primary))', r: 3, strokeWidth: 0 }}
                                       activeDot={{ r: 5 }}
                                     />
                                   </LineChart>
@@ -285,10 +274,10 @@ export default function PersonalBestPage() {
 
                           {/* Per-session history list */}
                           <div className="flex items-center gap-1.5 mb-2">
-                            <span className="text-xs font-semibold" style={{ color: 'var(--text-med)' }}>
+                            <span className="text-xs font-semibold text-foreground">
                               每次训练记录
                             </span>
-                            <span className="text-xs" style={{ color: 'var(--text-faint)' }}>
+                            <span className="text-xs text-muted-foreground">
                               ({exHistory.length} 次)
                             </span>
                           </div>
@@ -296,16 +285,15 @@ export default function PersonalBestPage() {
                             {exHistory.map((h, hi) => {
                               const isPR = h.estimated1RM >= rec.estimated1RM;
                               return (
-                                <div key={hi} className="flex items-center justify-between py-2 border-b last:border-0"
-                                  style={{ borderColor: 'var(--border)' }}>
+                                <div key={hi} className="flex items-center justify-between py-2 border-b border-border last:border-0">
                                   <div>
                                     <div className="text-xs font-semibold">{h.date}</div>
-                                    <div className="text-xs mt-0.5" style={{ color: 'var(--text-low)' }}>
+                                    <div className="text-xs mt-0.5 text-muted-foreground">
                                       {h.weight}kg × {h.reps}次
                                     </div>
                                   </div>
-                                  <div className="text-xs shrink-0" style={{ color: isPR ? 'var(--accent)' : 'var(--text-faint)' }}>
-                                    {isPR && <span className="mr-1">🏆</span>}
+                                  <div className={`text-xs shrink-0 flex items-center gap-1 ${isPR ? 'text-primary' : 'text-muted-foreground'}`}>
+                                    {isPR && <Trophy className="w-3 h-3" />}
                                     {h.estimated1RM} kg
                                   </div>
                                 </div>
@@ -321,7 +309,8 @@ export default function PersonalBestPage() {
             })}
           </div>
         )}
-      </div>
-    </div>
+        </Section>
+      </PageContent>
+    </PageShell>
   )
 }

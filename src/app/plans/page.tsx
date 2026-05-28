@@ -8,7 +8,8 @@ import { logger } from '@/lib/logger';
 import { SkeletonList } from '@/components/Skeleton';
 import { EmptyState } from '@/components/EmptyState';
 import { useToast } from '@/components/Toast';
-import { AmbientGlow } from "@/components/AmbientGlow";
+import { PageShell, PageHeader, PageContent } from "@/components/layout";
+import BottomTabBar from "@/components/BottomTabBar";
 
 type CustomPlanDay = { dayName: string; exercises: string[]; newExercise: string };
 type CustomPlanState = { name: string; days: CustomPlanDay[] };
@@ -227,46 +228,27 @@ export default function PlansPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background text-foreground p-6">
-
-      {/* Ambient */}
-      <AmbientGlow />
-
-      <div className="relative max-w-4xl mx-auto">
-        <h1 className="text-3xl font-black mb-8" style={{ color: 'var(--accent)' }}>训练计划</h1>
+    <PageShell>
+      <PageHeader title="训练计划" />
+      <PageContent>
 
         {/* 选项卡 */}
         <div className="flex gap-2 mb-6">
           <button
             onClick={() => setActiveTab('generate')}
-            className={`flex-1 py-3 rounded-xl font-bold transition-all ${activeTab === 'generate' ? 'bg-var(--accent) text-black' : 'bg-111 border border-1e1e1e text-foreground'}`}
-            style={{
-              background: activeTab === 'generate' ? 'var(--accent)' : '#111',
-              border: activeTab === 'generate' ? 'none' : '1px solid var(--border)',
-              color: activeTab === 'generate' ? '#000' : '#fff'
-            }}
+            className={`flex-1 py-3 rounded-xl font-bold transition-all border ${activeTab === 'generate' ? 'bg-primary text-primary-foreground border-transparent' : 'bg-card text-foreground border-border hover:bg-secondary'}`}
           >
             生成计划
           </button>
           <button
             onClick={() => setActiveTab('custom')}
-            className={`flex-1 py-3 rounded-xl font-bold transition-all ${activeTab === 'custom' ? 'bg-var(--accent) text-black' : 'bg-111 border border-1e1e1e text-foreground'}`}
-            style={{
-              background: activeTab === 'custom' ? 'var(--accent)' : '#111',
-              border: activeTab === 'custom' ? 'none' : '1px solid var(--border)',
-              color: activeTab === 'custom' ? '#000' : '#fff'
-            }}
+            className={`flex-1 py-3 rounded-xl font-bold transition-all border ${activeTab === 'custom' ? 'bg-primary text-primary-foreground border-transparent' : 'bg-card text-foreground border-border hover:bg-secondary'}`}
           >
             自定义计划
           </button>
           <button
             onClick={() => setActiveTab('my-plans')}
-            className={`flex-1 py-3 rounded-xl font-bold transition-all ${activeTab === 'my-plans' ? 'bg-var(--accent) text-black' : 'bg-111 border border-1e1e1e text-foreground'}`}
-            style={{
-              background: activeTab === 'my-plans' ? 'var(--accent)' : '#111',
-              border: activeTab === 'my-plans' ? 'none' : '1px solid var(--border)',
-              color: activeTab === 'my-plans' ? '#000' : '#fff'
-            }}
+            className={`flex-1 py-3 rounded-xl font-bold transition-all border ${activeTab === 'my-plans' ? 'bg-primary text-primary-foreground border-transparent' : 'bg-card text-foreground border-border hover:bg-secondary'}`}
           >
             我的计划
           </button>
@@ -274,49 +256,49 @@ export default function PlansPage() {
 
         {/* 生成计划 */}
         {activeTab === 'generate' && (
-          <div className="rounded-2xl p-6 mb-8" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
+          <div className="rounded-2xl p-6 mb-8 bg-card border border-border">
             <h2 className="text-lg font-bold mb-6">生成专属训练计划</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
               <div>
-                <label className="block mb-2 text-sm font-semibold" style={{ color: 'rgba(255,255,255,0.4)' }}>健身目标</label>
+                <label className="block mb-2 text-sm font-semibold text-muted-foreground">健身目标</label>
                 <select value={selectedGoal} onChange={(e) => setSelectedGoal(e.target.value)}
-                  className="w-full rounded-xl px-4 py-3 text-foreground" style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
+                  className="w-full rounded-xl px-4 py-3 text-foreground bg-secondary border border-border">
                   <option value="muscle">增肌</option>
                   <option value="strength">力量</option>
                   <option value="fat">减脂</option>
                 </select>
               </div>
               <div>
-                <label className="block mb-2 text-sm font-semibold" style={{ color: 'rgba(255,255,255,0.4)' }}>每周训练次数</label>
+                <label className="block mb-2 text-sm font-semibold text-muted-foreground">每周训练次数</label>
                 <select value={selectedFrequency} onChange={(e) => setSelectedFrequency(e.target.value)}
-                  className="w-full rounded-xl px-4 py-3 text-foreground" style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
+                  className="w-full rounded-xl px-4 py-3 text-foreground bg-secondary border border-border">
                   <option value="3">3次</option>
                   <option value="4">4次</option>
                   <option value="5">5次</option>
                 </select>
               </div>
               <div>
-                <label className="block mb-2 text-sm font-semibold" style={{ color: 'rgba(255,255,255,0.4)' }}>训练水平</label>
+                <label className="block mb-2 text-sm font-semibold text-muted-foreground">训练水平</label>
                 <select value={selectedLevel} onChange={(e) => setSelectedLevel(e.target.value)}
-                  className="w-full rounded-xl px-4 py-3 text-foreground" style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
+                  className="w-full rounded-xl px-4 py-3 text-foreground bg-secondary border border-border">
                   <option value="beginner">初级</option>
                   <option value="intermediate">中级</option>
                   <option value="advanced">高级</option>
                 </select>
               </div>
               <div>
-                <label className="block mb-2 text-sm font-semibold" style={{ color: 'rgba(255,255,255,0.4)' }}>训练偏好</label>
+                <label className="block mb-2 text-sm font-semibold text-muted-foreground">训练偏好</label>
                 <select
-                  className="w-full rounded-xl px-4 py-3 text-foreground" style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
+                  className="w-full rounded-xl px-4 py-3 text-foreground bg-secondary border border-border">
                   <option value="equipment">器械训练</option>
                   <option value="bodyweight">自重训练</option>
                   <option value="mixed">混合训练</option>
                 </select>
               </div>
               <div>
-                <label className="block mb-2 text-sm font-semibold" style={{ color: 'rgba(255,255,255,0.4)' }}>训练时长</label>
+                <label className="block mb-2 text-sm font-semibold text-muted-foreground">训练时长</label>
                 <select
-                  className="w-full rounded-xl px-4 py-3 text-foreground" style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
+                  className="w-full rounded-xl px-4 py-3 text-foreground bg-secondary border border-border">
                   <option value="30">30分钟</option>
                   <option value="45">45分钟</option>
                   <option value="60">60分钟</option>
@@ -324,9 +306,9 @@ export default function PlansPage() {
                 </select>
               </div>
               <div>
-                <label className="block mb-2 text-sm font-semibold" style={{ color: 'rgba(255,255,255,0.4)' }}>恢复能力</label>
+                <label className="block mb-2 text-sm font-semibold text-muted-foreground">恢复能力</label>
                 <select
-                  className="w-full rounded-xl px-4 py-3 text-foreground" style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
+                  className="w-full rounded-xl px-4 py-3 text-foreground bg-secondary border border-border">
                   <option value="fast">快速</option>
                   <option value="normal">正常</option>
                   <option value="slow">较慢</option>
@@ -334,8 +316,7 @@ export default function PlansPage() {
               </div>
             </div>
             <button onClick={generateAIPlan} disabled={isGenerating}
-              className="w-full py-3 rounded-xl font-bold text-black transition-all flex items-center justify-center gap-2"
-              style={{ background: isGenerating ? 'rgba(255,184,0,0.4)' : 'var(--accent)', boxShadow: isGenerating ? 'none' : '0 0 20px var(--accent-glow)' }}>
+              className={`w-full py-3 rounded-xl font-bold transition-all flex items-center justify-center gap-2 text-primary-foreground ${isGenerating ? 'bg-primary/40' : 'bg-primary hover:bg-primary/90'}`}>
               {isGenerating
                 ? <><Loader2 className="w-4 h-4 animate-spin" /> AI 正在生成个性化计划…</>
                 : <><Sparkles className="w-4 h-4" /> AI 生成个性化计划</>}
@@ -345,19 +326,19 @@ export default function PlansPage() {
 
         {/* 自定义计划 */}
         {activeTab === 'custom' && (
-          <div className="rounded-2xl p-6 mb-8" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
+          <div className="rounded-2xl p-6 mb-8 bg-card border border-border">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-lg font-bold">创建自定义训练计划</h2>
             </div>
             
             {/* 计划名称 */}
             <div className="mb-6">
-              <label className="block mb-2 text-sm font-semibold" style={{ color: 'rgba(255,255,255,0.4)' }}>计划名称</label>
+              <label className="block mb-2 text-sm font-semibold text-muted-foreground">计划名称</label>
               <input
                 type="text"
                 value={customPlan.name}
                 onChange={(e) => setCustomPlan(prev => ({ ...prev, name: e.target.value }))}
-                className="w-full rounded-xl px-4 py-3 text-foreground" style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}
+                className="w-full rounded-xl px-4 py-3 text-foreground bg-secondary border border-border"
                 placeholder="输入计划名称"
               />
             </div>
@@ -365,23 +346,19 @@ export default function PlansPage() {
             {/* 训练日 */}
             <div className="space-y-4 mb-6">
               {customPlan.days.map((day, index) => (
-                <div key={index} className="rounded-xl p-4" style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
+                <div key={index} className="rounded-xl p-4 bg-secondary border border-border">
                   <div className="flex items-center justify-between mb-4">
                     <input
                       type="text"
                       value={day.dayName}
                       onChange={(e) => updateDayName(index, e.target.value)}
-                      className="flex-1 rounded-xl px-3 py-2 text-foreground mr-3" style={{ background: 'var(--surface-3)', border: '1px solid #2a2a2a' }}
+                      className="flex-1 rounded-xl px-3 py-2 text-foreground mr-3 bg-background border border-border"
                     />
                     <div className="flex gap-2">
                       <button
                         onClick={() => removeTrainingDay(index)}
                         disabled={customPlan.days.length <= 1}
-                        className="p-2 rounded-lg transition-all"
-                        style={{
-                          background: customPlan.days.length <= 1 ? '#1a1a1a' : 'rgba(255,59,92,0.1)',
-                          color: customPlan.days.length <= 1 ? 'rgba(255,255,255,0.2)' : '#FF3B5C'
-                        }}
+                        className={`p-2 rounded-lg transition-all ${customPlan.days.length <= 1 ? 'bg-secondary text-muted-foreground opacity-40' : 'bg-danger/10 text-danger'}`}
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -392,12 +369,11 @@ export default function PlansPage() {
                   <div className="space-y-2 mb-3">
                     {day.exercises.map((exercise, ei) => (
                       <div key={ei} className="flex items-center gap-2">
-                        <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: 'var(--accent)' }}></div>
-                        <span className="flex-1 text-sm" style={{ color: 'rgba(255,255,255,0.6)' }}>{exercise}</span>
+                        <div className="w-1.5 h-1.5 rounded-full flex-shrink-0 bg-primary"></div>
+                        <span className="flex-1 text-sm text-foreground/60">{exercise}</span>
                         <button
                           onClick={() => removeExercise(index, ei)}
-                          className="p-1.5 rounded-lg transition-all"
-                          style={{ background: 'rgba(255,59,92,0.1)', color: '#FF3B5C' }}
+                          className="p-1.5 rounded-lg transition-all bg-danger/10 text-danger"
                         >
                           <X className="w-3.5 h-3.5" />
                         </button>
@@ -422,17 +398,13 @@ export default function PlansPage() {
                         }));
                       }}
                       onKeyPress={(e) => e.key === 'Enter' && addExercise(index)}
-                      className="flex-1 rounded-xl px-3 py-2 text-foreground" style={{ background: 'var(--surface-3)', border: '1px solid #2a2a2a' }}
+                      className="flex-1 rounded-xl px-3 py-2 text-foreground bg-background border border-border"
                       placeholder="输入动作名称"
                     />
                     <button
                       onClick={() => addExercise(index)}
                       disabled={!day.newExercise.trim()}
-                      className="p-2.5 rounded-xl transition-all"
-                      style={{
-                        background: day.newExercise.trim() ? 'var(--accent)' : '#1a1a1a',
-                        color: day.newExercise.trim() ? '#000' : 'rgba(255,255,255,0.3)'
-                      }}
+                      className={`p-2.5 rounded-xl transition-all ${day.newExercise.trim() ? 'bg-primary text-primary-foreground hover:bg-primary/90' : 'bg-secondary text-muted-foreground opacity-40'}`}
                     >
                       <Plus className="w-4 h-4" />
                     </button>
@@ -444,8 +416,7 @@ export default function PlansPage() {
             {/* 添加训练日 */}
             <button
               onClick={addTrainingDay}
-              className="w-full py-3 rounded-xl font-bold text-black transition-all mb-6"
-              style={{ background: 'var(--accent)', boxShadow: '0 0 20px var(--accent-glow)' }}
+              className="w-full py-3 rounded-xl font-bold transition-all mb-6 text-primary-foreground bg-primary hover:bg-primary/90"
             >
               <Plus className="w-4 h-4 inline mr-2" />添加训练日
             </button>
@@ -453,8 +424,7 @@ export default function PlansPage() {
             {/* 保存计划 */}
             <button
               onClick={saveCustomPlan}
-              className="w-full py-3 rounded-xl font-bold text-black transition-all"
-              style={{ background: 'var(--accent)', boxShadow: '0 0 20px var(--accent-glow)' }}
+              className="w-full py-3 rounded-xl font-bold transition-all text-primary-foreground bg-primary hover:bg-primary/90"
             >
               <Save className="w-4 h-4 inline mr-2" />保存自定义计划
             </button>
@@ -463,7 +433,7 @@ export default function PlansPage() {
 
         {/* 我的计划 */}
         {activeTab === 'my-plans' && (
-          <div className="rounded-2xl p-6 mb-8" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
+          <div className="rounded-2xl p-6 mb-8 bg-card border border-border">
             <h2 className="text-lg font-bold mb-6">我的计划</h2>
             {loading ? (
               <SkeletonList rows={2} />
@@ -477,24 +447,19 @@ export default function PlansPage() {
             ) : (
               <div className="space-y-4">
                 {myPlans.map((plan) => (
-                  <div key={plan.id} className="rounded-xl p-4" style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
+                  <div key={plan.id} className="rounded-xl p-4 bg-secondary border border-border">
                     <div className="flex items-center justify-between mb-4">
-                      <h3 className="font-bold" style={{ color: 'var(--accent)' }}>{plan.name}</h3>
+                      <h3 className="font-bold text-primary">{plan.name}</h3>
                       <div className="flex gap-2">
                         <button
                           onClick={() => router.push(`/workout?planId=${plan.id}`)}
-                          className="p-2 rounded-lg transition-all"
-                          style={{ background: 'var(--accent-dim)', color: 'var(--accent)' }}
+                          className="p-2 rounded-lg transition-all bg-primary/10 text-primary"
                         >
                           <Play className="w-4 h-4" />
                         </button>
                         <button
                           onClick={() => deletePlan(plan.id)}
-                          className="p-2 rounded-lg transition-all"
-                          style={{
-                            background: confirmDeleteId === plan.id ? 'rgba(255,59,92,0.3)' : 'rgba(255,59,92,0.1)',
-                            color: '#FF3B5C'
-                          }}
+                          className={`p-2 rounded-lg transition-all text-danger ${confirmDeleteId === plan.id ? 'bg-danger/30' : 'bg-danger/10'}`}
                           title={confirmDeleteId === plan.id ? '再次点击确认删除' : '删除'}
                         >
                           {confirmDeleteId === plan.id ? <Check className="w-4 h-4" /> : <Trash2 className="w-4 h-4" />}
@@ -502,20 +467,20 @@ export default function PlansPage() {
                       </div>
                     </div>
                     <div className="grid grid-cols-3 gap-2 mb-4">
-                      <div className="flex items-center gap-1.5 text-sm" style={{ color: 'rgba(255,255,255,0.6)' }}>
+                      <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
                         <Target className="w-3.5 h-3.5" />
                         <span>{plan.goal === 'muscle' ? '增肌' : plan.goal === 'strength' ? '力量' : '减脂'}</span>
                       </div>
-                      <div className="flex items-center gap-1.5 text-sm" style={{ color: 'rgba(255,255,255,0.6)' }}>
+                      <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
                         <Clock className="w-3.5 h-3.5" />
                         <span>每周 {plan.frequency} 次</span>
                       </div>
-                      <div className="flex items-center gap-1.5 text-sm" style={{ color: 'rgba(255,255,255,0.6)' }}>
+                      <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
                         <Dumbbell className="w-3.5 h-3.5" />
                         <span>{plan.level === 'beginner' ? '初级' : '中级'}</span>
                       </div>
                     </div>
-                    <div className="text-sm" style={{ color: 'rgba(255,255,255,0.4)' }}>
+                    <div className="text-sm text-muted-foreground">
                       {plan.days.map((day: any, index: number) => (
                         <div key={index} className="mb-3">
                           <div className="flex justify-between items-center mb-1">
@@ -527,8 +492,7 @@ export default function PlansPage() {
                                 const exercisesParam = encodeURIComponent(JSON.stringify(exercises));
                                 window.location.href = `/workout?exercises=${exercisesParam}&dayName=${encodeURIComponent(day.dayName)}`;
                               }}
-                              className="px-2 py-1 rounded text-xs font-semibold transition-all"
-                              style={{ background: 'var(--accent)', color: 'var(--accent-text)' }}
+                              className="px-2 py-1 rounded text-xs font-semibold transition-all bg-primary text-primary-foreground hover:bg-primary/90"
                             >
                               {hasActiveSession ? '继续训练' : '开始训练'}
                             </button>
@@ -536,7 +500,7 @@ export default function PlansPage() {
                           <div className="space-y-0.5 pl-3">
                             {JSON.parse(day.exercises).map((ex: string, ei: number) => (
                               <div key={ei} className="flex items-center gap-1.5">
-                                <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: 'var(--accent)' }}></div>
+                                <div className="w-1.5 h-1.5 rounded-full flex-shrink-0 bg-primary"></div>
                                 {ex}
                               </div>
                             ))}
@@ -553,15 +517,15 @@ export default function PlansPage() {
 
         {/* Generated plan — AI format */}
         {activeTab === 'generate' && generatedPlan && (
-          <div className="rounded-2xl p-6 mb-8" style={{ background: 'var(--surface)', border: '1px solid var(--accent-glow)', boxShadow: '0 0 20px var(--accent-dim)' }}>
+          <div className="rounded-2xl p-6 mb-8 bg-card border border-primary/30">
             {/* Header */}
             <div className="flex justify-between items-start mb-4">
               <div>
                 <div className="flex items-center gap-2 mb-1">
-                  <Sparkles className="w-4 h-4" style={{ color: 'var(--accent)' }} />
-                  <span className="text-xs font-semibold" style={{ color: 'var(--accent)' }}>AI 个性化计划</span>
+                  <Sparkles className="w-4 h-4 text-primary" />
+                  <span className="text-xs font-semibold text-primary">AI 个性化计划</span>
                 </div>
-                <h2 className="text-xl font-black" style={{ color: 'var(--accent)' }}>{generatedPlan.planName}</h2>
+                <h2 className="text-xl font-black text-primary">{generatedPlan.planName}</h2>
               </div>
               <button
                 onClick={async () => {
@@ -584,8 +548,7 @@ export default function PlansPage() {
                     else { toast({ message: '保存失败', type: 'error' }); }
                   } catch (e) { logger.error('保存错误:', e); toast({ message: '保存失败', type: 'error' }); }
                 }}
-                className="px-4 py-2 rounded-lg font-semibold text-sm text-black transition-all whitespace-nowrap"
-                style={{ background: 'var(--accent)' }}
+                className="px-4 py-2 rounded-lg font-semibold text-sm transition-all whitespace-nowrap text-primary-foreground bg-primary hover:bg-primary/90"
               >
                 保存到我的计划
               </button>
@@ -593,28 +556,28 @@ export default function PlansPage() {
 
             {/* Overview */}
             {generatedPlan.overview && (
-              <p className="text-sm mb-5 leading-relaxed" style={{ color: 'rgba(255,255,255,0.5)' }}>{generatedPlan.overview}</p>
+              <p className="text-sm mb-5 leading-relaxed text-muted-foreground">{generatedPlan.overview}</p>
             )}
 
             {/* Weekly structure */}
             <div className="space-y-3 mb-5">
               {(generatedPlan.weeklyStructure || []).map((day: any, i: number) => (
-                <div key={i} className="rounded-xl p-4" style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
+                <div key={i} className="rounded-xl p-4 bg-secondary border border-border">
                   <div className="flex items-center gap-2 mb-3">
-                    <div className="w-6 h-6 rounded-lg flex items-center justify-center text-xs font-black" style={{ background: 'var(--accent-dim)', color: 'var(--accent)' }}>{i + 1}</div>
+                    <div className="w-6 h-6 rounded-lg flex items-center justify-center text-xs font-black bg-primary/10 text-primary">{i + 1}</div>
                     <div>
                       <div className="font-bold text-sm">{day.day}</div>
-                      <div className="text-xs" style={{ color: 'var(--accent)' }}>{day.focus}</div>
+                      <div className="text-xs text-primary">{day.focus}</div>
                     </div>
                   </div>
                   <div className="space-y-2">
                     {(day.exercises || []).map((ex: any, ei: number) => (
-                      <div key={ei} className="rounded-lg p-2.5" style={{ background: 'rgba(255,255,255,0.03)' }}>
+                      <div key={ei} className="rounded-lg p-2.5 bg-card/50">
                         <div className="flex items-center justify-between mb-1">
                           <span className="text-sm font-semibold">{ex.name}</span>
-                          <span className="text-xs font-mono" style={{ color: 'var(--accent)' }}>{ex.sets}组×{ex.reps}</span>
+                          <span className="text-xs font-mono text-primary">{ex.sets}组×{ex.reps}</span>
                         </div>
-                        <div className="flex gap-3 text-xs" style={{ color: 'rgba(255,255,255,0.35)' }}>
+                        <div className="flex gap-3 text-xs text-muted-foreground/60">
                           {ex.rest && <span>休息 {ex.rest}</span>}
                           {ex.notes && <span className="flex-1">{ex.notes}</span>}
                         </div>
@@ -627,15 +590,15 @@ export default function PlansPage() {
 
             {/* Progression guide */}
             {generatedPlan.progressionGuide && (
-              <div className="rounded-xl p-4 mb-3" style={{ background: 'var(--accent-dim)', border: '1px solid rgba(255,184,0,0.15)' }}>
-                <div className="text-xs font-semibold mb-1" style={{ color: 'var(--accent)' }}>渐进超负荷方案</div>
-                <p className="text-sm" style={{ color: 'rgba(255,255,255,0.55)' }}>{generatedPlan.progressionGuide}</p>
+              <div className="rounded-xl p-4 mb-3 bg-primary/10 border border-primary/20">
+                <div className="text-xs font-semibold mb-1 text-primary">渐进超负荷方案</div>
+                <p className="text-sm text-muted-foreground">{generatedPlan.progressionGuide}</p>
               </div>
             )}
             {generatedPlan.deloadRecommendation && (
-              <div className="rounded-xl p-4 mb-3" style={{ background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.2)' }}>
-                <div className="text-xs font-semibold mb-1" style={{ color: '#818cf8' }}>减量周建议</div>
-                <p className="text-sm" style={{ color: 'rgba(255,255,255,0.55)' }}>{generatedPlan.deloadRecommendation}</p>
+              <div className="rounded-xl p-4 mb-3 bg-recovery/10 border border-recovery/20">
+                <div className="text-xs font-semibold mb-1 text-recovery">减量周建议</div>
+                <p className="text-sm text-muted-foreground">{generatedPlan.deloadRecommendation}</p>
               </div>
             )}
 
@@ -643,17 +606,17 @@ export default function PlansPage() {
             {generatedPlan.warning && (
               <div className="rounded-xl p-4" style={{ background: 'rgba(251,146,60,0.08)', border: '1px solid rgba(251,146,60,0.2)' }}>
                 <div className="flex items-center gap-1.5 mb-1">
-                  <AlertTriangle className="w-3.5 h-3.5" style={{ color: '#fb923c' }} />
-                  <span className="text-xs font-semibold" style={{ color: '#fb923c' }}>安全注意事项</span>
+                  <AlertTriangle className="w-3.5 h-3.5 text-warning" />
+                  <span className="text-xs font-semibold text-warning">安全注意事项</span>
                 </div>
-                <p className="text-sm" style={{ color: 'rgba(255,255,255,0.55)' }}>{generatedPlan.warning}</p>
+                <p className="text-sm text-muted-foreground">{generatedPlan.warning}</p>
               </div>
             )}
           </div>
         )}
 
         {/* 推荐计划 */}
-        <div className="rounded-2xl p-6" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
+        <div className="rounded-2xl p-6 bg-card border border-border">
           <h2 className="text-lg font-bold mb-6">推荐计划</h2>
           <div className="space-y-4">
             {
@@ -801,10 +764,12 @@ export default function PlansPage() {
 
         {/* Nav */}
         <div className="mt-8 flex justify-center gap-4">
-          <button onClick={() => router.push('/')} className="px-6 py-3 rounded-xl font-bold" style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}>返回首页</button>
-          <button onClick={() => router.push('/workout')} className="px-6 py-3 rounded-xl font-bold text-black" style={{ background: 'var(--accent)' }}>{hasActiveSession ? '继续训练' : '开始训练'}</button>
+          <button onClick={() => router.push('/')} className="px-6 py-3 rounded-xl font-bold bg-secondary border border-border text-foreground">返回首页</button>
+          <button onClick={() => router.push('/workout')} className="px-6 py-3 rounded-xl font-bold text-primary-foreground bg-primary hover:bg-primary/90">{hasActiveSession ? '继续训练' : '开始训练'}</button>
         </div>
-      </div>
-    </div>
+      </PageContent>
+
+      <BottomTabBar />
+    </PageShell>
   );
 }

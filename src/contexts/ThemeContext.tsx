@@ -6,8 +6,8 @@ import { themes, type ThemeName } from "@/lib/themes";
 
 export type { ThemeName } from "@/lib/themes";
 
-/* ── Legacy color object (backward compat during migration) ── */
-export interface LegacyColors {
+/* ── Semantic color helpers (VNext) ── */
+export interface SemanticColors {
   bg: string;
   surface: string;
   surface2: string;
@@ -26,31 +26,32 @@ export interface LegacyColors {
   topBg: string;
 }
 
-function toLegacy(name: ThemeName): LegacyColors {
+function toSemantic(name: ThemeName): SemanticColors {
   const t = themes[name];
+  const accentRgb = `rgb(${t.primary})`;
   return {
     bg: `rgb(${t.background})`,
-    surface: t.surface,
-    surface2: t["surface-2"],
-    surface3: t["surface-3"],
+    surface: `rgb(${t.card})`,
+    surface2: `rgb(${t.secondary})`,
+    surface3: `rgb(${t.muted})`,
     border: `rgb(${t.border})`,
-    borderAccent: t.accentGlow,
+    borderAccent: `color-mix(in srgb, ${accentRgb} 25%, transparent)`,
     text: `rgb(${t.foreground})`,
-    textSec: t.textSecondary,
-    textMuted: t.textMuted,
-    textFaint: t.textFaint,
-    accent: `rgb(${t.primary})`,
-    accentDim: t.accentDim,
-    accentGlow: t.accentGlow,
-    accentText: t.accentText,
-    navBg: t.navBg,
-    topBg: t.topBg,
+    textSec: `rgb(${t["muted-foreground"]})`,
+    textMuted: `rgb(${t["muted-foreground"]})`,
+    textFaint: `color-mix(in srgb, rgb(${t.foreground}) 40%, transparent)`,
+    accent: accentRgb,
+    accentDim: `color-mix(in srgb, ${accentRgb} 12%, transparent)`,
+    accentGlow: `color-mix(in srgb, ${accentRgb} 25%, transparent)`,
+    accentText: `rgb(${t["primary-foreground"]})`,
+    navBg: `color-mix(in srgb, rgb(${t.background}) 92%, transparent)`,
+    topBg: `color-mix(in srgb, rgb(${t.background}) 95%, transparent)`,
   };
 }
 
 interface ThemeCtx {
   theme: ThemeName;
-  t: LegacyColors;
+  t: SemanticColors;
   toggle: () => void;
   setTheme: (name: ThemeName) => void;
   resolved: "dark" | "light";
@@ -58,7 +59,7 @@ interface ThemeCtx {
 
 const Ctx = createContext<ThemeCtx>({
   theme: "dark",
-  t: toLegacy("dark"),
+  t: toSemantic("dark"),
   toggle: () => {},
   setTheme: () => {},
   resolved: "dark",
@@ -75,7 +76,7 @@ function ThemeConsumer({ children }: { children: ReactNode }) {
   const resolved = (resolvedTheme ?? "dark") as "dark" | "light";
   const activeTheme = (theme ?? "dark") as ThemeName;
 
-  const t = useMemo(() => toLegacy(activeTheme), [activeTheme]);
+  const t = useMemo(() => toSemantic(activeTheme), [activeTheme]);
 
   const ctx: ThemeCtx = {
     theme: activeTheme,

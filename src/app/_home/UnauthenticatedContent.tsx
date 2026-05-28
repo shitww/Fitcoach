@@ -2,7 +2,6 @@
 
 import { useRouter } from "next/navigation"
 import { useTheme } from "@/contexts/ThemeContext"
-import { AmbientGlow } from "@/components/AmbientGlow"
 import BottomTabBar from "@/components/BottomTabBar"
 
 export default function UnauthenticatedContent() {
@@ -10,8 +9,7 @@ export default function UnauthenticatedContent() {
   const { t } = useTheme()
 
   return (
-    <div className="min-h-screen" style={{ background: t.bg, color: t.text, fontFamily: "Inter, Space Grotesk, sans-serif" }}>
-      <AmbientGlow />
+    <div className="min-h-screen bg-background text-foreground">
 
       <div className="relative max-w-5xl mx-auto px-4 sm:px-6 py-6 pb-28">
         {/* ── Header ── */}

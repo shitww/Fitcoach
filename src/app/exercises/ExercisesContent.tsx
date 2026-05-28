@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { ArrowLeft, Dumbbell, Search, X, Target, AlertTriangle, CheckCircle, Zap, Plus, Trash2, Edit2, Loader2, Star } from 'lucide-react';
 import { createCustomExercise, getUserCustomExercises, updateCustomExercise, deleteCustomExercise } from '@/app/actions/exercise-actions';
 import { logger } from '@/lib/logger';
-import { AmbientGlow } from "@/components/AmbientGlow";
+import { PageShell, PageHeader, PageContent } from "@/components/layout";
 
 import { MUSCLE_GROUP_MAP, MUSCLE_GROUP_COLORS, MUSCLE_GROUP_ORDER, EXERCISE_CATEGORY_MAP, EXERCISE_CATEGORY_ORDER, EXERCISE_CATEGORY_COLORS, DIFFICULTY_MAP, DIFFICULTY_OPTIONS, equipmentToType } from '@/lib/exercise-constants';
 
@@ -254,23 +254,11 @@ export default function ExercisesContent() {
   };
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      {/* Ambient */}
-      <AmbientGlow />
-
-      <div className="relative max-w-6xl mx-auto p-6">
-
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-4">
-            <button onClick={() => router.push(selectMode ? backUrl : '/')} className="p-2.5 rounded-xl bg-card border border-border hover:bg-secondary transition-colors">
-              <ArrowLeft className="w-5 h-5 text-muted-foreground" />
-            </button>
-            <div>
-              <h1 className="text-2xl font-bold text-foreground">动作库</h1>
-              <p className="text-sm text-muted-foreground">专业动作指导与技巧</p>
-            </div>
-          </div>
+    <PageShell>
+      <PageHeader
+        title="动作库"
+        onBack={() => router.push(selectMode ? backUrl : '/')}
+        action={
           <div className="flex items-center gap-3">
             {!dbLoading && (
               <span className="text-sm text-muted-foreground">{filteredExercises.length} 个动作</span>
@@ -294,7 +282,7 @@ export default function ExercisesContent() {
             ) : (
               <button
                 onClick={() => setIsSelectingExercise(true)}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white text-black font-bold text-sm hover:bg-zinc-200 transition-colors"
+                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-primary-foreground font-bold text-sm hover:bg-primary/90 transition-colors"
               >
                 <Plus className="w-4 h-4" />
                 选择动作
@@ -308,7 +296,9 @@ export default function ExercisesContent() {
               添加动作
             </button>
           </div>
-        </div>
+        }
+      />
+      <PageContent>
 
         {/* Select mode banner */}
         {selectMode && (
@@ -343,13 +333,13 @@ export default function ExercisesContent() {
                 <button
                   onClick={() => setSelectedFilter('all')}
                   className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all whitespace-nowrap ${
-                    selectedFilter === 'all' ? 'bg-white text-black' : 'bg-card text-muted-foreground border border-border hover:bg-secondary'
+                    selectedFilter === 'all' ? 'bg-primary text-primary-foreground' : 'bg-card text-muted-foreground border border-border hover:bg-secondary'
                   }`}
                 >全部</button>
                 <button
                   onClick={() => setSelectedFilter('mine')}
                   className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all whitespace-nowrap ${
-                    selectedFilter === 'mine' ? 'bg-amber-500 text-black' : 'bg-card text-muted-foreground border border-border hover:bg-secondary'
+                    selectedFilter === 'mine' ? 'bg-warning text-warning-foreground' : 'bg-card text-muted-foreground border border-border hover:bg-secondary'
                   }`}
                 >我的</button>
                 {categoryOptions.map((cat) => (
@@ -357,7 +347,7 @@ export default function ExercisesContent() {
                     key={cat.value}
                     onClick={() => setSelectedFilter(cat.value)}
                     className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all whitespace-nowrap ${
-                      selectedFilter === cat.value ? 'text-black' : 'bg-card text-muted-foreground border border-border hover:bg-secondary'
+                      selectedFilter === cat.value ? 'text-primary-foreground' : 'bg-card text-muted-foreground border border-border hover:bg-secondary'
                     }`}
                     style={selectedFilter === cat.value ? { background: cat.color } : {}}
                   >{cat.label}</button>
@@ -373,7 +363,7 @@ export default function ExercisesContent() {
                     key={group.value}
                     onClick={() => setSelectedFilter(group.value)}
                     className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all whitespace-nowrap ${
-                      selectedFilter === group.value ? 'text-black' : 'bg-card text-muted-foreground border border-border hover:bg-secondary'
+                      selectedFilter === group.value ? 'text-primary-foreground' : 'bg-card text-muted-foreground border border-border hover:bg-secondary'
                     }`}
                     style={selectedFilter === group.value ? { background: group.color } : {}}
                   >{group.label}</button>
@@ -479,7 +469,7 @@ export default function ExercisesContent() {
             )}
           </>
         )}
-      </div>
+      </PageContent>
 
       {/* ========== 动作详情弹窗 ========== */}
       {selectedExercise && (
@@ -776,6 +766,6 @@ export default function ExercisesContent() {
           </div>
         </div>
       )}
-    </div>
+    </PageShell>
   );
 }

@@ -9,7 +9,7 @@ import {
 import { logger } from "@/lib/logger";
 import { clearUserStorage, clearLegacyStorage } from "@/lib/user-storage";
 import { useTheme } from "@/contexts/ThemeContext";
-import { AmbientGlow } from "@/components/AmbientGlow";
+import { PageShell, PageHeader, PageContent } from "@/components/layout";
 import { isRunningStandalone, showInstallPrompt } from "@/lib/pwa-utils";
 import { useToast } from "@/components/Toast";
 import { METRICS, type BodyDataRecord, type MetricConfig, findRecordByLocalDay, startOfLocalDay, isSameLocalDay, formatMetricValue } from "@/lib/body-metrics";
@@ -172,23 +172,9 @@ export default function ProfilePage() {
   };
 
   return (
-    <div className="min-h-screen" style={{ background: t.bg, color: t.text }}>
-      <AmbientGlow />
-
-      <div className="relative max-w-5xl mx-auto px-4 sm:px-6 py-6 pb-28">
-        {/* Header */}
-        <header className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => router.back()}
-              className="p-2.5 rounded-xl transition-all"
-              style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}
-            >
-              <ChevronRight className="w-5 h-5 rotate-180" />
-            </button>
-            <h1 className="text-xl font-black">个人中心</h1>
-          </div>
-        </header>
+    <PageShell>
+      <PageHeader title="个人中心" onBack={() => router.back()} />
+      <PageContent>
 
         {status === 'loading' ? (
           <div className="flex items-center justify-center py-20">
@@ -320,8 +306,7 @@ export default function ProfilePage() {
             <button
               onClick={handleLogout}
               disabled={loggingOut}
-              className="w-full flex items-center justify-center gap-2 p-4 rounded-2xl transition-colors"
-              style={{ background: 'rgba(255,59,92,0.08)', color: '#FF3B5C', border: '1px solid rgba(255,59,92,0.2)' }}
+              className="w-full flex items-center justify-center gap-2 p-4 rounded-2xl transition-colors bg-danger/10 text-danger border border-danger/20 hover:bg-danger/20"
             >
               {loggingOut ? (
                 <Loader2 className="w-5 h-5 animate-spin" />
@@ -332,26 +317,25 @@ export default function ProfilePage() {
             </button>
 
             {/* Version */}
-            <p className="text-center mt-6 text-xs" style={{ color: 'var(--text-faint)' }}>
+            <p className="text-center mt-6 text-xs text-muted-foreground">
               XFITX v1.0.0 · AI 健身私人教练
             </p>
           </>
         ) : (
           <div className="text-center py-20">
-            <div className="w-16 h-16 rounded-2xl mx-auto mb-4 flex items-center justify-center"
-              style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
-              <User className="w-8 h-8" style={{ color: 'var(--text-faint)' }} />
+            <div className="w-16 h-16 rounded-2xl mx-auto mb-4 flex items-center justify-center bg-secondary border border-border">
+              <User className="w-8 h-8 text-muted-foreground" />
             </div>
-            <p className="mb-6" style={{ color: 'var(--text-low)' }}>登录后查看您的个人中心</p>
+            <p className="mb-6 text-muted-foreground">登录后查看您的个人中心</p>
             <button
               onClick={() => router.push('/auth/signin')}
-              className="px-8 py-3 font-bold rounded-xl text-black"
-              style={{ background: 'var(--accent)' }}>
+              className="px-8 py-3 font-bold rounded-xl text-primary-foreground bg-primary hover:bg-primary/90"
+            >
               立即登录
             </button>
           </div>
         )}
-      </div>
+      </PageContent>
 
       <BottomTabBar active="profile" />
 
@@ -365,6 +349,6 @@ export default function ProfilePage() {
           onSave={handleSave}
         />
       )}
-    </div>
+    </PageShell>
   )
 }

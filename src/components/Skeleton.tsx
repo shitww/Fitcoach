@@ -1,23 +1,16 @@
 "use client"
 
-import { useTheme } from "@/contexts/ThemeContext"
-
 // ── Base pulse ────────────────────────────────────────────────────────────────
-function Pulse({ className = "", style }: { className?: string; style?: React.CSSProperties }) {
-  const { t } = useTheme()
+function Pulse({ className = "" }: { className?: string }) {
   return (
-    <div
-      className={`animate-pulse rounded-xl ${className}`}
-      style={{ background: t.surface3, ...style }}
-    />
+    <div className={`animate-pulse rounded-xl bg-muted ${className}`} />
   )
 }
 
 // ── SkeletonCard — generic stat/info card ─────────────────────────────────────
 export function SkeletonCard({ className = "" }: { className?: string }) {
-  const { t } = useTheme()
   return (
-    <div className={`rounded-2xl p-5 ${className}`} style={{ background: t.surface, border: `1px solid ${t.border}` }}>
+    <div className={`card-primary p-5 ${className}`}>
       <div className="flex items-center gap-2 mb-4">
         <Pulse className="w-4 h-4 rounded-full" />
         <Pulse className="w-24 h-3.5" />
@@ -31,9 +24,8 @@ export function SkeletonCard({ className = "" }: { className?: string }) {
 
 // ── SkeletonChart ─────────────────────────────────────────────────────────────
 export function SkeletonChart({ className = "" }: { className?: string }) {
-  const { t } = useTheme()
   return (
-    <div className={`rounded-2xl p-5 ${className}`} style={{ background: t.surface, border: `1px solid ${t.border}` }}>
+    <div className={`card-primary p-5 ${className}`}>
       <div className="flex items-center gap-2 mb-4">
         <Pulse className="w-4 h-4 rounded-full" />
         <Pulse className="w-28 h-3.5" />
@@ -45,14 +37,12 @@ export function SkeletonChart({ className = "" }: { className?: string }) {
 
 // ── SkeletonList — row list ───────────────────────────────────────────────────
 export function SkeletonList({ rows = 3, className = "" }: { rows?: number; className?: string }) {
-  const { t } = useTheme()
   return (
-    <div className={`rounded-2xl overflow-hidden ${className}`} style={{ background: t.surface, border: `1px solid ${t.border}` }}>
+    <div className={`card-primary overflow-hidden ${className}`}>
       {Array.from({ length: rows }).map((_, i) => (
         <div
           key={i}
-          className="flex items-center gap-3 px-4 py-3.5"
-          style={{ borderBottom: i < rows - 1 ? `1px solid ${t.border}` : undefined }}
+          className={`flex items-center gap-3 px-4 py-3.5 ${i < rows - 1 ? 'border-b border-border' : ''}`}
         >
           <Pulse className="w-9 h-9 rounded-xl flex-shrink-0" />
           <div className="flex-1 space-y-1.5">
@@ -68,9 +58,8 @@ export function SkeletonList({ rows = 3, className = "" }: { rows?: number; clas
 
 // ── SkeletonScoreCard — large AI score card ────────────────────────────────────
 export function SkeletonScoreCard({ className = "" }: { className?: string }) {
-  const { t } = useTheme()
   return (
-    <div className={`rounded-2xl p-5 ${className}`} style={{ background: t.surface, border: `1px solid ${t.border}` }}>
+    <div className={`card-primary p-5 ${className}`}>
       <div className="flex items-center gap-2 mb-5">
         <Pulse className="w-4 h-4 rounded-full" />
         <Pulse className="w-24 h-3.5" />
@@ -89,13 +78,12 @@ export function SkeletonScoreCard({ className = "" }: { className?: string }) {
   )
 }
 
-// ── SkeletonStatGrid — 4-column stat grid ─────────────────────────────────────
+// ── SkeletonStatGrid — N-column stat grid ─────────────────────────────────────
 export function SkeletonStatGrid({ cols = 4, className = "" }: { cols?: number; className?: string }) {
-  const { t } = useTheme()
   return (
-    <div className={`grid gap-3 ${className}`} style={{ gridTemplateColumns: `repeat(${cols}, 1fr)` }}>
+    <div className={`card-grid-${cols as 2 | 3 | 4} ${className}`}>
       {Array.from({ length: cols }).map((_, i) => (
-        <div key={i} className="rounded-2xl p-4" style={{ background: t.surface, border: `1px solid ${t.border}` }}>
+        <div key={i} className="metric-compact">
           <Pulse className="w-10 h-2.5 mb-3" />
           <Pulse className="w-14 h-6 mb-1" />
           <Pulse className="w-8 h-2" />
@@ -107,9 +95,8 @@ export function SkeletonStatGrid({ cols = 4, className = "" }: { cols?: number; 
 
 // ── SkeletonRingRow — 4 nutrition rings ──────────────────────────────────────
 export function SkeletonRingRow({ className = "" }: { className?: string }) {
-  const { t } = useTheme()
   return (
-    <div className={`rounded-2xl p-4 ${className}`} style={{ background: t.surface2, border: `1px solid ${t.border}` }}>
+    <div className={`card-secondary p-4 ${className}`}>
       <div className="flex items-center justify-between mb-3">
         <Pulse className="w-24 h-3.5" />
         <Pulse className="w-6 h-6 rounded-lg" />
