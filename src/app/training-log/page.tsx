@@ -11,8 +11,12 @@ import {
 } from "lucide-react"
 import { PageShell, PageHeader, PageContent } from "@/components/layout"
 import BottomTabBar from "@/components/BottomTabBar"
-import { MuscleHeatmap } from "@/components/ai-coaching/MuscleHeatmap"
 import { logger } from "@/lib/logger"
+
+const MuscleHeatmap = dynamic(
+  () => import('@/components/ai-coaching/MuscleHeatmap').then(m => ({ default: m.MuscleHeatmap })),
+  { ssr: false, loading: () => <div className="h-40 rounded-2xl animate-pulse bg-card" /> },
+)
 import { EmptyState } from "@/components/EmptyState"
 import { useWorkoutTimer } from "@/stores/workoutTimer"
 import { SkeletonStatGrid } from "@/components/Skeleton"

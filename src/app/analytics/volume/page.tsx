@@ -9,9 +9,9 @@ import {
 } from 'recharts';
 import { logger } from '@/lib/logger';
 import { getCached, setCached } from '@/lib/client-cache';
-import { SkeletonChart, SkeletonStatGrid } from '@/components/Skeleton';
 import { EmptyState } from '@/components/EmptyState';
 import { PageShell, PageHeader, PageContent } from "@/components/layout";
+import { useViewportLazy } from '@/hooks/useViewportLazy';
 
 interface VolumeData {
   week: string;
@@ -50,7 +50,6 @@ export default function VolumeTrendsPage() {
 
   const seedBuckets = getCached<VolumeData[]>(VOLUME_CACHE(4));
   const [volumeData, setVolumeData] = useState<VolumeData[]>(seedBuckets ?? []);
-  const [loading, setLoading] = useState(!seedBuckets);
   const [error, setError] = useState(false);
 
   const fetchVolumeData = useCallback(async (tr = timeRange) => {
@@ -58,7 +57,6 @@ export default function VolumeTrendsPage() {
     const cached = getCached<VolumeData[]>(ck);
     if (cached) {
       setVolumeData(cached);
-      setLoading(false);
       fetch('/api/workout?limit=200', { credentials: 'include' })
         .then(r => r.ok ? r.json() : null)
         .then(json => {
@@ -70,7 +68,6 @@ export default function VolumeTrendsPage() {
         .catch(() => {});
       return;
     }
-    setLoading(true);
     setError(false);
     try {
       const res = await fetch('/api/workout?limit=200', { credentials: 'include' });
@@ -83,7 +80,7 @@ export default function VolumeTrendsPage() {
       logger.error('获取训练量数据失败:', err);
       setError(true);
     } finally {
-      setLoading(false);
+      /* no-op */
     }
   }, [timeRange]);
 
@@ -93,6 +90,8 @@ export default function VolumeTrendsPage() {
     ? Math.round(volumeData.reduce((s, d) => s + d.volume, 0) / volumeData.length) : 0;
   const maxVolume = volumeData.length ? Math.max(...volumeData.map(d => d.volume)) : 0;
   const hasData = volumeData.some(d => d.volume > 0);
+
+  const { ref: chartRef, isVisible: chartVisible } = useViewportLazy();
 
   return (
     <PageShell>
@@ -110,12 +109,7 @@ export default function VolumeTrendsPage() {
           ))}
         </div>
 
-        {loading ? (
-          <>
-            <SkeletonStatGrid cols={2} className="mb-4" />
-            <SkeletonChart />
-          </>
-        ) : error ? (
+        {error && !hasData ? (
           <EmptyState
             icon={<AlertCircle className="w-8 h-8" />}
             title="加载失败"
@@ -130,6 +124,7 @@ export default function VolumeTrendsPage() {
           />
         ) : (
           <>
+            {/* Hero metrics — instant from cache */}
             <div className="grid grid-cols-2 gap-3 mb-4">
               <div className="rounded-2xl p-4 bg-card border border-border">
                 <p className="text-xs mb-1 text-muted-foreground">平均周训练量</p>
@@ -145,26 +140,33 @@ export default function VolumeTrendsPage() {
               </div>
             </div>
 
-            <div className="rounded-2xl p-4 bg-card border border-border">
+            {/* Chart — viewport lazy loaded */}
+            <div ref={chartRef} className="rounded-2xl p-4 bg-card border border-border">
               <div className="flex items-center gap-2 mb-4">
                 <TrendingUp className="w-4 h-4 text-primary" />
                 <span className="text-sm font-semibold">周训练量（kg）</span>
               </div>
-              <ResponsiveContainer width="100%" height={220}>
-                <ComposedChart data={volumeData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
-                  <XAxis dataKey="week" stroke="rgba(255,255,255,0.25)" tick={{ fontSize: 11 }} />
-                  <YAxis stroke="rgba(255,255,255,0.25)" tick={{ fontSize: 11 }} />
-                  <Tooltip
-                    contentStyle={{ background: '#111', border: '1px solid #333', borderRadius: 12 }}
-                    labelStyle={{ color: '#fff' }}
-                    itemStyle={{ color: 'rgba(255,255,255,0.7)' }}
-                  />
-                  <Legend wrapperStyle={{ fontSize: 12 }} />
-                  <Bar dataKey="volume" name="训练量" fill="var(--accent)" radius={[4,4,0,0]} opacity={0.85} />
-                  <Line type="monotone" dataKey="trend" name="3周均线" stroke="#A855F7" strokeWidth={2} dot={false} />
-                </ComposedChart>
-              </ResponsiveContainer>
+              {!chartVisible ? (
+                <div className="h-[220px] flex items-center justify-center text-muted-foreground text-sm">
+                  滚动查看图表
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height={220}>
+                  <ComposedChart data={volumeData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
+                    <XAxis dataKey="week" stroke="rgba(255,255,255,0.25)" tick={{ fontSize: 11 }} />
+                    <YAxis stroke="rgba(255,255,255,0.25)" tick={{ fontSize: 11 }} />
+                    <Tooltip
+                      contentStyle={{ background: '#111', border: '1px solid #333', borderRadius: 12 }}
+                      labelStyle={{ color: '#fff' }}
+                      itemStyle={{ color: 'rgba(255,255,255,0.7)' }}
+                    />
+                    <Legend wrapperStyle={{ fontSize: 12 }} />
+                    <Bar dataKey="volume" name="训练量" fill="var(--accent)" radius={[4,4,0,0]} opacity={0.85} />
+                    <Line type="monotone" dataKey="trend" name="3周均线" stroke="#A855F7" strokeWidth={2} dot={false} />
+                  </ComposedChart>
+                </ResponsiveContainer>
+              )}
             </div>
           </>
         )}

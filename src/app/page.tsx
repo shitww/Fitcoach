@@ -1,8 +1,9 @@
 import { auth } from "@/lib/auth"
 import { getDashboardSnapshot } from "@/lib/kv/dashboard"
 import { createDefaultDashboardStatus } from "@/lib/dashboard"
+import { getDashboardBootstrapCached } from "@/lib/dashboard-bootstrap"
 import HomeShell from "./_home/HomeShell"
-import CriticalBWidgets from "./_home/CriticalBWidgets"
+import HomeHero from "./_home/HomeHero"
 import ExtendedWidgets from "./_home/ExtendedWidgets"
 import UnauthenticatedContent from "./_home/UnauthenticatedContent"
 import DashboardMeta from "@/components/DashboardMeta"
@@ -18,6 +19,9 @@ export default async function HomePage() {
   const snapshot = await getDashboardSnapshot(userId)
   const instantStatus = snapshot?.data ?? createDefaultDashboardStatus()
 
+  // Critical-B: single server bootstrap for hero — no client fetch waterfall
+  const bootstrap = await getDashboardBootstrapCached(userId)
+
   return (
     <HomeShell>
       {/* Critical-A: instant — server-rendered streak, no skeleton */}
@@ -30,8 +34,8 @@ export default async function HomePage() {
         </div>
       </div>
 
-      {/* Critical-B: plans + status — client-side offline-first cache */}
-      <CriticalBWidgets userId={userId} />
+      {/* Phase X: Progressive Stable Rendering Hero — SSR bootstrap, instant CTA */}
+      <HomeHero bootstrap={bootstrap} userId={userId} />
 
       {/* Extended: nutrition — client-side offline-first cache */}
       <ExtendedWidgets userId={userId} />

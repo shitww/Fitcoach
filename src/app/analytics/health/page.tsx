@@ -5,10 +5,9 @@ import { useRouter } from 'next/navigation';
 import {
   ArrowLeft, RefreshCw, ShieldAlert, Zap, Salad,
   AlertTriangle, CheckCircle, Info, TrendingUp, TrendingDown,
-  Clock, Activity,
+  Clock, Activity, Dumbbell, Calendar, Heart, Flame,
 } from 'lucide-react';
 import { useCachedFetch } from '@/lib/client-cache';
-import { SkeletonScoreCard, SkeletonCard } from '@/components/Skeleton';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -182,6 +181,35 @@ function FactorChip({ factor }: { factor: RiskFactor }) {
   );
 }
 
+// ── Athletic metric card ────────────────────────────────────────────────────
+
+function MetricCard({
+  label, value, sub, icon, tone = 'neutral',
+}: {
+  label: string;
+  value: string;
+  sub?: string;
+  icon: React.ReactNode;
+  tone?: 'good' | 'warn' | 'danger' | 'neutral';
+}) {
+  const toneCls = {
+    good: 'border-green-500/20',
+    warn: 'border-yellow-400/20',
+    danger: 'border-red-500/20',
+    neutral: 'border-border',
+  }[tone];
+  return (
+    <div className={`rounded-2xl p-4 bg-card border ${toneCls}`}>
+      <div className="flex items-center gap-2 mb-2 text-muted-foreground">
+        {icon}
+        <span className="text-[10px] font-bold uppercase tracking-wider">{label}</span>
+      </div>
+      <div className="text-2xl font-black text-foreground">{value}</div>
+      {sub && <div className="text-[11px] text-muted-foreground mt-1">{sub}</div>}
+    </div>
+  );
+}
+
 // ── Main page ──────────────────────────────────────────────────────────────────
 
 export default function HealthDashboardPage() {
@@ -189,7 +217,7 @@ export default function HealthDashboardPage() {
   const { status } = useSession();
 
   const url = status === 'authenticated' ? '/api/analysis/health-snapshot' : null;
-  const { data: raw, isLoading, error, refresh } = useCachedFetch<{ data: HealthData }>(
+  const { data: raw, isLoading, isStale, error, refresh } = useCachedFetch<{ data: HealthData }>(
     url,
     { credentials: 'include' }
   );
@@ -200,229 +228,207 @@ export default function HealthDashboardPage() {
     return null;
   }
 
-  // ── Loading (no cache) ────────────────────────────────────────────────────
-  if (isLoading) {
-    return (
-      <div className="page-shell bg-background text-foreground">
-        <div className="px-4 py-6 space-y-4">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-9 h-9 rounded-xl animate-pulse bg-secondary" />
-            <div className="w-32 h-5 rounded-lg animate-pulse bg-secondary" />
-          </div>
-          <SkeletonScoreCard />
-          <SkeletonCard />
-          <SkeletonCard />
-        </div>
-      </div>
-    );
-  }
+  const fatigue = data?.fatigue;
+  const injuryRisk = data?.injuryRisk;
+  const nutrition = data?.nutrition;
 
-  // ── Error / empty (never had data) ───────────────────────────────────────
-  if (error || !data) {
-    return (
-      <div className="page-shell bg-background text-foreground flex flex-col items-center justify-center gap-4 px-6 text-center">
-        <AlertTriangle className="w-10 h-10 text-red-500" />
-        <p className="text-sm text-muted-foreground">{error?.message ?? '暂无数据，完成几次训练后再来查看。'}</p>
-        <button onClick={refresh} className="px-5 py-2.5 rounded-xl text-sm font-bold bg-primary text-primary-foreground">
-          重试
-        </button>
-      </div>
-    );
-  }
+  // ── Derived athletic metrics ──
+  const frequencyLabel = fatigue
+    ? fatigue.daysSinceLastWorkout === 0 ? '今日训练' : `${fatigue.daysSinceLastWorkout}天前`
+    : '—';
+  const volumeLabel = fatigue ? `${(fatigue.acuteLoad / 1000).toFixed(1)}t` : '—';
+  const recoveryLevel = fatigue ? CN_LEVEL[fatigue.level] : '—';
+  const recoveryTone: 'good' | 'warn' | 'danger' | 'neutral' = fatigue
+    ? fatigue.level === 'low' ? 'good' : fatigue.level === 'moderate' ? 'warn' : 'danger'
+    : 'neutral';
+  const consistencyLabel = fatigue ? `${Math.max(0, Math.round((1 - Math.abs(fatigue.monotony - 1.2) / 1.2) * 100))}%` : '—';
 
-  const { fatigue, injuryRisk, nutrition } = data;
-  const fatigueColor  = FATIGUE_COLOR[fatigue.level] ?? '#9ca3af';
-  const riskColor     = RISK_COLOR[injuryRisk.level] ?? '#9ca3af';
-  const macroColor    = MACRO_COLOR[nutrition.macroBalance] ?? '#9ca3af';
-
-  const calBalance = nutrition.calorieBalance;
-  const calSign = calBalance >= 0 ? '+' : '';
+  const fatigueColor = fatigue ? (FATIGUE_COLOR[fatigue.level] ?? '#9ca3af') : '#9ca3af';
+  const riskColor = injuryRisk ? (RISK_COLOR[injuryRisk.level] ?? '#9ca3af') : '#9ca3af';
+  const macroColor = nutrition ? (MACRO_COLOR[nutrition.macroBalance] ?? '#9ca3af') : '#9ca3af';
 
   return (
-    <div className="page-shell bg-background text-foreground pb-24">
+    <div className="min-h-screen bg-background text-foreground">
       {/* ── Header ── */}
       <div className="sticky top-0 z-10 backdrop-blur px-4 py-3 flex items-center gap-3 bg-background/80 border-b border-border">
         <button onClick={() => router.back()} className="p-2 rounded-lg transition-all active:scale-95 bg-secondary">
           <ArrowLeft className="w-5 h-5 text-foreground" />
         </button>
-        <h1 className="flex-1 text-base font-semibold">健康状态</h1>
+        <h1 className="flex-1 text-base font-bold">训练状态</h1>
         <button onClick={refresh} className="p-2 rounded-lg transition-all active:scale-95 bg-secondary">
-          <RefreshCw className="w-5 h-5 text-muted-foreground" />
+          <RefreshCw className={`w-5 h-5 text-muted-foreground ${isStale ? 'animate-spin' : ''}`} />
         </button>
       </div>
 
-      <div className="px-4 pt-4 space-y-4">
+      <div className="px-4 pt-4 pb-24 space-y-5">
 
-        {/* ── Overall banner ── */}
-        <div className="rounded-2xl p-4 bg-card border border-border">
+        {/* ═══════ FIRST SCREEN — Hero + 4 Core Metrics ═══════ */}
+
+        {/* Hero: composite status score */}
+        <div className="rounded-2xl p-5 bg-card border border-border relative overflow-hidden">
+          {isLoading && !data && <div className="absolute inset-0 bg-card animate-pulse rounded-2xl" />}
           <div className="flex items-center justify-between mb-1">
-            <span className="text-xs text-muted-foreground">综合健康指数</span>
-            <span className="text-xs flex items-center gap-1 text-muted-foreground/60">
-              <Clock className="w-3 h-3" />
-              {new Date(data.generatedAt).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}
-            </span>
+            <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold">综合状态</span>
+            {(isLoading || isStale) && data && (
+              <span className="text-[10px] text-muted-foreground animate-pulse">更新中…</span>
+            )}
           </div>
-          <div className="flex items-end gap-6 mt-2">
-            <ArcGauge score={fatigue.score} color={fatigueColor} label="疲劳评分" />
-            <div className="flex-1 space-y-3 pb-1">
-              <div>
-                <p className="text-xs mb-0.5 text-muted-foreground">ACWR（急慢负荷比）</p>
-                <div className="flex items-baseline gap-1.5">
-                  <span className="text-xl font-bold">{fatigue.acwr.toFixed(2)}</span>
-                  <span className="text-xs text-muted-foreground">安全区 0.8-1.3</span>
-                </div>
+          <div className="flex items-end gap-4">
+            <div className="text-5xl font-black leading-none" style={{ color: fatigueColor }}>
+              {fatigue ? fatigue.score : '—'}
+            </div>
+            <div className="pb-1">
+              <div className="text-sm font-bold" style={{ color: fatigueColor }}>
+                {fatigue ? CN_LEVEL[fatigue.level] : '—'}
               </div>
-              <div>
-                <p className="text-xs mb-0.5 text-muted-foreground">距上次训练</p>
-                <span className="text-xl font-bold">{fatigue.daysSinceLastWorkout}</span>
-                <span className="text-xs ml-1 text-muted-foreground">天</span>
-              </div>
+              <div className="text-[11px] text-muted-foreground">疲劳评分 / 100</div>
             </div>
           </div>
+          {fatigue && (
+            <div className="mt-3 flex items-start gap-2 rounded-xl p-2.5 bg-secondary">
+              <Activity className="w-3.5 h-3.5 mt-0.5 text-primary shrink-0" />
+              <p className="text-xs text-foreground leading-relaxed">{fatigue.recommendation}</p>
+            </div>
+          )}
         </div>
 
-        {/* ── Fatigue ── */}
-        <div className="rounded-2xl p-4 bg-card border border-border">
-          <SectionTitle icon={<Zap className="w-4 h-4" style={{ color: fatigueColor }} />} title="训练疲劳" />
+        {/* 4 Athletic metric cards */}
+        <div className="grid grid-cols-2 gap-3">
+          <MetricCard
+            label="训练频率"
+            value={frequencyLabel}
+            sub={fatigue ? `ACWR ${fatigue.acwr.toFixed(2)}` : undefined}
+            icon={<Calendar className="w-3.5 h-3.5" />}
+          />
+          <MetricCard
+            label="本周容量"
+            value={volumeLabel}
+            sub={fatigue ? `均周 ${(fatigue.chronicLoad / 1000).toFixed(1)}t` : undefined}
+            icon={<Dumbbell className="w-3.5 h-3.5" />}
+          />
+          <MetricCard
+            label="恢复状态"
+            value={recoveryLevel}
+            sub={fatigue ? `应激 ${Math.round(fatigue.strain / 1000)}k` : undefined}
+            icon={<Heart className="w-3.5 h-3.5" />}
+            tone={recoveryTone}
+          />
+          <MetricCard
+            label="训练一致性"
+            value={consistencyLabel}
+            sub={fatigue ? `单调性 ${fatigue.monotony.toFixed(2)}` : undefined}
+            icon={<Flame className="w-3.5 h-3.5" />}
+          />
+        </div>
 
+        {/* ═══════ SCROLL DOWN — Supporting Metrics ═══════ */}
+
+        {/* Injury Risk — compact */}
+        <div className="rounded-2xl p-4 bg-card border border-border">
           <div className="flex items-center gap-2 mb-3">
-            <span className="px-3 py-1 rounded-full text-xs font-medium"
-              style={{ backgroundColor: fatigueColor + '22', color: fatigueColor, border: `1px solid ${fatigueColor}55` }}>
-              {CN_LEVEL[fatigue.level]}
-            </span>
-            <span className="text-xs text-muted-foreground">疲劳评分 {fatigue.score} / 100</span>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3 mb-4">
-            {[
-              { label: '7天训练量', value: `${(fatigue.acuteLoad / 1000).toFixed(1)}t` },
-              { label: '均周训练量', value: `${(fatigue.chronicLoad / 1000).toFixed(1)}t` },
-              { label: '训练单调性', value: fatigue.monotony.toFixed(2) },
-              { label: '训练应激', value: `${Math.round(fatigue.strain / 1000)}k` },
-            ].map(m => (
-              <div key={m.label} className="rounded-xl p-3 bg-secondary">
-                <p className="text-xs mb-0.5 text-muted-foreground">{m.label}</p>
-                <p className="text-lg font-semibold">{m.value}</p>
-              </div>
-            ))}
-          </div>
-
-          <div className="rounded-xl p-3 flex gap-2 bg-secondary">
-            <Activity className="w-4 h-4 flex-shrink-0 mt-0.5 text-primary" />
-            <p className="text-sm text-foreground">{fatigue.recommendation}</p>
-          </div>
-        </div>
-
-        {/* ── Injury Risk ── */}
-        <div className="rounded-2xl p-4 bg-card border border-border">
-          <SectionTitle icon={<ShieldAlert className="w-4 h-4" style={{ color: riskColor }} />} title="受伤风险" />
-
-          <div className="flex items-center gap-3 mb-4">
-            <div className="relative w-16 h-16 flex-shrink-0">
-              <svg viewBox="0 0 64 64" className="w-full h-full">
-                <circle cx="32" cy="32" r="26" fill="none" style={{ stroke: 'var(--border)' }} strokeWidth="8" />
-                <circle cx="32" cy="32" r="26" fill="none" stroke={riskColor} strokeWidth="8"
-                  strokeDasharray={`${(injuryRisk.score / 100) * 163.4} 163.4`} strokeLinecap="round"
-                  transform="rotate(-90 32 32)" />
-              </svg>
-              <span className="absolute inset-0 flex items-center justify-center text-lg font-bold">
+            <ShieldAlert className="w-4 h-4" style={{ color: riskColor }} />
+            <h2 className="text-sm font-bold text-foreground">受伤风险</h2>
+            {injuryRisk && (
+              <span className="ml-auto text-xs font-bold px-2 py-0.5 rounded-full" style={{ backgroundColor: riskColor + '22', color: riskColor }}>
                 {injuryRisk.score}
               </span>
-            </div>
-            <div>
-              <span className="inline-block px-3 py-1 rounded-full text-xs font-medium mb-1"
-                style={{ backgroundColor: riskColor + '22', color: riskColor, border: `1px solid ${riskColor}55` }}>
-                {CN_LEVEL[injuryRisk.level]}风险
-              </span>
-              <p className="text-xs text-muted-foreground">{injuryRisk.triggeredFactors.length} 个风险因子触发</p>
-            </div>
+            )}
           </div>
 
-          {injuryRisk.triggeredFactors.length > 0 ? (
-            <div className="space-y-2 mb-4">
-              {injuryRisk.triggeredFactors.map(f => (
-                <FactorChip key={f.id} factor={f} />
-              ))}
-            </div>
-          ) : (
-            <div className="flex items-center gap-2 rounded-xl p-3 mb-4 bg-green-500/10 border border-green-500/20">
-              <CheckCircle className="w-4 h-4 flex-shrink-0 text-green-500" />
-              <p className="text-sm text-green-500">所有风险因子均在安全范围内</p>
-            </div>
-          )}
-
-          <div className="rounded-xl p-3 flex gap-2 bg-secondary">
-            <ShieldAlert className="w-4 h-4 flex-shrink-0 mt-0.5 text-yellow-400" />
-            <p className="text-sm text-foreground">{injuryRisk.recommendation}</p>
-          </div>
-        </div>
-
-        {/* ── Nutrition ── */}
-        <div className="rounded-2xl p-4 bg-card border border-border">
-          <SectionTitle icon={<Salad className="w-4 h-4" style={{ color: macroColor }} />} title="营养平衡" />
-
-          <div className="flex items-center gap-4 mb-4">
-            <div className="flex-1 rounded-xl p-3 bg-secondary">
-              <p className="text-xs mb-0.5 text-muted-foreground">日均热量</p>
-              <p className="text-lg font-bold">{nutrition.avgDailyCalories} <span className="text-xs font-normal text-muted-foreground">kcal</span></p>
-            </div>
-            <div className="flex-1 rounded-xl p-3 bg-secondary">
-              <p className="text-xs mb-0.5 text-muted-foreground">热量缺口</p>
-              <div className="flex items-center gap-1">
-                {calBalance >= 0
-                  ? <TrendingUp className="w-4 h-4 text-orange-400" />
-                  : <TrendingDown className="w-4 h-4 text-green-500" />
-                }
-                <p className={`text-lg font-bold ${calBalance > 300 ? 'text-orange-400' : calBalance < -500 ? 'text-red-400' : 'text-green-500'}`}>
-                  {calSign}{calBalance} <span className="text-xs font-normal text-muted-foreground">kcal</span>
-                </p>
+          {injuryRisk ? (
+            <>
+              {injuryRisk.triggeredFactors.length > 0 ? (
+                <div className="space-y-2 mb-3">
+                  {injuryRisk.triggeredFactors.slice(0, 3).map(f => (
+                    <FactorChip key={f.id} factor={f} />
+                  ))}
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 rounded-xl p-3 mb-3 bg-green-500/10 border border-green-500/20">
+                  <CheckCircle className="w-4 h-4 flex-shrink-0 text-green-500" />
+                  <p className="text-sm text-green-500">所有风险因子均在安全范围内</p>
+                </div>
+              )}
+              <div className="rounded-xl p-3 flex gap-2 bg-secondary">
+                <ShieldAlert className="w-4 h-4 flex-shrink-0 mt-0.5 text-yellow-400" />
+                <p className="text-sm text-foreground">{injuryRisk.recommendation}</p>
               </div>
-            </div>
-            <div className="flex-1 rounded-xl p-3 bg-secondary">
-              <p className="text-xs mb-0.5 text-muted-foreground">估算 TDEE</p>
-              <p className="text-lg font-bold">{nutrition.estimatedTDEE} <span className="text-xs font-normal text-muted-foreground">kcal</span></p>
-            </div>
-          </div>
-
-          <div className="space-y-3 mb-4">
-            <MacroBar label="蛋白质达标率" value={nutrition.proteinAdequacy}
-              color={nutrition.proteinAdequacy >= 80 ? '#22c55e' : nutrition.proteinAdequacy >= 60 ? '#eab308' : '#ef4444'} />
-            <MacroBar label="碳水达标率" value={nutrition.carbAdequacy}
-              color={nutrition.carbAdequacy >= 80 ? '#22c55e' : nutrition.carbAdequacy >= 60 ? '#eab308' : '#ef4444'} />
-            <MacroBar label="脂肪达标率" value={nutrition.fatAdequacy}
-              color={nutrition.fatAdequacy >= 80 ? '#22c55e' : nutrition.fatAdequacy >= 60 ? '#eab308' : '#ef4444'} />
-          </div>
-
-          <div className="flex items-center gap-2 mb-4">
-            <span className="text-xs text-muted-foreground">宏量平衡：</span>
-            <span className="px-2 py-0.5 rounded-full text-xs font-medium"
-              style={{ backgroundColor: macroColor + '22', color: macroColor, border: `1px solid ${macroColor}55` }}>
-              {CN_LEVEL[nutrition.macroBalance]}
-            </span>
-          </div>
-
-          {nutrition.issues.length > 0 && (
-            <div className="space-y-2 mb-3">
-              {nutrition.issues.map((issue, i) => (
-                <div key={i} className="flex gap-2 rounded-xl p-3 bg-red-500/10 border border-red-500/20">
-                  <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5 text-red-400" />
-                  <p className="text-xs text-red-400">{issue}</p>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {nutrition.suggestions.length > 0 && (
+            </>
+          ) : (
             <div className="space-y-2">
-              {nutrition.suggestions.map((s, i) => (
-                <div key={i} className="flex gap-2 rounded-xl p-3 bg-blue-500/10 border border-blue-500/20">
-                  <Info className="w-4 h-4 flex-shrink-0 mt-0.5 text-blue-400" />
-                  <p className="text-xs text-blue-400">{s}</p>
-                </div>
-              ))}
+              <div className="h-8 bg-secondary rounded-xl animate-pulse" />
+              <div className="h-8 bg-secondary rounded-xl animate-pulse" />
             </div>
           )}
         </div>
+
+        {/* Nutrition — compact trend section */}
+        <div className="rounded-2xl p-4 bg-card border border-border">
+          <div className="flex items-center gap-2 mb-3">
+            <Salad className="w-4 h-4" style={{ color: macroColor }} />
+            <h2 className="text-sm font-bold text-foreground">营养平衡</h2>
+            {nutrition && (
+              <span className="ml-auto text-xs font-bold px-2 py-0.5 rounded-full" style={{ backgroundColor: macroColor + '22', color: macroColor }}>
+                {CN_LEVEL[nutrition.macroBalance]}
+              </span>
+            )}
+          </div>
+
+          {nutrition ? (
+            <>
+              <div className="flex items-center gap-3 mb-3">
+                <div className="flex-1 rounded-xl p-3 bg-secondary">
+                  <p className="text-[11px] mb-0.5 text-muted-foreground">日均热量</p>
+                  <p className="text-lg font-bold text-foreground">{nutrition.avgDailyCalories} <span className="text-xs font-normal text-muted-foreground">kcal</span></p>
+                </div>
+                <div className="flex-1 rounded-xl p-3 bg-secondary">
+                  <p className="text-[11px] mb-0.5 text-muted-foreground">热量平衡</p>
+                  <div className="flex items-center gap-1">
+                    {nutrition.calorieBalance >= 0
+                      ? <TrendingUp className="w-4 h-4 text-orange-400" />
+                      : <TrendingDown className="w-4 h-4 text-green-500" />
+                    }
+                    <p className={`text-lg font-bold ${nutrition.calorieBalance > 300 ? 'text-orange-400' : nutrition.calorieBalance < -500 ? 'text-red-400' : 'text-green-500'}`}>
+                      {nutrition.calorieBalance >= 0 ? '+' : ''}{nutrition.calorieBalance}
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div className="space-y-2 mb-3">
+                <MacroBar label="蛋白质" value={nutrition.proteinAdequacy} color={nutrition.proteinAdequacy >= 80 ? '#22c55e' : nutrition.proteinAdequacy >= 60 ? '#eab308' : '#ef4444'} />
+                <MacroBar label="碳水" value={nutrition.carbAdequacy} color={nutrition.carbAdequacy >= 80 ? '#22c55e' : nutrition.carbAdequacy >= 60 ? '#eab308' : '#ef4444'} />
+                <MacroBar label="脂肪" value={nutrition.fatAdequacy} color={nutrition.fatAdequacy >= 80 ? '#22c55e' : nutrition.fatAdequacy >= 60 ? '#eab308' : '#ef4444'} />
+              </div>
+              {nutrition.issues.length > 0 && (
+                <div className="space-y-2">
+                  {nutrition.issues.map((issue, i) => (
+                    <div key={i} className="flex gap-2 rounded-xl p-3 bg-red-500/10 border border-red-500/20">
+                      <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5 text-red-400" />
+                      <p className="text-xs text-red-400">{issue}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="space-y-2">
+              <div className="h-8 bg-secondary rounded-xl animate-pulse" />
+              <div className="h-8 bg-secondary rounded-xl animate-pulse" />
+              <div className="h-8 bg-secondary rounded-xl animate-pulse" />
+            </div>
+          )}
+        </div>
+
+        {/* Inline error */}
+        {error && (
+          <div className="rounded-2xl p-4 bg-red-500/10 border border-red-500/20 text-center">
+            <AlertTriangle className="w-8 h-8 mx-auto mb-2 text-red-400" />
+            <p className="text-sm text-red-400 mb-2">{error.message ?? '加载失败'}</p>
+            <button onClick={refresh} className="px-4 py-2 rounded-xl text-xs font-bold bg-red-500/20 text-red-400">
+              重试
+            </button>
+          </div>
+        )}
 
       </div>
     </div>

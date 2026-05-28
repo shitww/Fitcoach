@@ -1,20 +1,18 @@
 "use client";
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
-import { motion } from 'framer-motion';
 import { 
-  ArrowLeft, Plus, Trash2, Droplets,
-  Coffee, Sun, Cloud, Moon, Cookie, Pencil, Minus, X, Settings2, Dumbbell
+  ArrowLeft, Plus, Trash2, Droplets, RotateCcw,
+  Coffee, Sun, Cloud, Moon, Cookie, Pencil, Minus, X, Settings2, Dumbbell,
+  Clock, Zap, ChevronRight
 } from 'lucide-react';
 import FoodSearch from '@/components/FoodSearch';
 import { logger } from '@/lib/logger';
 import { getUserStorageItem, setUserStorageItem } from '@/lib/user-storage';
 import { useToast } from '@/components/Toast';
-import { EmptyState } from '@/components/EmptyState';
-import { SkeletonRingRow, SkeletonList } from '@/components/Skeleton';
-import { useTheme } from '@/contexts/ThemeContext';
+import { getCached, setCached } from '@/lib/client-cache';
 
 const MEAL_TYPES = [
   { key: 'breakfast', label: '早餐', icon: Coffee },
@@ -26,7 +24,34 @@ const MEAL_TYPES = [
   { key: 'supper', label: '宵夜', icon: Moon },
 ];
 
+const QUICK_FOODS = [
+  { name: '煮鸡蛋', calories: 155, protein: 13, carbs: 1, fat: 11 },
+  { name: '鸡胸肉', calories: 165, protein: 31, carbs: 0, fat: 3.6 },
+  { name: '米饭', calories: 130, protein: 2.7, carbs: 28, fat: 0.3 },
+  { name: '燕麦', calories: 389, protein: 16.9, carbs: 66, fat: 6.9 },
+  { name: '香蕉', calories: 89, protein: 1.1, carbs: 23, fat: 0.3 },
+  { name: '牛奶', calories: 42, protein: 3.4, carbs: 5, fat: 1 },
+  { name: '蛋白粉', calories: 120, protein: 24, carbs: 3, fat: 1 },
+  { name: '西兰花', calories: 34, protein: 2.8, carbs: 7, fat: 0.4 },
+];
+
 const FALLBACK_GOALS = { calories: 2000, carbs: 250, protein: 150, fat: 65 };
+
+function MacroBar({ label, value, max, color }: { label: string; value: number; max: number; color: string }) {
+  const pct = Math.min(100, max > 0 ? (value / max) * 100 : 0);
+  const over = value > max;
+  return (
+    <div className="flex-1">
+      <div className="flex items-baseline justify-between mb-1">
+        <span className="text-[10px] font-bold text-muted-foreground">{label}</span>
+        <span className={`text-xs font-bold ${over ? 'text-red-400' : 'text-foreground'}`}>{Math.round(value)}<span className="text-[9px] text-muted-foreground">/{max}</span></span>
+      </div>
+      <div className="h-1.5 rounded-full bg-secondary overflow-hidden">
+        <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, backgroundColor: over ? '#ef4444' : color }} />
+      </div>
+    </div>
+  );
+}
 
 interface Goals { calories: number; carbs: number; protein: number; fat: number; }
 type GoalInputs = { calories: string; carbs: string; protein: string; fat: string; }
@@ -106,9 +131,11 @@ export default function DietPage() {
     return now.toISOString().split('T')[0];
   });
   const [activeMeal, setActiveMeal] = useState('breakfast');
-  const [foodLogs, setFoodLogs] = useState<FoodLog[]>([]);
-  const [summary, setSummary] = useState<DaySummary>({ calories: 0, protein: 0, carbs: 0, fat: 0 });
-  const [loading, setLoading] = useState(true);
+  const [foodLogs, setFoodLogs] = useState<FoodLog[]>(() => {
+    const cached = getCached<{ logs: FoodLog[] }>(`diet:logs:${new Date().toISOString().split('T')[0]}`);
+    return cached?.logs ?? [];
+  });
+  const [summary, setSummary] = useState({ calories: 0, protein: 0, carbs: 0, fat: 0 });
   const [showFoodSearch, setShowFoodSearch] = useState(false);
   const [waterCount, setWaterCount] = useState(0);
   const [editLog, setEditLog] = useState<FoodLog | null>(null);
@@ -119,21 +146,24 @@ export default function DietPage() {
   const [editGoals, setEditGoals] = useState<GoalInputs>({ calories: '2000', carbs: '250', protein: '150', fat: '65' });
   const [showMealPicker, setShowMealPicker] = useState(false);
   const { toast } = useToast();
-  const { t } = useTheme();
 
   const loadLogs = useCallback(async (date: string) => {
-    setLoading(true);
+    const ck = `diet:logs:${date}`;
+    const cached = getCached<{ logs: FoodLog[]; summary: any }>(ck);
+    if (cached) {
+      setFoodLogs(cached.logs || []);
+      setSummary(cached.summary || { calories: 0, protein: 0, carbs: 0, fat: 0 });
+    }
     try {
       const res = await fetch(`/api/food-logs?date=${date}`);
       if (res.ok) {
         const data = await res.json();
         setFoodLogs(data.logs || []);
         setSummary(data.summary || { calories: 0, protein: 0, carbs: 0, fat: 0 });
+        setCached(ck, data);
       }
     } catch (e) {
       logger.warn('[Diet] 加载失败:', e);
-    } finally {
-      setLoading(false);
     }
   }, []);
 
@@ -192,23 +222,44 @@ export default function DietPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          foodId: food.id,
-          date: selectedDate,
-          mealType: activeMeal,
-          grams,
-          calories: food.calories * ratio,
-          protein: food.protein * ratio,
-          carbs: food.carbs * ratio,
-          fat: food.fat * ratio,
+          foodId: food.id, date: selectedDate, mealType: activeMeal, grams,
+          calories: food.calories * ratio, protein: food.protein * ratio,
+          carbs: food.carbs * ratio, fat: food.fat * ratio,
         }),
       });
       if (res.ok) {
-        toast({ message: `已添加 ${food.name} ${grams}g · ${Math.round(food.calories * ratio)} kcal`, type: 'success' });
+        toast({ message: `已添加 ${food.name} ${grams}g`, type: 'success' });
         await loadLogs(selectedDate);
       }
-    } catch (e) {
-      logger.error('[Diet] 添加失败:', e);
-    }
+    } catch (e) { logger.error('[Diet] 添加失败:', e); }
+  };
+
+  const handleQuickAdd = async (food: typeof QUICK_FOODS[0]) => {
+    try {
+      const res = await fetch('/api/food-logs', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          foodId: `quick_${food.name}`, date: selectedDate, mealType: activeMeal, grams: 100,
+          calories: food.calories, protein: food.protein, carbs: food.carbs, fat: food.fat,
+        }),
+      });
+      if (res.ok) { toast({ message: `已添加 ${food.name}`, type: 'success' }); await loadLogs(selectedDate); }
+    } catch (e) { logger.error('[Diet] 快速添加失败:', e); }
+  };
+
+  const handleRepeatLast = async () => {
+    if (foodLogs.length === 0) return;
+    const last = foodLogs[foodLogs.length - 1];
+    try {
+      const res = await fetch('/api/food-logs', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          foodId: last.foodId, date: selectedDate, mealType: activeMeal, grams: last.servingG,
+          calories: last.calories, protein: last.protein, carbs: last.carbs, fat: last.fat,
+        }),
+      });
+      if (res.ok) { toast({ message: `已重复 ${last.food.name}`, type: 'success' }); await loadLogs(selectedDate); }
+    } catch (e) { logger.error('[Diet] 重复失败:', e); }
   };
 
   const handleEditLog = async () => {
@@ -236,36 +287,16 @@ export default function DietPage() {
     const logToDelete = foodLogs.find(l => l.id === logId);
     try {
       const res = await fetch(`/api/food-logs/${logId}`, { method: 'DELETE' });
-      if (res.ok) {
-        await loadLogs(selectedDate);
-        toast({
-          message: `已删除 ${logToDelete?.food.name ?? '记录'}`,
-          type: 'info',
-          duration: 3500,
-          undoLabel: '撤销',
-          onUndo: async () => {
-            if (!logToDelete) return;
-            await handleSelectFood(logToDelete.food, logToDelete.servingG);
-          },
-        });
-      }
-    } catch (e) {
-      logger.error('[Diet] 删除失败:', e);
-      toast({ message: '删除失败，请重试', type: 'error' });
-    }
+      if (res.ok) { await loadLogs(selectedDate); toast({ message: `已删除 ${logToDelete?.food.name ?? '记录'}`, type: 'info' }); }
+    } catch (e) { logger.error('[Diet] 删除失败:', e); toast({ message: '删除失败', type: 'error' }); }
   };
 
   const addWater = async (ml: number) => {
     const newCount = waterCount + ml;
     setWaterCount(newCount);
     if (userId) setUserStorageItem(userId, `water_${selectedDate}`, newCount.toString());
-    try {
-      await fetch('/api/water-logs', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ date: selectedDate, ml }),
-      });
-    } catch {}
+    try { await fetch('/api/water-logs', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ date: selectedDate, ml }) }); }
+    catch {}
   };
 
   const changeDate = (delta: number) => {
@@ -276,251 +307,242 @@ export default function DietPage() {
 
   const dateLabel = new Date(selectedDate).toLocaleDateString('zh-CN', { month: 'long', day: 'numeric', weekday: 'short' });
 
+  // Recent foods = unique foods from logs, sorted by most recent
+  const recentFoods = useMemo(() => {
+    const seen = new Set<string>();
+    const unique: FoodLog[] = [];
+    for (const log of [...foodLogs].reverse()) {
+      if (!seen.has(log.food.name)) { seen.add(log.food.name); unique.push(log); }
+    }
+    return unique.slice(0, 6);
+  }, [foodLogs]);
+
   return (
-    <div className="min-h-screen" style={{ background: t.bg, color: t.text }}>
-      {/* 顶部导航 */}
-      <div className="sticky top-0 z-40 backdrop-blur-sm border-b" style={{ background: t.topBg, borderColor: t.border }}>
+    <div className="min-h-screen bg-background text-foreground">
+      {/* Header */}
+      <div className="sticky top-0 z-40 backdrop-blur-sm bg-background/80 border-b border-border">
         <div className="max-w-3xl mx-auto px-4 py-3 flex items-center justify-between">
-          <button onClick={() => router.back()} className="p-2 rounded-xl hover:bg-white/5 transition-colors">
-            <ArrowLeft className="w-5 h-5" style={{ color: t.textSec }} />
+          <button onClick={() => router.back()} className="p-2 rounded-xl hover:bg-secondary transition-colors">
+            <ArrowLeft className="w-5 h-5 text-muted-foreground" />
           </button>
-          <h1 className="text-base font-semibold">饮食记录</h1>
-          <div className="w-9" />
+          <h1 className="text-base font-bold">饮食记录</h1>
+          <button onClick={() => { setEditGoals({ calories: String(goals.calories), carbs: String(goals.carbs), protein: String(goals.protein), fat: String(goals.fat) }); setShowGoalEditor(true); }}
+            className="p-2 rounded-xl hover:bg-secondary transition-colors">
+            <Settings2 className="w-4 h-4 text-muted-foreground" />
+          </button>
         </div>
       </div>
 
-      <div className="max-w-3xl mx-auto px-4 py-5 space-y-4">
+      <div className="max-w-3xl mx-auto px-4 py-4 space-y-4 pb-24">
 
-        {/* 日期选择 */}
+        {/* Date switcher */}
         <div className="flex items-center justify-center gap-4">
-          <button onClick={() => changeDate(-1)} className="p-2 rounded-lg hover:bg-white/5 transition-colors">
-            <ArrowLeft className="w-4 h-4" style={{ color: t.textSec }} />
+          <button onClick={() => changeDate(-1)} className="p-2 rounded-lg hover:bg-secondary transition-colors">
+            <ArrowLeft className="w-4 h-4 text-muted-foreground" />
           </button>
-          <span className="text-sm font-medium min-w-[100px] text-center" style={{ color: t.textSec }}>
+          <span className="text-sm font-bold min-w-[100px] text-center">
             {selectedDate === new Date().toISOString().split('T')[0] ? '今天' : dateLabel}
           </span>
-          <button onClick={() => changeDate(1)} className="p-2 rounded-lg hover:bg-white/5 transition-colors"
+          <button onClick={() => changeDate(1)} className="p-2 rounded-lg hover:bg-secondary transition-colors"
             disabled={selectedDate >= new Date().toISOString().split('T')[0]}>
-            <ArrowLeft className="w-4 h-4 rotate-180" style={{ color: t.textSec }} />
+            <ArrowLeft className="w-4 h-4 rotate-180 text-muted-foreground" />
           </button>
         </div>
 
-        {/* 营养摄入目标 — 图圈进度 */}
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-          className="rounded-2xl p-4 border" style={{ background: t.surface, borderColor: t.border }}>
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-sm font-semibold" style={{ color: t.text }}>营养摄入目标</span>
-            <button onClick={() => { setEditGoals({ calories: String(goals.calories), carbs: String(goals.carbs), protein: String(goals.protein), fat: String(goals.fat) }); setShowGoalEditor(true); }}
-              className="p-1.5 rounded-lg hover:bg-white/5 transition-colors">
-              <Settings2 className="w-4 h-4" style={{ color: t.textMuted }} />
-            </button>
+        {/* ═══════ Instant Summary Bar ═══════ */}
+        <div className="rounded-2xl p-4 bg-card border border-border">
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">今日摄入</span>
+            <span className="text-[10px] text-muted-foreground">{Math.round(summary.calories)} / {goals.calories} kcal</span>
           </div>
-          <div className="grid grid-cols-4 gap-1">
-            <RingProgress value={summary.calories} max={goals.calories} color="#e4e4e7" label="热量(kcal)" themeColors={{ border: t.border, text: t.text, textMuted: t.textMuted, textSec: t.textSec }} />
-            <RingProgress value={summary.carbs} max={goals.carbs} color="#22d3ee" label="碳水(g)" themeColors={{ border: t.border, text: t.text, textMuted: t.textMuted, textSec: t.textSec }} />
-            <RingProgress value={summary.protein} max={goals.protein} color="#34d399" label="蛋白质(g)" themeColors={{ border: t.border, text: t.text, textMuted: t.textMuted, textSec: t.textSec }} />
-            <RingProgress value={summary.fat} max={goals.fat} color="#fb923c" label="脂肪(g)" themeColors={{ border: t.border, text: t.text, textMuted: t.textMuted, textSec: t.textSec }} />
+          <div className="grid grid-cols-4 gap-3">
+            <MacroBar label="热量" value={summary.calories} max={goals.calories} color="#e4e4e7" />
+            <MacroBar label="碳水" value={summary.carbs} max={goals.carbs} color="#22d3ee" />
+            <MacroBar label="蛋白质" value={summary.protein} max={goals.protein} color="#34d399" />
+            <MacroBar label="脂肪" value={summary.fat} max={goals.fat} color="#fb923c" />
           </div>
-        </motion.div>
+        </div>
 
-        {/* 饮水追踪 */}
-        <div className="rounded-2xl p-4 border" style={{ background: t.surface, borderColor: t.border }}>
-          <div className="flex items-center justify-between mb-3">
+        {/* ═══════ Quick Actions ═══════ */}
+        <div className="flex gap-2">
+          <button onClick={() => setShowMealPicker(true)}
+            className="flex-1 flex items-center justify-center gap-1.5 py-3 rounded-xl bg-primary text-primary-foreground text-sm font-bold active:scale-95 transition-all">
+            <Plus className="w-4 h-4" />添加食物
+          </button>
+          <button onClick={handleRepeatLast} disabled={foodLogs.length === 0}
+            className="flex items-center justify-center gap-1.5 px-4 py-3 rounded-xl bg-secondary border border-border text-sm font-bold active:scale-95 transition-all disabled:opacity-40">
+            <RotateCcw className="w-4 h-4" />重复
+          </button>
+        </div>
+
+        {/* ═══════ Quick Add — 极速工具感 ═══════ */}
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-bold text-muted-foreground">快速添加</span>
+            <span className="text-[10px] text-muted-foreground">每份100g</span>
+          </div>
+          <div className="flex gap-2 overflow-x-auto pb-1 -mx-4 px-4 scrollbar-hide">
+            {QUICK_FOODS.map(food => (
+              <button key={food.name} onClick={() => handleQuickAdd(food)}
+                className="flex-shrink-0 px-3 py-2 rounded-xl bg-card border border-border text-xs font-bold active:scale-95 transition-all whitespace-nowrap">
+                {food.name}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* ═══════ Recent Foods ═══════ */}
+        {recentFoods.length > 0 && (
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-bold text-muted-foreground">最近添加</span>
+              <span className="text-[10px] text-muted-foreground">点击重复</span>
+            </div>
+            <div className="flex gap-2 flex-wrap">
+              {recentFoods.map(log => (
+                <button key={`${log.food.id}-${log.id}`} onClick={() => handleSelectFood(log.food, log.servingG)}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-secondary border border-border text-xs font-medium active:scale-95 transition-all">
+                  <Clock className="w-3 h-3 text-muted-foreground" />
+                  <span>{log.food.name}</span>
+                  <span className="text-[10px] text-muted-foreground">{log.servingG}g</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* ═══════ Water ═══════ */}
+        <div className="rounded-2xl p-4 bg-card border border-border">
+          <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
               <Droplets className="w-4 h-4 text-blue-400" />
-              <span className="text-sm font-medium" style={{ color: t.textSec }}>饮水</span>
+              <span className="text-xs font-bold text-muted-foreground">饮水</span>
             </div>
-            <span className="text-xs" style={{ color: t.textMuted }}>{waterCount} ml / 2500 ml</span>
+            <span className="text-xs text-muted-foreground">{waterCount} / 2500 ml</span>
           </div>
-          <div className="w-full h-2 rounded-full overflow-hidden mb-3" style={{ background: t.surface2 }}>
-            <div className="h-full bg-blue-500/80 rounded-full transition-all duration-300"
-              style={{ width: `${Math.min(100, (waterCount / 2500) * 100)}%` }} />
+          <div className="w-full h-2 rounded-full bg-secondary overflow-hidden mb-2">
+            <div className="h-full bg-blue-500/80 rounded-full transition-all" style={{ width: `${Math.min(100, (waterCount / 2500) * 100)}%` }} />
           </div>
           <div className="flex gap-2">
-            {[200, 250, 300, 500].map((ml) => (
-              <button key={ml} onClick={() => addWater(ml)}
-                className="flex-1 py-2 rounded-lg hover:bg-white/5 text-xs transition-colors"
-                style={{ background: t.surface2, color: t.textSec }}>
+            {[200, 250, 300, 500].map(ml => (
+              <button key={ml} onClick={() => addWater(ml)} className="flex-1 py-2 rounded-lg bg-secondary text-xs font-bold text-foreground active:scale-95 transition-all">
                 +{ml}ml
               </button>
             ))}
           </div>
         </div>
 
-        {/* 各餐 sections — 仅显示已有记录的餐次 */}
-        {loading ? (
-          <SkeletonList rows={4} />
-        ) : foodLogs.length === 0 ? (
-          <EmptyState
-            icon={
-              <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2" className="w-10 h-10">
-                <path d="M24 6C15.163 6 8 13.163 8 22s7.163 16 16 16 16-7.163 16-16S32.837 6 24 6z"/>
-                <path d="M16 22h16M24 14v16"/>
-              </svg>
-            }
-            title="今天还没有记录饮食"
-            description="记录每一餐，让 AI 为你分析营养缺口并给出补充建议"
-            action={{ label: '记录第一餐', onClick: () => setShowMealPicker(true) }}
-          />
+        {/* ═══════ Meal Sections ═══════ */}
+        {foodLogs.length === 0 ? (
+          <div className="text-center py-8">
+            <Zap className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
+            <p className="text-sm text-muted-foreground mb-1">今天还没有记录</p>
+            <p className="text-xs text-muted-foreground">使用快速添加或搜索食物</p>
+          </div>
         ) : (
-          <>
-          {MEAL_TYPES.filter(meal => foodLogs.some(l => l.mealType === meal.key)).map((meal) => {
-            const Icon = meal.icon;
-            const logs = foodLogs.filter(l => l.mealType === meal.key);
-            const mCal = logs.reduce((s, l) => s + l.calories, 0);
-            const mCarbs = logs.reduce((s, l) => s + l.carbs, 0);
-            const mProt = logs.reduce((s, l) => s + l.protein, 0);
-            const mFat = logs.reduce((s, l) => s + l.fat, 0);
-            const earliest = logs.reduce((a, b) =>
-              new Date(a.createdAt) < new Date(b.createdAt) ? a : b
-            );
-            const timeStr = new Date(earliest.createdAt).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
-
-            return (
-              <div key={meal.key} className="rounded-2xl border overflow-hidden" style={{ background: t.surface, borderColor: t.border }}>
-                {/* 餐次标题行 */}
-                <div className="flex items-center justify-between px-4 py-3">
-                  <div className="flex items-center gap-2">
-                    <Icon className="w-4 h-4" style={{ color: t.textMuted }} />
-                    <span className="text-sm font-semibold" style={{ color: t.text }}>{meal.label}</span>
-                    <span className="text-[11px]" style={{ color: t.textMuted }}>({timeStr})</span>
-                    <span className="text-[10px] px-1.5 py-0.5 rounded-full" style={{ background: t.surface2, color: t.textSec }}>{logs.length}</span>
+          <div className="space-y-3">
+            {MEAL_TYPES.filter(meal => foodLogs.some(l => l.mealType === meal.key)).map(meal => {
+              const Icon = meal.icon;
+              const logs = foodLogs.filter(l => l.mealType === meal.key);
+              const mCal = logs.reduce((s, l) => s + l.calories, 0);
+              const mCarbs = logs.reduce((s, l) => s + l.carbs, 0);
+              const mProt = logs.reduce((s, l) => s + l.protein, 0);
+              const mFat = logs.reduce((s, l) => s + l.fat, 0);
+              const earliest = logs.reduce((a, b) => new Date(a.createdAt) < new Date(b.createdAt) ? a : b);
+              const timeStr = new Date(earliest.createdAt).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+              return (
+                <div key={meal.key} className="rounded-2xl bg-card border border-border overflow-hidden">
+                  <div className="flex items-center justify-between px-4 py-3">
+                    <div className="flex items-center gap-2">
+                      <Icon className="w-4 h-4 text-muted-foreground" />
+                      <span className="text-sm font-bold">{meal.label}</span>
+                      <span className="text-[11px] text-muted-foreground">{timeStr}</span>
+                    </div>
+                    <button onClick={() => { setActiveMeal(meal.key); setShowFoodSearch(true); }}
+                      className="flex items-center gap-1 px-2 py-1 rounded-lg bg-primary/10 text-primary text-xs font-bold active:scale-95">
+                      <Plus className="w-3 h-3" />添加
+                    </button>
                   </div>
-                  <button
-                    onClick={() => { setActiveMeal(meal.key); setShowFoodSearch(true); }}
-                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all active:scale-95"
-                    style={{ background: 'var(--accent)', color: 'var(--accent-text)' }}
-                  >
-                    <Plus className="w-3 h-3" />添加
-                  </button>
-                </div>
-
-                {/* 本餐合计 */}
-                {logs.length > 0 && (
-                  <div className="flex gap-4 px-4 py-2 border-t" style={{ borderColor: t.border, background: t.surface3 }}>
-                    <span className="text-xs font-medium" style={{ color: t.text }}>{Math.round(mCal)} kcal</span>
-                    <span className="text-xs text-cyan-400">{mCarbs.toFixed(1)}C</span>
-                    <span className="text-xs text-emerald-400">{mProt.toFixed(1)}P</span>
-                    <span className="text-xs text-orange-400">{mFat.toFixed(1)}F</span>
+                  <div className="flex gap-3 px-4 py-2 border-t border-border bg-secondary/50">
+                    <span className="text-xs font-bold">{Math.round(mCal)} kcal</span>
+                    <span className="text-xs text-cyan-400">{mCarbs.toFixed(0)}C</span>
+                    <span className="text-xs text-emerald-400">{mProt.toFixed(0)}P</span>
+                    <span className="text-xs text-orange-400">{mFat.toFixed(0)}F</span>
                   </div>
-                )}
-
-                {/* 食物列表 */}
-                {logs.length > 0 && (
-                  <div className="divide-y" style={{ borderColor: t.border }}>
-                    {logs.map((log) => (
-                      <motion.div
-                        key={log.id}
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        className="flex items-center gap-3 px-4 py-3 group cursor-pointer hover:bg-white/5 transition-colors"
-                        onClick={() => { setEditLog(log); setEditGrams(log.servingG); }}
-                      >
+                  <div className="divide-y divide-border">
+                    {logs.map(log => (
+                      <div key={log.id}
+                        className="flex items-center gap-3 px-4 py-2.5 group cursor-pointer hover:bg-secondary/30 transition-colors"
+                        onClick={() => { setEditLog(log); setEditGrams(log.servingG); }}>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
-                            <span className="text-sm truncate" style={{ color: t.text }}>{log.food.name}</span>
-                            <span className="text-[10px] flex-shrink-0" style={{ color: t.textMuted }}>{log.servingG}g</span>
+                            <span className="text-sm truncate">{log.food.name}</span>
+                            <span className="text-[10px] text-muted-foreground">{log.servingG}g</span>
                           </div>
-                          <div className="flex gap-3 mt-0.5">
-                            <span className="text-[10px]" style={{ color: t.textMuted }}>{Math.round(log.calories)} kcal</span>
-                            <span className="text-[10px] text-cyan-500">{log.carbs.toFixed(1)}C</span>
-                            <span className="text-[10px] text-emerald-500">{log.protein.toFixed(1)}P</span>
-                            <span className="text-[10px] text-orange-500">{log.fat.toFixed(1)}F</span>
+                          <div className="flex gap-2 mt-0.5">
+                            <span className="text-[10px] text-muted-foreground">{Math.round(log.calories)} kcal</span>
+                            <span className="text-[10px] text-cyan-500">{log.carbs.toFixed(0)}C</span>
+                            <span className="text-[10px] text-emerald-500">{log.protein.toFixed(0)}P</span>
+                            <span className="text-[10px] text-orange-500">{log.fat.toFixed(0)}F</span>
                           </div>
                         </div>
                         <div className="flex items-center gap-1">
-                          <Pencil className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-all" style={{ color: t.textMuted }} />
-                          <button
-                            onClick={(e) => { e.stopPropagation(); handleDeleteLog(log.id); }}
-                            className="p-1.5 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-red-500/20 transition-all"
-                          >
+                          <Pencil className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 text-muted-foreground transition-all" />
+                          <button onClick={e => { e.stopPropagation(); handleDeleteLog(log.id); }}
+                            className="p-1.5 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-red-500/20 transition-all">
                             <Trash2 className="w-3.5 h-3.5 text-red-400" />
                           </button>
                         </div>
-                      </motion.div>
+                      </div>
                     ))}
                   </div>
-                )}
-              </div>
-            );
-          })}
-
-          {/* 添加下一餐按钮 */}
-          <button
-            onClick={() => setShowMealPicker(true)}
-            className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl border-2 border-dashed hover:border-white/20 transition-all active:scale-[0.98] text-sm font-medium"
-            style={{ borderColor: t.border, color: t.textSec }}
-          >
-            <Plus className="w-4 h-4" />
-            添加下一餐
-          </button>
-          </>
+                </div>
+              );
+            })}
+          </div>
         )}
 
       </div>
 
-      {/* 编辑食物克重弹窗 */}
+      {/* Edit grams modal */}
       {editLog && (
-        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4" style={{ overscrollBehavior: 'contain' }}>
-          <div className="w-full max-w-xs rounded-3xl border shadow-2xl overflow-hidden" style={{ background: t.surface, borderColor: t.border }}>
-            <div className="flex items-center justify-between p-5 border-b" style={{ borderColor: t.border }}>
+        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="w-full max-w-xs rounded-2xl border border-border bg-card shadow-2xl overflow-hidden">
+            <div className="flex items-center justify-between p-4 border-b border-border">
               <div>
-                <p className="text-base font-semibold leading-tight truncate max-w-[200px]" style={{ color: t.text }}>{editLog.food.name}</p>
-                <p className="text-[11px] mt-0.5" style={{ color: t.textMuted }}>修改克重</p>
+                <p className="text-base font-bold truncate max-w-[200px]">{editLog.food.name}</p>
+                <p className="text-[11px] text-muted-foreground">修改克重</p>
               </div>
-              <button onClick={() => setEditLog(null)} className="p-1.5 rounded-lg hover:bg-white/5 transition-colors">
-                <X className="w-4 h-4" style={{ color: t.textMuted }} />
-              </button>
+              <button onClick={() => setEditLog(null)} className="p-1.5 rounded-lg hover:bg-secondary"><X className="w-4 h-4 text-muted-foreground" /></button>
             </div>
-            <div className="p-5 space-y-5">
-              {/* 克重调节 */}
+            <div className="p-4 space-y-4">
               <div>
-                <div className="text-xs mb-2" style={{ color: t.textSec }}>重量 (g)</div>
+                <div className="text-xs text-muted-foreground mb-2">重量 (g)</div>
                 <div className="flex items-center justify-between gap-2">
-                  <button onClick={() => setEditGrams(g => Math.max(1, g - 50))} className="w-9 h-9 rounded-xl hover:bg-white/5 flex items-center justify-center text-xs font-medium"
-                    style={{ background: t.surface2, color: t.textSec }}>-50</button>
-                  <button onClick={() => setEditGrams(g => Math.max(1, g - 10))} className="w-9 h-9 rounded-xl hover:bg-white/5 flex items-center justify-center"
-                    style={{ background: t.surface2 }}><Minus className="w-4 h-4" style={{ color: t.textSec }} /></button>
-                  <input
-                    type="number"
-                    inputMode="numeric"
-                    value={editGrams}
-                    onChange={(e) => { const s = e.target.value; if (s === '') { setEditGrams(0); return; } const v = parseInt(s); if (!isNaN(v) && v >= 0 && v <= 5000) setEditGrams(v); }}
-                    className="w-20 text-center py-2 bg-transparent border-b-2 focus:border-white text-2xl font-bold outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                    style={{ borderColor: t.border, color: t.text }}
-                  />
-                  <button onClick={() => setEditGrams(g => Math.min(5000, g + 10))} className="w-9 h-9 rounded-xl hover:bg-white/5 flex items-center justify-center"
-                    style={{ background: t.surface2 }}><Plus className="w-4 h-4" style={{ color: t.textSec }} /></button>
-                  <button onClick={() => setEditGrams(g => Math.min(5000, g + 50))} className="w-9 h-9 rounded-xl hover:bg-white/5 flex items-center justify-center text-xs font-medium"
-                    style={{ background: t.surface2, color: t.textSec }}>+50</button>
+                  <button onClick={() => setEditGrams(g => Math.max(1, g - 50))} className="w-9 h-9 rounded-xl bg-secondary flex items-center justify-center text-xs font-bold">-50</button>
+                  <button onClick={() => setEditGrams(g => Math.max(1, g - 10))} className="w-9 h-9 rounded-xl bg-secondary flex items-center justify-center"><Minus className="w-4 h-4 text-muted-foreground" /></button>
+                  <input type="number" inputMode="numeric" value={editGrams}
+                    onChange={e => { const v = parseInt(e.target.value); if (!isNaN(v) && v >= 0 && v <= 5000) setEditGrams(v); }}
+                    className="w-20 text-center py-2 bg-transparent border-b-2 border-border text-2xl font-bold outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
+                  <button onClick={() => setEditGrams(g => Math.min(5000, g + 10))} className="w-9 h-9 rounded-xl bg-secondary flex items-center justify-center"><Plus className="w-4 h-4 text-muted-foreground" /></button>
+                  <button onClick={() => setEditGrams(g => Math.min(5000, g + 50))} className="w-9 h-9 rounded-xl bg-secondary flex items-center justify-center text-xs font-bold">+50</button>
                 </div>
               </div>
-              {/* 实时预览 */}
-              <div className="grid grid-cols-4 gap-2 rounded-xl p-3 border" style={{ background: t.surface, borderColor: t.border }}>
-                {[{
-                  val: Math.round(editLog.food.calories * editGrams / 100), label: '千卡', cls: ''
-                }, {
-                  val: (editLog.food.carbs * editGrams / 100).toFixed(1), label: '碳水', cls: 'text-cyan-400'
-                }, {
-                  val: (editLog.food.protein * editGrams / 100).toFixed(1), label: '蛋白质', cls: 'text-emerald-400'
-                }, {
-                  val: (editLog.food.fat * editGrams / 100).toFixed(1), label: '脂肪', cls: 'text-orange-400'
-                }].map(({ val, label, cls }) => (
+              <div className="grid grid-cols-4 gap-2 rounded-xl p-3 bg-secondary border border-border">
+                {[ { val: Math.round(editLog.food.calories * editGrams / 100), label: '千卡' },
+                  { val: (editLog.food.carbs * editGrams / 100).toFixed(1), label: '碳水', color: 'text-cyan-400' },
+                  { val: (editLog.food.protein * editGrams / 100).toFixed(1), label: '蛋白质', color: 'text-emerald-400' },
+                  { val: (editLog.food.fat * editGrams / 100).toFixed(1), label: '脂肪', color: 'text-orange-400' },
+                ].map(({ val, label, color }) => (
                   <div key={label} className="text-center">
-                    <div className={`text-sm font-bold ${cls}`} style={!cls ? { color: t.text } : undefined}>{val}</div>
-                    <div className="text-[10px]" style={{ color: t.textMuted }}>{label}</div>
+                    <div className={`text-sm font-bold ${color || ''}`}>{val}</div>
+                    <div className="text-[10px] text-muted-foreground">{label}</div>
                   </div>
                 ))}
               </div>
               <div className="flex gap-2">
-                <button onClick={() => setEditLog(null)} className="flex-1 py-3 rounded-xl text-sm font-medium border hover:bg-white/5 transition-all"
-                  style={{ color: t.textSec, background: t.surface, borderColor: t.border }}>取消</button>
-                <button
-                  onClick={handleEditLog}
-                  disabled={editSaving}
-                  className="flex-1 py-3 rounded-xl text-sm font-semibold transition-all active:scale-[0.98] disabled:opacity-50"
-                  style={{ background: 'var(--accent)', color: t.accentText }}
-                >
+                <button onClick={() => setEditLog(null)} className="flex-1 py-3 rounded-xl text-sm font-bold border border-border bg-card text-foreground">取消</button>
+                <button onClick={handleEditLog} disabled={editSaving} className="flex-1 py-3 rounded-xl text-sm font-bold bg-primary text-primary-foreground disabled:opacity-50 active:scale-95 transition-all">
                   {editSaving ? '保存中…' : '保存'}
                 </button>
               </div>
@@ -529,36 +551,26 @@ export default function DietPage() {
         </div>
       )}
 
-      {/* 餐次选择弹窗 */}
+      {/* Meal picker */}
       {showMealPicker && (
-        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-end justify-center sm:items-center p-4" style={{ overscrollBehavior: 'contain' }}>
-          <div className="w-full max-w-xs rounded-3xl border shadow-2xl overflow-hidden" style={{ background: t.surface, borderColor: t.border }}>
-            <div className="flex items-center justify-between p-5 border-b" style={{ borderColor: t.border }}>
-              <span className="text-base font-semibold" style={{ color: t.text }}>选择餐次</span>
-              <button onClick={() => setShowMealPicker(false)} className="p-1.5 rounded-lg hover:bg-white/5">
-                <X className="w-4 h-4" style={{ color: t.textMuted }} />
-              </button>
+        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-4">
+          <div className="w-full max-w-xs rounded-2xl border border-border bg-card shadow-2xl overflow-hidden">
+            <div className="flex items-center justify-between p-4 border-b border-border">
+              <span className="text-base font-bold">选择餐次</span>
+              <button onClick={() => setShowMealPicker(false)} className="p-1.5 rounded-lg hover:bg-secondary"><X className="w-4 h-4 text-muted-foreground" /></button>
             </div>
-            <div className="p-3 space-y-1.5">
-              {MEAL_TYPES.map((meal) => {
+            <div className="p-3 space-y-1">
+              {MEAL_TYPES.map(meal => {
                 const Icon = meal.icon;
                 const hasLogs = foodLogs.some(l => l.mealType === meal.key);
                 return (
-                  <button
-                    key={meal.key}
-                    onClick={() => { setActiveMeal(meal.key); setShowMealPicker(false); setShowFoodSearch(true); }}
-                    className="w-full flex items-center justify-between px-4 py-3 rounded-xl hover:bg-white/5 transition-colors"
-                    style={{ background: t.surface }}
-                  >
+                  <button key={meal.key} onClick={() => { setActiveMeal(meal.key); setShowMealPicker(false); setShowFoodSearch(true); }}
+                    className="w-full flex items-center justify-between px-4 py-3 rounded-xl hover:bg-secondary transition-colors">
                     <div className="flex items-center gap-3">
-                      <Icon className="w-4 h-4" style={{ color: t.textMuted }} />
-                      <span className="text-sm font-medium" style={{ color: t.text }}>{meal.label}</span>
+                      <Icon className="w-4 h-4 text-muted-foreground" />
+                      <span className="text-sm font-medium">{meal.label}</span>
                     </div>
-                    {hasLogs ? (
-                      <span className="text-[10px] px-2 py-0.5 rounded-full" style={{ color: t.textMuted, background: t.surface2 }}>已有记录</span>
-                    ) : (
-                      <Plus className="w-3.5 h-3.5" style={{ color: t.textMuted }} />
-                    )}
+                    {hasLogs ? <span className="text-[10px] px-2 py-0.5 rounded-full bg-secondary text-muted-foreground">已有记录</span> : <Plus className="w-3.5 h-3.5 text-muted-foreground" />}
                   </button>
                 );
               })}
@@ -567,69 +579,40 @@ export default function DietPage() {
         </div>
       )}
 
-      {/* 目标编辑弹窗 */}
+      {/* Goal editor */}
       {showGoalEditor && (
-        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4" style={{ overscrollBehavior: 'contain' }}>
-          <div className="w-full max-w-xs rounded-3xl border shadow-2xl overflow-hidden" style={{ background: t.surface, borderColor: t.border }}>
-            <div className="flex items-center justify-between p-5 border-b" style={{ borderColor: t.border }}>
-              <span className="text-base font-semibold" style={{ color: t.text }}>设置营养目标</span>
-              <button onClick={() => setShowGoalEditor(false)} className="p-1.5 rounded-lg hover:bg-white/5">
-                <X className="w-4 h-4" style={{ color: t.textMuted }} />
-              </button>
+        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="w-full max-w-xs rounded-2xl border border-border bg-card shadow-2xl overflow-hidden">
+            <div className="flex items-center justify-between p-4 border-b border-border">
+              <span className="text-base font-bold">设置营养目标</span>
+              <button onClick={() => setShowGoalEditor(false)} className="p-1.5 rounded-lg hover:bg-secondary"><X className="w-4 h-4 text-muted-foreground" /></button>
             </div>
-            <div className="p-5 space-y-3">
-              {/* 热量—自动计算，只读提示 */}
+            <div className="p-4 space-y-3">
               <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label className="text-xs" style={{ color: t.textSec }}>热量目标</label>
-                  <span className="text-[10px]" style={{ color: t.textMuted }}>米=碳×4+蛋×4+脂×9 · kcal</span>
-                </div>
-                <input
-                  type="text" inputMode="numeric"
-                  value={editGoals.calories}
-                  onChange={(e) => setEditGoals(prev => ({ ...prev, calories: e.target.value }))}
-                  className="w-full px-3 py-2.5 rounded-xl border focus:outline-none focus:border-border text-sm"
-                  style={{ color: t.text, background: t.surface, borderColor: t.border }}
-                />
+                <label className="text-xs text-muted-foreground">热量目标 (kcal)</label>
+                <input type="text" inputMode="numeric" value={editGoals.calories}
+                  onChange={e => setEditGoals(prev => ({ ...prev, calories: e.target.value }))}
+                  className="w-full mt-1 px-3 py-2.5 rounded-xl border border-border bg-card text-sm" />
               </div>
-              {([
-                { key: 'carbs' as const, label: '碳水目标', unit: 'g' },
-                { key: 'protein' as const, label: '蛋白质目标', unit: 'g' },
-                { key: 'fat' as const, label: '脂肪目标', unit: 'g' },
-              ]).map(({ key, label, unit }) => (
+              {([ { key: 'carbs' as const, label: '碳水目标' }, { key: 'protein' as const, label: '蛋白质目标' }, { key: 'fat' as const, label: '脂肪目标' }, ]).map(({ key, label }) => (
                 <div key={key}>
-                  <div className="flex items-center justify-between mb-1">
-                    <label className="text-xs" style={{ color: t.textSec }}>{label}</label>
-                    <span className="text-[10px]" style={{ color: t.textMuted }}>{unit}</span>
-                  </div>
-                  <input
-                    type="text" inputMode="decimal"
-                    value={editGoals[key]}
-                    onChange={(e) => updateGoalMacro(key, e.target.value)}
-                    className="w-full px-3 py-2.5 rounded-xl border focus:outline-none focus:border-border text-sm"
-                    style={{ color: t.text, background: t.surface, borderColor: t.border }}
-                  />
+                  <label className="text-xs text-muted-foreground">{label} (g)</label>
+                  <input type="text" inputMode="decimal" value={editGoals[key]}
+                    onChange={e => updateGoalMacro(key, e.target.value)}
+                    className="w-full mt-1 px-3 py-2.5 rounded-xl border border-border bg-card text-sm" />
                 </div>
               ))}
               <div className="flex gap-2 pt-1">
-                <button onClick={() => setShowGoalEditor(false)} className="flex-1 py-3 rounded-xl text-sm font-medium border"
-                  style={{ color: t.textSec, background: t.surface, borderColor: t.border }}>取消</button>
-                <button onClick={saveGoals} className="flex-1 py-3 rounded-xl text-sm font-semibold"
-                  style={{ background: 'var(--accent)', color: t.accentText }}>保存</button>
+                <button onClick={() => setShowGoalEditor(false)} className="flex-1 py-3 rounded-xl text-sm font-bold border border-border bg-card">取消</button>
+                <button onClick={saveGoals} className="flex-1 py-3 rounded-xl text-sm font-bold bg-primary text-primary-foreground active:scale-95 transition-all">保存</button>
               </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* FoodSearch 弹窗 */}
-      <FoodSearch
-        isOpen={showFoodSearch}
-        onClose={() => setShowFoodSearch(false)}
-        onSelectFood={handleSelectFood}
-        todaySummary={summary}
-        userId={userId}
-      />
+      {/* FoodSearch */}
+      <FoodSearch isOpen={showFoodSearch} onClose={() => setShowFoodSearch(false)} onSelectFood={handleSelectFood} todaySummary={summary} userId={userId} />
     </div>
   );
 }

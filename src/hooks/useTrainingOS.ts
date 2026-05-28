@@ -6,32 +6,75 @@
 //   const os = useTrainingOS(intelligenceInput);
 //   <OSDisplay os={os} />
 
-import { useMemo, useRef } from 'react';
-import { useWorkoutTimer, selectWorkoutPhase } from '@/stores/workoutTimer';
+import { useMemo, useRef, useDeferredValue } from 'react';
+import { useWorkoutTimer } from '@/stores/workoutTimer';
 import { useWorkoutSession } from '@/stores/workoutSession';
 import type { AdaptiveIntelligenceInput } from './useAdaptiveIntelligence';
 import { computeAdaptiveIntelligence } from './useAdaptiveIntelligence';
 import type { TrainingOSOutput } from '@/lib/training/orchestrator/trainingExperienceController';
 import { computeTrainingOS } from '@/lib/training/orchestrator/trainingExperienceController';
 
+const IDLE_OUTPUT: TrainingOSOutput = {
+  osState: 'idle',
+  previousOSState: null,
+  stateLabel: '未开始',
+  isInSession: false,
+  isWorkingState: false,
+  rhythm: {
+    phase: 'entry',
+    tipRefreshIntervalSec: 30,
+    allowNewSuggestions: false,
+    energyLevel: 'calm',
+    primaryStream: 'none',
+    focusMode: false,
+  },
+  intensity: {
+    tipCap: 0,
+    chipCap: 0,
+    animationLevel: 0,
+    infoDensity: 'minimal',
+    showProgression: false,
+    showInsights: false,
+    showCoaching: false,
+    visualNoise: 'low',
+  },
+  narrative: null,
+  displayItems: [],
+  fatigue: null,
+  progression: null,
+  adaptiveProgression: null,
+  warmup: null,
+  recoveryStatus: null,
+  overallConfidence: 0,
+};
+
 // ── Hook ───────────────────────────────────────────────────────────────────
 
 /**
  * The single Training OS hook.
- * Pass the same input you would pass to useAdaptiveIntelligence.
- * Returns the complete unified OS output for rendering.
+ * PROHIBITED on first screen — only computes when user is in an active workout.
+ * Heavy intelligence engines run inside useMemo but gated by session phase.
+ * Use useDeferredValue on input to avoid blocking React render phase.
  */
 export function useTrainingOS(intelligenceInput: AdaptiveIntelligenceInput): TrainingOSOutput {
-  // Read from zustand stores
   const timer = useWorkoutTimer();
   const session = useWorkoutSession();
-
-  // Track previous OS state for transition detection
   const prevStateRef = useRef<TrainingOSOutput['osState'] | null>(null);
 
+  // Deferred input prevents heavy computation from blocking UI transitions
+  const deferredInput = useDeferredValue(intelligenceInput);
+
+  const isActive = timer.sessionPhase === 'active' || timer.sessionPhase === 'paused';
+
   return useMemo(() => {
-    // 1. Compute Phase 3 intelligence
-    const intelligence = computeAdaptiveIntelligence(intelligenceInput);
+    // ── Rule: computeTrainingOS is ONLY allowed after user enters active workout ──
+    if (!isActive) {
+      prevStateRef.current = null;
+      return IDLE_OUTPUT;
+    }
+
+    // 1. Compute Phase 3 intelligence (heavy CPU — deferred input isolates it)
+    const intelligence = computeAdaptiveIntelligence(deferredInput);
 
     // 2. Build OS input
     const osInput = {
@@ -49,7 +92,7 @@ export function useTrainingOS(intelligenceInput: AdaptiveIntelligenceInput): Tra
           sets: e.sets.map((s) => ({ completed: s.completed, isWarmup: s.isWarmup })),
         })),
         activeExerciseName: session.activeExerciseName,
-        prCount: 0, // SessionSet doesn't track isPR; PR detection handled by intelligence layer
+        prCount: 0,
       },
       intelligence: {
         signalState: intelligence.signalState,
@@ -78,7 +121,8 @@ export function useTrainingOS(intelligenceInput: AdaptiveIntelligenceInput): Tra
 
     return output;
   }, [
-    intelligenceInput,
+    isActive,
+    deferredInput,
     timer.sessionPhase,
     timer.isRestActive,
     timer.trainingDuration,

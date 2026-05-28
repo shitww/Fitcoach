@@ -9,9 +9,9 @@ import {
 } from 'recharts';
 import { logger } from '@/lib/logger';
 import { getCached, setCached } from '@/lib/client-cache';
-import { SkeletonChart, SkeletonStatGrid } from '@/components/Skeleton';
 import { EmptyState } from '@/components/EmptyState';
 import { PageShell, PageHeader, PageContent } from "@/components/layout";
+import { useViewportLazy } from '@/hooks/useViewportLazy';
 
 interface TrendData {
   date: string;
@@ -32,7 +32,6 @@ export default function StrengthTrendsPage() {
 
   const seed = getCached<{ data: TrendData[] }>(cacheKey(selectedExercise, timeRange));
   const [trendData, setTrendData] = useState<TrendData[]>(seed?.data ?? []);
-  const [loading, setLoading] = useState(!seed);
   const [error, setError] = useState(false);
 
   const fetchTrends = async (ex = selectedExercise, tr = timeRange) => {
@@ -40,7 +39,6 @@ export default function StrengthTrendsPage() {
     const cached = getCached<{ data: TrendData[] }>(url);
     if (cached) {
       setTrendData(cached.data ?? []);
-      setLoading(false);
       // background revalidate
       fetch(url, { credentials: 'include' })
         .then(r => r.ok ? r.json() : null)
@@ -48,7 +46,6 @@ export default function StrengthTrendsPage() {
         .catch(() => {});
       return;
     }
-    setLoading(true);
     setError(false);
     try {
       const response = await fetch(url, { credentials: 'include' });
@@ -61,7 +58,7 @@ export default function StrengthTrendsPage() {
       setError(true);
       setTrendData([]);
     } finally {
-      setLoading(false);
+      /* no-op */
     }
   };
 
@@ -71,6 +68,7 @@ export default function StrengthTrendsPage() {
   const timeRanges = ['1个月', '3个月', '6个月', '1年'];
 
   const latest = trendData[trendData.length - 1];
+  const { ref: chartRef, isVisible: chartVisible } = useViewportLazy();
 
   return (
     <PageShell>
@@ -100,12 +98,7 @@ export default function StrengthTrendsPage() {
           </div>
         </div>
 
-        {loading ? (
-          <>
-            <SkeletonStatGrid cols={2} className="mb-4" />
-            <SkeletonChart />
-          </>
-        ) : error ? (
+        {error && trendData.length === 0 ? (
           <EmptyState
             icon={<AlertCircle className="w-8 h-8" />}
             title="加载失败"
@@ -120,6 +113,7 @@ export default function StrengthTrendsPage() {
           />
         ) : (
           <>
+            {/* Hero metrics — instant from cache */}
             <div className="grid grid-cols-2 gap-3 mb-4">
               <div className="rounded-2xl p-4 bg-card border border-border">
                 <p className="text-xs mb-1 text-muted-foreground">当前估算 1RM</p>
@@ -135,26 +129,33 @@ export default function StrengthTrendsPage() {
               </div>
             </div>
 
-            <div className="rounded-2xl p-4 bg-card border border-border">
+            {/* Chart — viewport lazy loaded */}
+            <div ref={chartRef} className="rounded-2xl p-4 bg-card border border-border">
               <div className="flex items-center gap-2 mb-4">
                 <TrendingUp className="w-4 h-4 text-primary" />
                 <span className="text-sm font-semibold">{selectedExercise} 力量趋势</span>
               </div>
-              <ResponsiveContainer width="100%" height={220}>
-                <LineChart data={trendData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
-                  <XAxis dataKey="date" stroke="rgba(255,255,255,0.25)" tick={{ fontSize: 10 }} />
-                  <YAxis stroke="rgba(255,255,255,0.25)" tick={{ fontSize: 11 }} />
-                  <Tooltip
-                    contentStyle={{ background: '#111', border: '1px solid #333', borderRadius: 12 }}
-                    labelStyle={{ color: '#fff' }}
-                    itemStyle={{ color: 'rgba(255,255,255,0.7)' }}
-                  />
-                  <Legend wrapperStyle={{ fontSize: 12 }} />
-                  <Line type="monotone" dataKey="estimated1RM" name="1RM 估算" stroke="var(--accent)" strokeWidth={2} dot={{ r: 3 }} />
-                  <Line type="monotone" dataKey="maxWeight" name="最大重量" stroke="#A855F7" strokeWidth={2} dot={{ r: 3 }} />
-                </LineChart>
-              </ResponsiveContainer>
+              {!chartVisible ? (
+                <div className="h-[220px] flex items-center justify-center text-muted-foreground text-sm">
+                  滚动查看图表
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height={220}>
+                  <LineChart data={trendData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
+                    <XAxis dataKey="date" stroke="rgba(255,255,255,0.25)" tick={{ fontSize: 10 }} />
+                    <YAxis stroke="rgba(255,255,255,0.25)" tick={{ fontSize: 11 }} />
+                    <Tooltip
+                      contentStyle={{ background: '#111', border: '1px solid #333', borderRadius: 12 }}
+                      labelStyle={{ color: '#fff' }}
+                      itemStyle={{ color: 'rgba(255,255,255,0.7)' }}
+                    />
+                    <Legend wrapperStyle={{ fontSize: 12 }} />
+                    <Line type="monotone" dataKey="estimated1RM" name="1RM 估算" stroke="var(--accent)" strokeWidth={2} dot={{ r: 3 }} />
+                    <Line type="monotone" dataKey="maxWeight" name="最大重量" stroke="#A855F7" strokeWidth={2} dot={{ r: 3 }} />
+                  </LineChart>
+                </ResponsiveContainer>
+              )}
             </div>
           </>
         )}
