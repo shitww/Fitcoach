@@ -201,6 +201,18 @@ function deriveCoachInsight(
 export async function getNutritionSettings(userId: string): Promise<NutritionSettings> {
   let settings = await prisma.userSettings.findUnique({ where: { userId } })
   if (!settings) {
+    // Guard: verify user exists before creating settings to avoid FK violation
+    const user = await prisma.user.findUnique({ where: { id: userId }, select: { id: true } })
+    if (!user) {
+      // Stale/invalid userId — return safe defaults without writing
+      return {
+        waterGoal: 2500,
+        targetCalories: 2000,
+        targetProtein: 60,
+        targetCarbs: 250,
+        targetFat: 65,
+      }
+    }
     settings = await prisma.userSettings.create({
       data: {
         userId,
