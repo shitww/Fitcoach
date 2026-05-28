@@ -82,12 +82,9 @@ export default function VolumeTrendsPage() {
         <div className="flex gap-2 mb-6">
           {[4, 8, 12].map(w => (
             <button key={w} onClick={() => setTimeRange(w)}
-              className="flex-1 py-2 rounded-xl text-sm font-bold transition-all"
-              style={{
-                background: timeRange === w ? 'var(--accent)' : 'var(--surface)',
-                color: timeRange === w ? '#000' : 'rgba(255,255,255,0.5)',
-                border: '1px solid var(--border)'
-              }}>
+              className={`flex-1 py-2 rounded-xl text-sm font-bold transition-all border border-border ${
+                timeRange === w ? 'bg-primary text-primary-foreground' : 'bg-card text-muted-foreground'
+              }`}>
               {w}周
             </button>
           ))}
@@ -114,23 +111,23 @@ export default function VolumeTrendsPage() {
         ) : (
           <>
             <div className="grid grid-cols-2 gap-3 mb-4">
-              <div className="rounded-2xl p-4" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
-                <p className="text-xs mb-1" style={{ color: 'rgba(255,255,255,0.35)' }}>平均周训练量</p>
-                <p className="text-2xl font-black" style={{ color: 'var(--accent)' }}>
+              <div className="rounded-2xl p-4 bg-card border border-border">
+                <p className="text-xs mb-1 text-muted-foreground">平均周训练量</p>
+                <p className="text-2xl font-black text-primary">
                   {avgVolume >= 1000 ? (avgVolume / 1000).toFixed(1) + 't' : avgVolume + 'kg'}
                 </p>
               </div>
-              <div className="rounded-2xl p-4" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
-                <p className="text-xs mb-1" style={{ color: 'rgba(255,255,255,0.35)' }}>最高周训练量</p>
-                <p className="text-2xl font-black" style={{ color: '#A855F7' }}>
+              <div className="rounded-2xl p-4 bg-card border border-border">
+                <p className="text-xs mb-1 text-muted-foreground">最高周训练量</p>
+                <p className="text-2xl font-black text-purple-400">
                   {maxVolume >= 1000 ? (maxVolume / 1000).toFixed(1) + 't' : maxVolume + 'kg'}
                 </p>
               </div>
             </div>
 
-            <div className="rounded-2xl p-4" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
+            <div className="rounded-2xl p-4 bg-card border border-border">
               <div className="flex items-center gap-2 mb-4">
-                <TrendingUp className="w-4 h-4" style={{ color: 'var(--accent)' }} />
+                <TrendingUp className="w-4 h-4 text-primary" />
                 <span className="text-sm font-semibold">周训练量（kg）</span>
               </div>
               <ResponsiveContainer width="100%" height={220}>

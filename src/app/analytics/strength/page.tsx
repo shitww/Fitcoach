@@ -63,12 +63,9 @@ export default function StrengthTrendsPage() {
           <div className="flex gap-2">
             {exercises.map(ex => (
               <button key={ex} onClick={() => setSelectedExercise(ex)}
-                className="px-3 py-1.5 rounded-xl text-xs font-bold transition-all"
-                style={{
-                  background: selectedExercise === ex ? 'var(--accent)' : 'var(--surface)',
-                  color: selectedExercise === ex ? '#000' : 'rgba(255,255,255,0.5)',
-                  border: '1px solid var(--border)'
-                }}>
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border border-border ${
+                  selectedExercise === ex ? 'bg-primary text-primary-foreground' : 'bg-card text-muted-foreground'
+                }`}>
                 {ex}
               </button>
             ))}
@@ -76,12 +73,9 @@ export default function StrengthTrendsPage() {
           <div className="flex gap-2">
             {timeRanges.map(r => (
               <button key={r} onClick={() => setTimeRange(r)}
-                className="px-3 py-1.5 rounded-xl text-xs font-bold transition-all"
-                style={{
-                  background: timeRange === r ? '#A855F7' : 'var(--surface)',
-                  color: timeRange === r ? '#fff' : 'rgba(255,255,255,0.5)',
-                  border: '1px solid var(--border)'
-                }}>
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border border-border ${
+                  timeRange === r ? 'bg-secondary text-secondary-foreground' : 'bg-card text-muted-foreground'
+                }`}>
                 {r}
               </button>
             ))}
@@ -109,23 +103,23 @@ export default function StrengthTrendsPage() {
         ) : (
           <>
             <div className="grid grid-cols-2 gap-3 mb-4">
-              <div className="rounded-2xl p-4" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
-                <p className="text-xs mb-1" style={{ color: 'rgba(255,255,255,0.35)' }}>当前估算 1RM</p>
-                <p className="text-2xl font-black" style={{ color: 'var(--accent)' }}>
+              <div className="rounded-2xl p-4 bg-card border border-border">
+                <p className="text-xs mb-1 text-muted-foreground">当前估算 1RM</p>
+                <p className="text-2xl font-black text-primary">
                   {latest?.estimated1RM.toFixed(1) ?? 0}kg
                 </p>
               </div>
-              <div className="rounded-2xl p-4" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
-                <p className="text-xs mb-1" style={{ color: 'rgba(255,255,255,0.35)' }}>最大重量</p>
-                <p className="text-2xl font-black" style={{ color: '#A855F7' }}>
+              <div className="rounded-2xl p-4 bg-card border border-border">
+                <p className="text-xs mb-1 text-muted-foreground">最大重量</p>
+                <p className="text-2xl font-black text-purple-400">
                   {latest?.maxWeight ?? 0}kg
                 </p>
               </div>
             </div>
 
-            <div className="rounded-2xl p-4" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
+            <div className="rounded-2xl p-4 bg-card border border-border">
               <div className="flex items-center gap-2 mb-4">
-                <TrendingUp className="w-4 h-4" style={{ color: 'var(--accent)' }} />
+                <TrendingUp className="w-4 h-4 text-primary" />
                 <span className="text-sm font-semibold">{selectedExercise} 力量趋势</span>
               </div>
               <ResponsiveContainer width="100%" height={220}>

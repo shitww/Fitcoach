@@ -242,12 +242,9 @@ function SettingsContent() {
         <div className="flex gap-2 mb-6">
           <button
             onClick={() => router.replace('/settings?tab=notifications')}
-            className={`flex-1 py-3 rounded-xl font-bold transition-all`}
-            style={{
-              background: activeTab === 'notifications' ? t.surface2 : t.surface,
-              border: '1px solid var(--border)',
-              color: activeTab === 'notifications' ? 'var(--accent)' : t.textSec
-            }}
+            className={`flex-1 py-3 rounded-xl font-bold transition-all border border-border ${
+              activeTab === 'notifications' ? 'bg-secondary text-primary' : 'bg-card text-muted-foreground'
+            }`}
           >
             <div className="flex items-center justify-center gap-2">
               <Bell className="w-4 h-4" />
@@ -256,12 +253,9 @@ function SettingsContent() {
           </button>
           <button
             onClick={() => router.replace('/settings?tab=nutrition')}
-            className={`flex-1 py-3 rounded-xl font-bold transition-all`}
-            style={{
-              background: activeTab === 'nutrition' ? t.surface2 : t.surface,
-              border: '1px solid var(--border)',
-              color: activeTab === 'nutrition' ? 'var(--accent)' : t.textSec
-            }}
+            className={`flex-1 py-3 rounded-xl font-bold transition-all border border-border ${
+              activeTab === 'nutrition' ? 'bg-secondary text-primary' : 'bg-card text-muted-foreground'
+            }`}
           >
             <div className="flex items-center justify-center gap-2">
               <Gauge className="w-4 h-4" />
@@ -270,12 +264,9 @@ function SettingsContent() {
           </button>
           <button
             onClick={() => router.replace('/settings?tab=security')}
-            className={`flex-1 py-3 rounded-xl font-bold transition-all`}
-            style={{
-              background: activeTab === 'security' ? t.surface2 : t.surface,
-              border: '1px solid var(--border)',
-              color: activeTab === 'security' ? 'var(--accent)' : t.textSec
-            }}
+            className={`flex-1 py-3 rounded-xl font-bold transition-all border border-border ${
+              activeTab === 'security' ? 'bg-secondary text-primary' : 'bg-card text-muted-foreground'
+            }`}
           >
             <div className="flex items-center justify-center gap-2">
               <Shield className="w-4 h-4" />
@@ -287,30 +278,29 @@ function SettingsContent() {
         {/* 全局保存反馈 */}
         {saveMessage && (
           <div
-            className="mb-4 px-4 py-3 rounded-xl text-sm font-medium flex items-center gap-2"
-            style={{
-              background: saveMessage.type === 'success' ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)',
-              border: `1px solid ${saveMessage.type === 'success' ? 'rgba(34,197,94,0.3)' : 'rgba(239,68,68,0.3)'}`,
-              color: saveMessage.type === 'success' ? '#22C55E' : '#EF4444',
-            }}
+            className={`mb-4 px-4 py-3 rounded-xl text-sm font-medium flex items-center gap-2 ${
+              saveMessage.type === 'success'
+                ? 'bg-success/10 border border-success/30 text-success'
+                : 'bg-danger/10 border border-danger/30 text-danger'
+            }`}
           >
             {saveMessage.type === 'success' ? '✓' : '✕'} {saveMessage.text}
           </div>
         )}
 
         {/* Content */}
-        <div className="rounded-2xl p-6 mb-6" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
+        <div className="rounded-2xl p-6 mb-6 bg-card border border-border">
           {activeTab === 'notifications' ? (
             <>
               <h2 className="text-lg font-bold mb-6">通知设置</h2>
               
               <div className="space-y-4">
-                <div className="flex items-center justify-between p-4 rounded-xl" style={{ background: 'var(--surface-2)' }}>
+                <div className="flex items-center justify-between p-4 rounded-xl bg-secondary">
                   <div className="flex items-center gap-3">
-                    <Bell className="w-5 h-5" style={{ color: 'var(--accent)' }} />
+                    <Bell className="w-5 h-5 text-primary" />
                     <div>
                       <div className="font-medium text-sm">训练提醒</div>
-                      <div className="text-xs" style={{ color: t.textMuted }}>按时提醒您进行训练</div>
+                      <div className="text-xs text-muted-foreground">按时提醒您进行训练</div>
                     </div>
                   </div>
                   <label className="relative inline-flex items-center cursor-pointer">
@@ -320,18 +310,17 @@ function SettingsContent() {
                       onChange={() => handleNotificationChange('trainingReminders')}
                       className="sr-only peer"
                     />
-                    <div className="w-11 h-6 bg-var(--border) peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-var(--border) after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-var(--accent)"
-                      style={{ backgroundColor: notificationSettings.trainingReminders ? 'var(--accent)' : 'var(--surface-2)' }}
+                    <div className={`w-11 h-6 rounded-full peer transition-colors after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full ${notificationSettings.trainingReminders ? 'bg-primary' : 'bg-secondary'}`}
                     />
                   </label>
                 </div>
 
-                <div className="flex items-center justify-between p-4 rounded-xl" style={{ background: 'var(--surface-2)' }}>
+                <div className="flex items-center justify-between p-4 rounded-xl bg-secondary">
                   <div className="flex items-center gap-3">
-                    <Calendar className="w-5 h-5" style={{ color: 'var(--accent)' }} />
+                    <Calendar className="w-5 h-5 text-primary" />
                     <div>
                       <div className="font-medium text-sm">训练完成通知</div>
-                      <div className="text-xs" style={{ color: 'var(--text)' }}>完成训练后收到总结</div>
+                      <div className="text-xs text-foreground">完成训练后收到总结</div>
                     </div>
                   </div>
                   <label className="relative inline-flex items-center cursor-pointer">
@@ -341,18 +330,17 @@ function SettingsContent() {
                       onChange={() => handleNotificationChange('workoutCompletion')}
                       className="sr-only peer"
                     />
-                    <div className="w-11 h-6 bg-var(--border) peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-var(--border) after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-var(--accent)"
-                      style={{ backgroundColor: notificationSettings.workoutCompletion ? 'var(--accent)' : 'var(--surface-2)' }}
+                    <div className={`w-11 h-6 rounded-full peer transition-colors after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full ${notificationSettings.workoutCompletion ? 'bg-primary' : 'bg-secondary'}`}
                     />
                   </label>
                 </div>
 
-                <div className="flex items-center justify-between p-4 rounded-xl" style={{ background: 'var(--surface-2)' }}>
+                <div className="flex items-center justify-between p-4 rounded-xl bg-secondary">
                   <div className="flex items-center gap-3">
-                    <ShieldCheck className="w-5 h-5" style={{ color: 'var(--accent)' }} />
+                    <ShieldCheck className="w-5 h-5 text-primary" />
                     <div>
                       <div className="font-medium text-sm">成就解锁通知</div>
-                      <div className="text-xs" style={{ color: 'var(--text)' }}>获得新成就时通知</div>
+                      <div className="text-xs text-foreground">获得新成就时通知</div>
                     </div>
                   </div>
                   <label className="relative inline-flex items-center cursor-pointer">
@@ -362,18 +350,17 @@ function SettingsContent() {
                       onChange={() => handleNotificationChange('achievementUnlocks')}
                       className="sr-only peer"
                     />
-                    <div className="w-11 h-6 bg-var(--border) peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-var(--border) after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-var(--accent)"
-                      style={{ backgroundColor: notificationSettings.achievementUnlocks ? 'var(--accent)' : 'var(--surface-2)' }}
+                    <div className={`w-11 h-6 rounded-full peer transition-colors after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full ${notificationSettings.achievementUnlocks ? 'bg-primary' : 'bg-secondary'}`}
                     />
                   </label>
                 </div>
 
-                <div className="flex items-center justify-between p-4 rounded-xl" style={{ background: 'var(--surface-2)' }}>
+                <div className="flex items-center justify-between p-4 rounded-xl bg-secondary">
                   <div className="flex items-center gap-3">
-                    <Mail className="w-5 h-5" style={{ color: 'var(--accent)' }} />
+                    <Mail className="w-5 h-5 text-primary" />
                     <div>
                       <div className="font-medium text-sm">系统更新通知</div>
-                      <div className="text-xs" style={{ color: 'var(--text)' }}>接收系统更新和重要信息</div>
+                      <div className="text-xs text-foreground">接收系统更新和重要信息</div>
                     </div>
                   </div>
                   <label className="relative inline-flex items-center cursor-pointer">
@@ -383,18 +370,17 @@ function SettingsContent() {
                       onChange={() => handleNotificationChange('systemUpdates')}
                       className="sr-only peer"
                     />
-                    <div className="w-11 h-6 bg-var(--border) peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-var(--border) after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-var(--accent)"
-                      style={{ backgroundColor: notificationSettings.systemUpdates ? 'var(--accent)' : 'var(--surface-2)' }}
+                    <div className={`w-11 h-6 rounded-full peer transition-colors after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full ${notificationSettings.systemUpdates ? 'bg-primary' : 'bg-secondary'}`}
                     />
                   </label>
                 </div>
 
-                <div className="flex items-center justify-between p-4 rounded-xl" style={{ background: 'var(--surface-2)' }}>
+                <div className="flex items-center justify-between p-4 rounded-xl bg-secondary">
                   <div className="flex items-center gap-3">
-                    <Mail className="w-5 h-5" style={{ color: 'var(--accent)' }} />
+                    <Mail className="w-5 h-5 text-primary" />
                     <div>
                       <div className="font-medium text-sm">邮件通知</div>
-                      <div className="text-xs" style={{ color: 'var(--text)' }}>通过邮件接收重要通知</div>
+                      <div className="text-xs text-foreground">通过邮件接收重要通知</div>
                     </div>
                   </div>
                   <label className="relative inline-flex items-center cursor-pointer">
@@ -404,8 +390,7 @@ function SettingsContent() {
                       onChange={() => handleNotificationChange('emailNotifications')}
                       className="sr-only peer"
                     />
-                    <div className="w-11 h-6 bg-var(--border) peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-var(--border) after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-var(--accent)"
-                      style={{ backgroundColor: notificationSettings.emailNotifications ? 'var(--accent)' : 'var(--surface-2)' }}
+                    <div className={`w-11 h-6 rounded-full peer transition-colors after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full ${notificationSettings.emailNotifications ? 'bg-primary' : 'bg-secondary'}`}
                     />
                   </label>
                 </div>
@@ -414,12 +399,7 @@ function SettingsContent() {
               <button
                 onClick={handleSaveNotifications}
                 disabled={loading}
-                className="mt-8 w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold transition-all"
-                style={{ 
-                  background: 'var(--accent)', 
-                  color: 'var(--accent-text)',
-                  opacity: loading ? 0.7 : 1
-                }}
+                className={`mt-8 w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold transition-all bg-primary text-primary-foreground ${loading ? 'opacity-70' : ''}`}
               >
                 {loading ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
@@ -432,116 +412,111 @@ function SettingsContent() {
           ) : activeTab === 'nutrition' ? (
             <>
               <h2 className="text-lg font-bold mb-6">营养目标</h2>
-              <p className="text-sm mb-6" style={{ color: t.textMuted }}>
+              <p className="text-sm mb-6 text-muted-foreground">
                 设置每日营养摄入目标，首页进度条会根据你的目标显示
               </p>
 
               <div className="space-y-5">
                 {/* 热量 */}
-                <div className="p-4 rounded-xl" style={{ background: 'var(--surface-2)' }}>
+                <div className="p-4 rounded-xl bg-secondary">
                   <div className="flex items-center gap-3 mb-3">
-                    <div className="w-9 h-9 rounded-lg flex items-center justify-center" style={{ background: 'var(--accent-dim)' }}>
-                      <Gauge className="w-5 h-5" style={{ color: 'var(--accent)' }} />
+                    <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-primary/10">
+                      <Gauge className="w-5 h-5 text-primary" />
                     </div>
                     <div>
                       <div className="font-bold text-sm">每日热量</div>
-                      <div className="text-xs" style={{ color: t.textMuted }}>千卡 (kcal)</div>
+                      <div className="text-xs text-muted-foreground">千卡 (kcal)</div>
                     </div>
                   </div>
                   <input
                     type="number"
                     value={nutritionTargets.targetCalories}
                     onChange={e => handleCaloriesChange(Number(e.target.value))}
-                    className="w-full px-4 py-3 rounded-xl text-foreground text-lg font-bold"
-                    style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}
+                    className="w-full px-4 py-3 rounded-xl text-foreground text-lg font-bold bg-background border border-border"
                   />
                   <div className="mt-2 px-1 flex items-center justify-between">
-                    <span className="text-xs" style={{ color: t.textFaint }}>
+                    <span className="text-xs text-muted-foreground">
                       = 碳水×4 + 蛋白质×4 + 脂肪×9
                     </span>
-                    <span className="text-xs font-mono" style={{ color: 'var(--accent-glow)' }}>
+                    <span className="text-xs font-mono text-primary/60">
                       {nutritionTargets.targetCarbs}×4 + {nutritionTargets.targetProtein}×4 + {nutritionTargets.targetFat}×9 = {calcCalories(nutritionTargets.targetProtein, nutritionTargets.targetCarbs, nutritionTargets.targetFat)}
                     </span>
                   </div>
                 </div>
 
                 {/* 蛋白质 */}
-                <div className="p-4 rounded-xl" style={{ background: 'var(--surface-2)' }}>
+                <div className="p-4 rounded-xl bg-secondary">
                   <div className="flex items-center gap-3 mb-3">
-                    <div className="w-9 h-9 rounded-lg flex items-center justify-center" style={{ background: 'rgba(74,222,128,0.1)' }}>
-                      <Beef className="w-5 h-5" style={{ color: '#4ADE80' }} />
+                    <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-green-400/10">
+                      <Beef className="w-5 h-5 text-green-400" />
                     </div>
                     <div>
                       <div className="font-bold text-sm">蛋白质</div>
-                      <div className="text-xs" style={{ color: t.textMuted }}>克 (g)</div>
+                      <div className="text-xs text-muted-foreground">克 (g)</div>
                     </div>
                   </div>
                   <input
                     type="number"
                     value={nutritionTargets.targetProtein}
                     onChange={e => handleMacroChange('targetProtein', Number(e.target.value))}
-                    className="w-full px-4 py-3 rounded-xl text-foreground text-lg font-bold"
-                    style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}
+                    className="w-full px-4 py-3 rounded-xl text-foreground text-lg font-bold bg-background border border-border"
                   />
                 </div>
 
                 {/* 碳水 */}
-                <div className="p-4 rounded-xl" style={{ background: 'var(--surface-2)' }}>
+                <div className="p-4 rounded-xl bg-secondary">
                   <div className="flex items-center gap-3 mb-3">
-                    <div className="w-9 h-9 rounded-lg flex items-center justify-center" style={{ background: 'rgba(34,211,238,0.1)' }}>
-                      <Wheat className="w-5 h-5" style={{ color: '#22D3EE' }} />
+                    <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-cyan-400/10">
+                      <Wheat className="w-5 h-5 text-cyan-400" />
                     </div>
                     <div>
                       <div className="font-bold text-sm">碳水化合物</div>
-                      <div className="text-xs" style={{ color: t.textMuted }}>克 (g)</div>
+                      <div className="text-xs text-muted-foreground">克 (g)</div>
                     </div>
                   </div>
                   <input
                     type="number"
                     value={nutritionTargets.targetCarbs}
                     onChange={e => handleMacroChange('targetCarbs', Number(e.target.value))}
-                    className="w-full px-4 py-3 rounded-xl text-foreground text-lg font-bold"
-                    style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}
+                    className="w-full px-4 py-3 rounded-xl text-foreground text-lg font-bold bg-background border border-border"
                   />
                 </div>
 
                 {/* 脂肪 */}
-                <div className="p-4 rounded-xl" style={{ background: 'var(--surface-2)' }}>
+                <div className="p-4 rounded-xl bg-secondary">
                   <div className="flex items-center gap-3 mb-3">
-                    <div className="w-9 h-9 rounded-lg flex items-center justify-center" style={{ background: 'rgba(251,146,60,0.1)' }}>
-                      <Droplets className="w-5 h-5" style={{ color: '#FB923C' }} />
+                    <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-orange-400/10">
+                      <Droplets className="w-5 h-5 text-orange-400" />
                     </div>
                     <div>
                       <div className="font-bold text-sm">脂肪</div>
-                      <div className="text-xs" style={{ color: t.textMuted }}>克 (g)</div>
+                      <div className="text-xs text-muted-foreground">克 (g)</div>
                     </div>
                   </div>
                   <input
                     type="number"
                     value={nutritionTargets.targetFat}
                     onChange={e => handleMacroChange('targetFat', Number(e.target.value))}
-                    className="w-full px-4 py-3 rounded-xl text-foreground text-lg font-bold"
-                    style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}
+                    className="w-full px-4 py-3 rounded-xl text-foreground text-lg font-bold bg-background border border-border"
                   />
                 </div>
 
                 {/* 饮水目标 */}
-                <div className="p-4 rounded-xl" style={{ background: 'var(--surface-2)' }}>
+                <div className="p-4 rounded-xl bg-secondary">
                   <div className="flex items-center gap-3 mb-3">
-                    <div className="w-9 h-9 rounded-lg flex items-center justify-center" style={{ background: 'rgba(56,189,248,0.1)' }}>
-                      <Droplets className="w-5 h-5" style={{ color: '#38BDF8' }} />
+                    <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-sky-400/10">
+                      <Droplets className="w-5 h-5 text-sky-400" />
                     </div>
                     <div>
                       <div className="font-bold text-sm">每日饮水</div>
-                      <div className="text-xs" style={{ color: t.textMuted }}>毫升 (ml)</div>
+                      <div className="text-xs text-muted-foreground">毫升 (ml)</div>
                     </div>
                   </div>
                   <input
                     type="number"
                     value={nutritionTargets.waterGoal}
                     onChange={e => setNutritionTargets(p => ({ ...p, waterGoal: Number(e.target.value) }))}
-                    className="w-full px-4 py-3 rounded-xl text-foreground text-lg font-bold"
-                    style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}
+                    className="w-full px-4 py-3 rounded-xl text-foreground text-lg font-bold bg-background border border-border"
                   />
                 </div>
               </div>
@@ -549,12 +524,7 @@ function SettingsContent() {
               <button
                 onClick={handleNutritionSave}
                 disabled={nutritionLoading}
-                className="mt-8 w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold transition-all"
-                style={{
-                  background: nutritionSaved ? '#22C55E' : 'var(--accent)',
-                  color: 'var(--accent-text)',
-                  opacity: nutritionLoading ? 0.7 : 1
-                }}
+                className={`mt-8 w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold transition-all text-primary-foreground ${nutritionSaved ? 'bg-green-500' : 'bg-primary'} ${nutritionLoading ? 'opacity-70' : ''}`}
               >
                 {nutritionLoading ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
@@ -571,13 +541,13 @@ function SettingsContent() {
               
               <div className="space-y-6">
                 <div>
-                  <h3 className="text-sm font-medium mb-4" style={{ color: t.textSec }}>
+                  <h3 className="text-sm font-medium mb-4 text-muted-foreground">
                     修改密码
                   </h3>
                   
                   <div className="space-y-4">
                     <div>
-                      <label className="block text-sm font-medium mb-2" style={{ color: t.textSec }}>
+                      <label className="block text-sm font-medium mb-2 text-muted-foreground">
                         当前密码
                       </label>
                       <div className="relative">
@@ -586,8 +556,7 @@ function SettingsContent() {
                           name="currentPassword"
                           value={securitySettings.currentPassword}
                           onChange={handleSecurityInputChange}
-                          className="w-full px-4 py-3 rounded-xl text-foreground"
-                          style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}
+                          className="w-full px-4 py-3 rounded-xl text-foreground bg-secondary border border-border"
                           placeholder="请输入当前密码"
                         />
                         <button
@@ -596,16 +565,16 @@ function SettingsContent() {
                           className="absolute right-3 top-1/2 transform -translate-y-1/2"
                         >
                           {showPassword ? (
-                            <EyeOff className="w-5 h-5" style={{ color: t.textMuted }} />
+                            <EyeOff className="w-5 h-5 text-muted-foreground" />
                           ) : (
-                            <Eye className="w-5 h-5" style={{ color: t.textMuted }} />
+                            <Eye className="w-5 h-5 text-muted-foreground" />
                           )}
                         </button>
                       </div>
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium mb-2" style={{ color: t.textSec }}>
+                      <label className="block text-sm font-medium mb-2 text-muted-foreground">
                         新密码
                       </label>
                       <div className="relative">
@@ -614,8 +583,7 @@ function SettingsContent() {
                           name="newPassword"
                           value={securitySettings.newPassword}
                           onChange={handleSecurityInputChange}
-                          className="w-full px-4 py-3 rounded-xl text-foreground"
-                          style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}
+                          className="w-full px-4 py-3 rounded-xl text-foreground bg-secondary border border-border"
                           placeholder="请输入新密码"
                         />
                         <button
@@ -624,19 +592,19 @@ function SettingsContent() {
                           className="absolute right-3 top-1/2 transform -translate-y-1/2"
                         >
                           {showPassword ? (
-                            <EyeOff className="w-5 h-5" style={{ color: t.textMuted }} />
+                            <EyeOff className="w-5 h-5 text-muted-foreground" />
                           ) : (
-                            <Eye className="w-5 h-5" style={{ color: t.textMuted }} />
+                            <Eye className="w-5 h-5 text-muted-foreground" />
                           )}
                         </button>
                       </div>
-                      <p className="text-xs mt-1" style={{ color: t.textMuted }}>
+                      <p className="text-xs mt-1 text-muted-foreground">
                         密码长度至少8位，包含字母和数字
                       </p>
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium mb-2" style={{ color: t.textSec }}>
+                      <label className="block text-sm font-medium mb-2 text-muted-foreground">
                         确认新密码
                       </label>
                       <div className="relative">
@@ -645,8 +613,7 @@ function SettingsContent() {
                           name="confirmPassword"
                           value={securitySettings.confirmPassword}
                           onChange={handleSecurityInputChange}
-                          className="w-full px-4 py-3 rounded-xl text-foreground"
-                          style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}
+                          className="w-full px-4 py-3 rounded-xl text-foreground bg-secondary border border-border"
                           placeholder="请再次输入新密码"
                         />
                         <button
@@ -655,9 +622,9 @@ function SettingsContent() {
                           className="absolute right-3 top-1/2 transform -translate-y-1/2"
                         >
                           {showPassword ? (
-                            <EyeOff className="w-5 h-5" style={{ color: t.textMuted }} />
+                            <EyeOff className="w-5 h-5 text-muted-foreground" />
                           ) : (
-                            <Eye className="w-5 h-5" style={{ color: t.textMuted }} />
+                            <Eye className="w-5 h-5 text-muted-foreground" />
                           )}
                         </button>
                       </div>
@@ -665,12 +632,12 @@ function SettingsContent() {
                   </div>
                 </div>
 
-                <div className="p-4 rounded-xl" style={{ background: 'rgba(255,184,0,0.05)', border: '1px solid rgba(255,184,0,0.2)' }}>
+                <div className="p-4 rounded-xl bg-warning/5 border border-warning/20">
                   <div className="flex items-start gap-3">
-                    <AlertTriangle className="w-5 h-5 flex-shrink-0" style={{ color: '#FFB800' }} />
+                    <AlertTriangle className="w-5 h-5 flex-shrink-0 text-warning" />
                     <div>
-                      <h3 className="font-medium text-sm" style={{ color: '#FFB800' }}>安全提示</h3>
-                      <p className="text-xs mt-1" style={{ color: t.textMuted }}>
+                      <h3 className="font-medium text-sm text-warning">安全提示</h3>
+                      <p className="text-xs mt-1 text-muted-foreground">
                         为了您的账号安全，请定期修改密码，不要使用与其他网站相同的密码，
                         并确保密码包含字母、数字和特殊字符。
                       </p>
