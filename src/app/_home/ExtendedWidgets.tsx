@@ -13,13 +13,14 @@ export default function ExtendedWidgets({ userId }: Props) {
 
   useEffect(() => {
     if (!userId) return
+    const today = new Date().toISOString().split('T')[0]
     Promise.allSettled([
-      fetch('/api/settings', { credentials: 'include' }).then(r => r.ok ? r.json() : null),
-      fetch('/api/food-logs/today', { credentials: 'include' }).then(r => r.ok ? r.json() : null),
+      fetch('/api/nutrition-goals', { credentials: 'include' }).then(r => r.ok ? r.json() : null),
+      fetch(`/api/food-logs?date=${today}`, { credentials: 'include' }).then(r => r.ok ? r.json() : null),
     ]).then(([nutritionRes, dietRes]) => {
       if (nutritionRes.status === 'fulfilled' && nutritionRes.value) setNutrition(nutritionRes.value)
       if (dietRes.status === 'fulfilled' && dietRes.value) {
-        const d = dietRes.value
+        const d = dietRes.value?.summary ?? dietRes.value
         setDietSummary({ calories: d.calories || 0, protein: d.protein || 0, carbs: d.carbs || 0, fat: d.fat || 0 })
       }
     })
