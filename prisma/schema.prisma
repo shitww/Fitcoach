@@ -9,9 +9,6 @@ datasource db {
   url               = env("DATABASE_URL")
   // Direct connection is required for Prisma migrations (avoid pooler limitations).
   directUrl         = env("DIRECT_URL")
-  // Shadow database URL for migration diffing (use a dedicated schema, not a new database).
-  // Example: DIRECT_URL + ?schema=shadow
-  shadowDatabaseUrl = env("SHADOW_DATABASE_URL")
 }
 
 model Exercise {
