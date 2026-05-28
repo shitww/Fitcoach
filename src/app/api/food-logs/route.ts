@@ -69,21 +69,48 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { foodId, date, mealType, grams, calories, protein, carbs, fat } = body;
+    const { foodId: bodyFoodId, name, date, mealType, grams, calories, protein, carbs, fat } = body;
 
-    if (!foodId || !date || !mealType) {
-      return NextResponse.json({ error: '缺少必填字段：foodId, date, mealType' }, { status: 400 });
+    if (!date) {
+      return NextResponse.json({ error: '缺少必填字段：date' }, { status: 400 });
+    }
+
+    // Resolve foodId: use provided one, or find/create by name (offline sync path)
+    let resolvedFoodId: string = bodyFoodId;
+    if (!resolvedFoodId && name) {
+      const existing = await prisma.food.findFirst({ where: { name } });
+      if (existing) {
+        resolvedFoodId = existing.id;
+      } else {
+        const created = await prisma.food.create({
+          data: {
+            name,
+            category: '其他',
+            calories: parseFloat(calories || '0'),
+            protein: parseFloat(protein || '0'),
+            carbs: parseFloat(carbs || '0'),
+            fat: parseFloat(fat || '0'),
+            isCustom: true,
+            userId,
+          },
+        });
+        resolvedFoodId = created.id;
+      }
+    }
+
+    if (!resolvedFoodId) {
+      return NextResponse.json({ error: '缺少必填字段：foodId 或 name' }, { status: 400 });
     }
 
     const gramsVal = parseFloat(grams || '100');
     const log = await prisma.foodLog.create({
       data: {
         userId,
-        foodId,
+        foodId: resolvedFoodId,
         date: new Date(`${date}T00:00:00.000Z`),
-        mealType,
-        serving: gramsVal / 100,          // 份数 = 克数 / 100
-        servingG: gramsVal,                // 克数
+        mealType: mealType || 'other',
+        serving: gramsVal / 100,
+        servingG: gramsVal,
         calories: parseFloat(calories || '0'),
         protein: parseFloat(protein || '0'),
         carbs: parseFloat(carbs || '0'),
