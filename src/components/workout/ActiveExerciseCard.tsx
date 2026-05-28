@@ -2,6 +2,8 @@
 import { memo, useState, useEffect, useRef, useCallback } from 'react';
 import { Check, ChevronDown, Plus, Minus, Loader2, Play, X } from 'lucide-react';
 import { REST_TIME_PRESETS } from '@/lib/exercise-constants';
+import { ProgressionBadge, ContextualTipPill, WarmupCard } from './intelligence';
+import type { ProgressionRecommendation, ContextualTip, WarmupPlan } from '@/lib/training/trainingTypes';
 
 export interface ActiveExerciseCardProps {
   currentExercise: string;
@@ -11,20 +13,30 @@ export interface ActiveExerciseCardProps {
   isBodyweight: boolean;
   restTime: string;
   lastRecord: { weight: number; reps: number; date: string } | null;
+  completedSets: { weight: number; reps: number; rir: number | null; isBodyweight: boolean }[];
   completedSetsCount: number;
   exerciseIndex: number;
   totalExercises: number;
   onWeightChange: (v: string) => void;
   onRepsChange: (v: string) => void;
   onRirChange: (v: string) => void;
+  onFocusWeight?: () => void;
+  onFocusReps?: () => void;
   onBodyweightToggle: () => void;
   onRestTimeChange: (v: string) => void;
   onLogSet: () => void;
   onChangeExercise: () => void;
+  onCopyLastSet?: () => void;
   isLoading: boolean;
   hint?: string;
   isTimed?: boolean;
   onCdActiveChange?: (active: boolean) => void;
+  prResult?: { type: 'weight' | 'reps' | 'volume'; display: string } | null;
+  // V2 Intelligence (optional — non-breaking)
+  progressionRecommendation?: ProgressionRecommendation | null;
+  contextualTips?: ContextualTip[];
+  warmupPlan?: WarmupPlan | null;
+  onLogWarmupSet?: (weight: number, reps: number) => void;
 }
 
 const RIR_META = [
@@ -71,9 +83,15 @@ const StepButton = memo(function StepButton({
 
 const ActiveExerciseCard = memo(function ActiveExerciseCard({
   currentExercise, weight, reps, rir, isBodyweight, restTime,
-  lastRecord, completedSetsCount, exerciseIndex, totalExercises,
-  onWeightChange, onRepsChange, onRirChange, onBodyweightToggle,
-  onRestTimeChange, onLogSet, onChangeExercise, isLoading, hint, isTimed, onCdActiveChange,
+  lastRecord, completedSets, completedSetsCount, exerciseIndex, totalExercises,
+  onWeightChange, onRepsChange, onRirChange, onFocusWeight, onFocusReps, onBodyweightToggle,
+  onRestTimeChange, onLogSet, onChangeExercise, onCopyLastSet, isLoading, hint, isTimed, onCdActiveChange,
+  prResult,
+  // V2 Intelligence
+  progressionRecommendation,
+  contextualTips,
+  warmupPlan,
+  onLogWarmupSet,
 }: ActiveExerciseCardProps) {
   const [showSecondary, setShowSecondary] = useState(false);
   const [cdActive, setCdActive] = useState(false);
@@ -81,6 +99,10 @@ const ActiveExerciseCard = memo(function ActiveExerciseCard({
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   // Signals that the countdown hit 0 — read in a separate effect to trigger onLogSet
   const cdDoneRef = useRef(false);
+
+  // Input refs for auto-focus flow
+  const weightInputRef = useRef<HTMLInputElement | null>(null);
+  const repsInputRef = useRef<HTMLInputElement | null>(null);
 
   const stopCountdown = useCallback(() => {
     if (intervalRef.current) { clearInterval(intervalRef.current); intervalRef.current = null; }
@@ -95,6 +117,17 @@ const ActiveExerciseCard = memo(function ActiveExerciseCard({
     setCdRemaining(secs);
     setCdActive(true);
   }, [reps]);
+
+  // Auto-focus weight input when exercise changes (strength mode only)
+  useEffect(() => {
+    if (isTimed) return;
+    // Small delay to ensure DOM is ready
+    const t = setTimeout(() => {
+      weightInputRef.current?.focus();
+      weightInputRef.current?.select();
+    }, 80);
+    return () => clearTimeout(t);
+  }, [currentExercise, isTimed]);
 
   // Tick every second while active
   useEffect(() => {
@@ -145,6 +178,44 @@ const ActiveExerciseCard = memo(function ActiveExerciseCard({
     setEditingField(null);
   }
 
+  function handleKeyDown(field: 'weight' | 'reps', e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const raw = (e.target as HTMLInputElement).value;
+      commitEdit(field, raw);
+      if (field === 'weight') {
+        // Move focus to reps input
+        setTimeout(() => {
+          repsInputRef.current?.focus();
+          repsInputRef.current?.select();
+        }, 20);
+      } else {
+        // Reps done → submit set
+        if (canLog && !isLoading) {
+          onLogSet();
+        }
+      }
+    }
+  }
+
+  function handleCopyLastSet() {
+    if (completedSets.length === 0) return;
+    const last = completedSets[completedSets.length - 1];
+    if (last.isBodyweight) {
+      if (!isBodyweight) onBodyweightToggle();
+    } else {
+      if (isBodyweight) onBodyweightToggle();
+      onWeightChange(String(last.weight));
+    }
+    onRepsChange(String(last.reps));
+    // Focus weight for quick edit
+    setTimeout(() => {
+      weightInputRef.current?.focus();
+      weightInputRef.current?.select();
+    }, 40);
+    onCopyLastSet?.();
+  }
+
   function guardedAction(action: () => void) {
     if (cdActive) {
       pendingActionRef.current = action;
@@ -167,6 +238,7 @@ const ActiveExerciseCard = memo(function ActiveExerciseCard({
   const setLabel    = completedSetsCount > 0 ? `第 ${completedSetsCount + 1} 组` : '完成此组';
   const rirColor    = getRirColor(rir);
   const rirLabel    = getRirLabel(rir);
+  const hasLastSet  = completedSets.length > 0;
 
   function stepWeight(delta: number) {
     if (isBodyweight) return;
@@ -264,6 +336,19 @@ const ActiveExerciseCard = memo(function ActiveExerciseCard({
         )}
       </div>
 
+      {/* ── V2 Intelligence layer ── */}
+      {warmupPlan && (
+        <div className="px-5 pt-3 pb-1" style={{ borderBottom: '1px solid var(--border)' }}>
+          <WarmupCard plan={warmupPlan} onLogWarmupSet={onLogWarmupSet} />
+        </div>
+      )}
+
+      {progressionRecommendation && (
+        <div className="px-5 pt-3 pb-1">
+          <ProgressionBadge recommendation={progressionRecommendation} compact />
+        </div>
+      )}
+
       {/* ── Mega-number input grid ── */}
       {isTimed ? (
         /* ── Timed mode: single-column, seconds only ── */
@@ -337,97 +422,148 @@ const ActiveExerciseCard = memo(function ActiveExerciseCard({
           )}
         </div>
       ) : (
-        /* ── Standard mode: weight + reps ── */
-        <div className="grid grid-cols-2" style={{ borderBottom: '1px solid var(--border)' }}>
-          {/* Weight */}
-          <div
-            className="flex flex-col items-center py-6 gap-3"
-            style={{ borderRight: '1px solid var(--border)' }}
-          >
-            <div className="flex items-center justify-between w-full px-4">
-              <span className="text-xs font-bold" style={{ color: 'var(--text-faint)' }}>重量</span>
+        <>
+          {/* ── Quick Copy Last Set ── */}
+          {hasLastSet && (
+            <div className="px-5 pt-4 pb-1" style={{ borderBottom: '1px solid var(--border)' }}>
               <button
-                onClick={onBodyweightToggle}
-                className="text-xs font-bold px-2 py-0.5 rounded-full transition-all active:scale-95"
-                style={
-                  isBodyweight
-                    ? { background: 'rgb(var(--accent))', color: 'var(--accent-text)' }
-                    : { background: 'var(--surface-3)', color: 'var(--text-faint)' }
-                }
+                onClick={handleCopyLastSet}
+                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold transition-all active:scale-[0.97]"
+                style={{
+                  background: 'var(--surface-2)',
+                  color: 'var(--text-low)',
+                  border: '1px solid var(--border)',
+                  touchAction: 'manipulation',
+                }}
               >
-                自重
+                <span>📋</span>
+                复制上一组 · {completedSets[completedSets.length - 1].weight}kg × {completedSets[completedSets.length - 1].reps}次
               </button>
             </div>
-            <StepButton onClick={() => stepWeight(2.5)} disabled={isBodyweight}>
-              <Plus className="w-5 h-5" style={{ color: 'var(--text-med)' }} />
-            </StepButton>
-            <div className="flex items-baseline gap-1 min-h-[4rem] items-center justify-center">
-              {!isBodyweight && editingField === 'weight' ? (
-                <input
-                  type="text" inputMode="decimal" autoFocus
-                  defaultValue={weightNum || ''}
-                  onFocus={e => e.target.select()}
-                  onBlur={e => commitEdit('weight', e.target.value)}
-                  onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
-                  className="font-black tabular-nums leading-none text-center bg-transparent"
-                  style={{ fontSize: '3rem', letterSpacing: '-0.03em', color: 'var(--foreground)', width: 100, border: 'none', outline: 'none', caretColor: 'var(--color-accent)' }}
-                />
-              ) : (
-                <span
-                  className="font-black tabular-nums leading-none cursor-text"
-                  style={{ fontSize: '3rem', letterSpacing: '-0.03em', color: isBodyweight ? 'var(--text-faint)' : 'var(--foreground)' }}
-                  onClick={() => { if (!isBodyweight) setEditingField('weight'); }}
+          )}
+
+          {/* ── PR Badge ── */}
+          {prResult && (
+            <div className="px-5 pt-3 pb-1" style={{ borderBottom: '1px solid var(--border)' }}>
+              <div
+                className="flex items-center justify-center gap-2 py-2 rounded-2xl"
+                style={{
+                  background: 'rgba(251,191,36,0.08)',
+                  border: '1px solid rgba(251,191,36,0.2)',
+                }}
+              >
+                <span style={{ fontSize: '0.9rem' }}>🏆</span>
+                <span className="text-xs font-black" style={{ color: '#fbbf24' }}>
+                  {prResult.type === 'weight' && '重量新纪录'}
+                  {prResult.type === 'reps' && '次数新纪录'}
+                  {prResult.type === 'volume' && '容量新纪录'}
+                  {' · '}{prResult.display}
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* ── Standard mode: weight + reps ── */}
+          <div className="grid grid-cols-2" style={{ borderBottom: '1px solid var(--border)' }}>
+            {/* Weight */}
+            <div
+              className="flex flex-col items-center py-6 gap-3"
+              style={{ borderRight: '1px solid var(--border)' }}
+            >
+              <div className="flex items-center justify-between w-full px-4">
+                <span className="text-xs font-bold" style={{ color: 'var(--text-faint)' }}>重量</span>
+                <button
+                  onClick={onBodyweightToggle}
+                  className="text-xs font-bold px-2 py-0.5 rounded-full transition-all active:scale-95"
+                  style={
+                    isBodyweight
+                      ? { background: 'rgb(var(--accent))', color: 'var(--accent-text)' }
+                      : { background: 'var(--surface-3)', color: 'var(--text-faint)' }
+                  }
                 >
-                  {isBodyweight ? '—' : (weightNum || '0')}
-                </span>
-              )}
-              {!isBodyweight && editingField !== 'weight' && (
-                <span className="text-sm font-semibold mb-1" style={{ color: 'var(--text-faint)' }}>
-                  kg
-                </span>
-              )}
+                  自重
+                </button>
+              </div>
+              <StepButton onClick={() => stepWeight(2.5)} disabled={isBodyweight}>
+                <Plus className="w-5 h-5" style={{ color: 'var(--text-med)' }} />
+              </StepButton>
+              <div className="flex items-baseline gap-1 min-h-[4rem] items-center justify-center">
+                {!isBodyweight && editingField === 'weight' ? (
+                  <input
+                    ref={weightInputRef}
+                    type="text" inputMode="decimal" autoFocus
+                    defaultValue={weightNum || ''}
+                    onFocus={e => e.target.select()}
+                    onBlur={e => commitEdit('weight', e.target.value)}
+                    onKeyDown={e => handleKeyDown('weight', e)}
+                    className="font-black tabular-nums leading-none text-center bg-transparent"
+                    style={{ fontSize: '3rem', letterSpacing: '-0.03em', color: 'var(--foreground)', width: 100, border: 'none', outline: 'none', caretColor: 'var(--color-accent)' }}
+                  />
+                ) : (
+                  <span
+                    className="font-black tabular-nums leading-none cursor-text"
+                    style={{ fontSize: '3rem', letterSpacing: '-0.03em', color: isBodyweight ? 'var(--text-faint)' : 'var(--foreground)' }}
+                    onClick={() => {
+                      if (isBodyweight) return;
+                      if (onFocusWeight) { onFocusWeight(); return; }
+                      setEditingField('weight');
+                    }}
+                  >
+                    {isBodyweight ? '—' : (weightNum || '0')}
+                  </span>
+                )}
+                {!isBodyweight && editingField !== 'weight' && (
+                  <span className="text-sm font-semibold mb-1" style={{ color: 'var(--text-faint)' }}>
+                    kg
+                  </span>
+                )}
+              </div>
+              <StepButton onClick={() => stepWeight(-2.5)} disabled={isBodyweight}>
+                <Minus className="w-5 h-5" style={{ color: 'var(--text-med)' }} />
+              </StepButton>
             </div>
-            <StepButton onClick={() => stepWeight(-2.5)} disabled={isBodyweight}>
-              <Minus className="w-5 h-5" style={{ color: 'var(--text-med)' }} />
-            </StepButton>
+            {/* Reps */}
+            <div className="flex flex-col items-center py-6 gap-3">
+              <div className="flex items-center justify-start w-full px-4">
+                <span className="text-xs font-bold" style={{ color: 'var(--text-faint)' }}>次数</span>
+              </div>
+              <StepButton onClick={() => stepReps(1)}>
+                <Plus className="w-5 h-5" style={{ color: 'var(--text-med)' }} />
+              </StepButton>
+              <div className="flex items-baseline gap-1 min-h-[4rem] items-center justify-center">
+                {editingField === 'reps' ? (
+                  <input
+                    ref={repsInputRef}
+                    type="text" inputMode="numeric" autoFocus
+                    defaultValue={repsNum || ''}
+                    onFocus={e => e.target.select()}
+                    onBlur={e => commitEdit('reps', e.target.value)}
+                    onKeyDown={e => handleKeyDown('reps', e)}
+                    className="font-black tabular-nums leading-none text-center bg-transparent"
+                    style={{ fontSize: '3rem', letterSpacing: '-0.03em', color: 'var(--foreground)', width: 80, border: 'none', outline: 'none', caretColor: 'var(--color-accent)' }}
+                  />
+                ) : (
+                  <span
+                    className="font-black tabular-nums leading-none cursor-text"
+                    style={{ fontSize: '3rem', letterSpacing: '-0.03em', color: 'var(--foreground)' }}
+                    onClick={() => {
+                      if (onFocusReps) { onFocusReps(); return; }
+                      setEditingField('reps');
+                    }}
+                  >
+                    {repsNum || '0'}
+                  </span>
+                )}
+                {editingField !== 'reps' && (
+                  <span className="text-sm font-semibold mb-1" style={{ color: 'var(--text-faint)' }}>次</span>
+                )}
+              </div>
+              <StepButton onClick={() => stepReps(-1)}>
+                <Minus className="w-5 h-5" style={{ color: 'var(--text-med)' }} />
+              </StepButton>
+            </div>
           </div>
-          {/* Reps */}
-          <div className="flex flex-col items-center py-6 gap-3">
-            <div className="flex items-center justify-start w-full px-4">
-              <span className="text-xs font-bold" style={{ color: 'var(--text-faint)' }}>次数</span>
-            </div>
-            <StepButton onClick={() => stepReps(1)}>
-              <Plus className="w-5 h-5" style={{ color: 'var(--text-med)' }} />
-            </StepButton>
-            <div className="flex items-baseline gap-1 min-h-[4rem] items-center justify-center">
-              {editingField === 'reps' ? (
-                <input
-                  type="text" inputMode="numeric" autoFocus
-                  defaultValue={repsNum || ''}
-                  onFocus={e => e.target.select()}
-                  onBlur={e => commitEdit('reps', e.target.value)}
-                  onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
-                  className="font-black tabular-nums leading-none text-center bg-transparent"
-                  style={{ fontSize: '3rem', letterSpacing: '-0.03em', color: 'var(--foreground)', width: 80, border: 'none', outline: 'none', caretColor: 'var(--color-accent)' }}
-                />
-              ) : (
-                <span
-                  className="font-black tabular-nums leading-none cursor-text"
-                  style={{ fontSize: '3rem', letterSpacing: '-0.03em', color: 'var(--foreground)' }}
-                  onClick={() => setEditingField('reps')}
-                >
-                  {repsNum || '0'}
-                </span>
-              )}
-              {editingField !== 'reps' && (
-                <span className="text-sm font-semibold mb-1" style={{ color: 'var(--text-faint)' }}>次</span>
-              )}
-            </div>
-            <StepButton onClick={() => stepReps(-1)}>
-              <Minus className="w-5 h-5" style={{ color: 'var(--text-med)' }} />
-            </StepButton>
-          </div>
-        </div>
+        </>
       )}
 
       {/* ── Reference row ── */}
@@ -446,6 +582,15 @@ const ActiveExerciseCard = memo(function ActiveExerciseCard({
               预估1RM: {est1RM}kg
             </span>
           )}
+        </div>
+      )}
+
+      {/* ── Contextual tips (V2 Intelligence) ── */}
+      {contextualTips && contextualTips.length > 0 && (
+        <div className="px-5 py-2 space-y-2" style={{ borderBottom: '1px solid var(--border)', background: 'var(--surface-2)' }}>
+          {contextualTips.map((tip, i) => (
+            <ContextualTipPill key={`${tip.trigger}-${i}`} tip={tip} />
+          ))}
         </div>
       )}
 

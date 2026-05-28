@@ -369,3 +369,21 @@ html {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* ── Mobile Safe Area Utilities ───────────────────────────── */
+.safe-top { padding-top: env(safe-area-inset-top); }
+.safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
+.safe-left { padding-left: env(safe-area-inset-left); }
+.safe-right { padding-right: env(safe-area-inset-right); }
+
+/* Prevent callout / text selection on training UI elements */
+.no-select {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* Disable double-tap zoom on buttons */
+.touch-manipulation {
+  touch-action: manipulation;
+}
