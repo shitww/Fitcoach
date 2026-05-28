@@ -5,13 +5,6 @@ const nextConfig: NextConfig = {
   // `127.0.0.1` or a LAN IP on mobile. Next.js blocks dev-only resources
   // (webpack-hmr, original stack frames, etc.) unless the origin is allowlisted.
   allowedDevOrigins: ['127.0.0.1', 'localhost'],
-  webpack: (config) => {
-    config.resolve.alias = {
-      ...config.resolve.alias,
-      '@': __dirname + '/src',
-    };
-    return config;
-  },
   async headers() {
     return [
       {
@@ -25,12 +18,6 @@ const nextConfig: NextConfig = {
     ]
   },
 
-  // Production deployments must never fail due to lint toolchain differences
-  // between local Windows and Vercel build environment.
-  // Lint can still be run explicitly via `pnpm lint`.
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
 };
 
 export default nextConfig;
