@@ -1,6 +1,7 @@
 'use client'
 
-import { useRouter, usePathname } from 'next/navigation'
+import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 import { Home, Dumbbell, Utensils, Clock, User } from 'lucide-react'
 
 export type BottomTab = 'home' | 'training' | 'diet' | 'history' | 'profile'
@@ -33,7 +34,6 @@ const TABS: Array<{
  * Pages only need: <BottomTabBar active="training" />
  */
 export default function BottomTabBar({ active, style }: BottomTabBarProps) {
-  const router = useRouter()
   const pathname = usePathname()
 
   const resolved: BottomTab | undefined =
@@ -43,10 +43,6 @@ export default function BottomTabBar({ active, style }: BottomTabBarProps) {
       // Sort by matchPrefix length descending so longer (more specific) prefixes win
       .sort((a, b) => b.matchPrefix.length - a.matchPrefix.length)
       .find((t) => pathname.startsWith(t.matchPrefix))?.id
-
-  function go(path: string, tab: BottomTab) {
-    if (resolved !== tab) router.push(path)
-  }
 
   return (
     <nav
@@ -73,12 +69,14 @@ export default function BottomTabBar({ active, style }: BottomTabBarProps) {
             const weight = isActive ? 600 : 400
 
             return (
-              <button
+              <Link
                 key={tab.id}
-                onClick={() => go(tab.path, tab.id)}
+                href={tab.path}
+                prefetch
                 className="flex flex-col items-center gap-0.5 py-1 px-2 transition-colors"
                 aria-label={tab.label}
                 aria-current={isActive ? 'page' : undefined}
+                style={{ textDecoration: 'none' }}
               >
                 <tab.icon
                   className="w-6 h-6"
@@ -90,7 +88,7 @@ export default function BottomTabBar({ active, style }: BottomTabBarProps) {
                 >
                   {tab.label}
                 </span>
-              </button>
+              </Link>
             )
           })}
         </div>
