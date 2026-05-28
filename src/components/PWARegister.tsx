@@ -53,7 +53,7 @@ export default function PWARegister() {
         // Start periodic polling
         pollTimer = setInterval(() => {
           void reg.update()
-        }, 60_000)
+        }, 15_000)
 
         // Case 1: a SW is already waiting when page loads
         if (reg.waiting && navigator.serviceWorker.controller) {
