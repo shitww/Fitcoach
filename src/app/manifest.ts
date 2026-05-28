@@ -17,7 +17,7 @@ export default function manifest(): MetadataRoute.Manifest {
         name: '开始训练',
         short_name: '训练',
         description: '选择训练模式，立即开始',
-        url: '/intent',
+        url: '/workout',
         icons: [{ src: '/icon', sizes: '96x96' }],
       },
       {

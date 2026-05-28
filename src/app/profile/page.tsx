@@ -7,6 +7,7 @@ import {
   User, Calendar, LogOut, ChevronRight, Loader2, Bell, Shield, Flame, Palette, Download
 } from "lucide-react"
 import { logger } from "@/lib/logger";
+import { getCached, setCached } from "@/lib/client-cache";
 import { clearUserStorage, clearLegacyStorage } from "@/lib/user-storage";
 import { useTheme } from "@/contexts/ThemeContext";
 import { PageShell, PageHeader, PageContent } from "@/components/layout";
@@ -44,6 +45,8 @@ function computeWeightDelta(records: BodyDataRecord[]): number | null {
   return Math.round((latest - prev) * 10) / 10;
 }
 
+const BODY_CACHE = '/api/body-data?limit=30';
+
 export default function ProfilePage() {
   const router = useRouter()
   const { data: session, status } = useSession()
@@ -51,8 +54,12 @@ export default function ProfilePage() {
   const [loggingOut, setLoggingOut] = useState(false)
   const [freshAvatar, setFreshAvatar] = useState<string | null>(null)
 
-  const [records, setRecords] = useState<BodyDataRecord[]>([])
-  const [bodyDataLoading, setBodyDataLoading] = useState(false)
+  const [records, setRecords] = useState<BodyDataRecord[]>(
+    () => getCached<{ records: BodyDataRecord[] }>(BODY_CACHE)?.records ?? []
+  )
+  const [bodyDataLoading, setBodyDataLoading] = useState(
+    () => !getCached<{ records: BodyDataRecord[] }>(BODY_CACHE)
+  )
 
   const [activeMetric, setActiveMetric] = useState<MetricConfig | null>(null)
   const [editorOpen, setEditorOpen] = useState(false)
@@ -61,11 +68,22 @@ export default function ProfilePage() {
 
   const reloadBodyData = async () => {
     if (status !== "authenticated") return;
+    const cached = getCached<{ records: BodyDataRecord[] }>(BODY_CACHE);
+    if (cached) {
+      setRecords(cached.records ?? []);
+      // background refresh
+      fetch(BODY_CACHE, { credentials: "include" })
+        .then(r => r.ok ? r.json() : null)
+        .then(d => { if (d) { setCached(BODY_CACHE, d); setRecords(d.records ?? []); } })
+        .catch(() => {});
+      return;
+    }
     setBodyDataLoading(true);
     try {
-      const res = await fetch("/api/body-data?limit=30", { credentials: "include" });
+      const res = await fetch(BODY_CACHE, { credentials: "include" });
       if (!res.ok) throw new Error("fetch failed");
       const data = await res.json();
+      setCached(BODY_CACHE, data);
       setRecords(data.records ?? []);
     } catch (err) {
       logger.error("Body data reload error:", err);
@@ -76,9 +94,8 @@ export default function ProfilePage() {
   };
 
   useEffect(() => {
-    if (status === "authenticated") {
-      reloadBodyData();
-    }
+    if (status === "authenticated") reloadBodyData();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status]);
 
   // 头像更新后，NextAuth JWT 可能需要一段时间才刷新到 session。
@@ -176,11 +193,7 @@ export default function ProfilePage() {
       <PageHeader title="个人中心" onBack={() => router.back()} />
       <PageContent>
 
-        {status === 'loading' ? (
-          <div className="flex items-center justify-center py-20">
-            <Loader2 className="w-8 h-8 animate-spin" style={{ color: 'var(--accent)' }} />
-          </div>
-        ) : status === 'authenticated' && user ? (
+        {status === 'authenticated' && user ? (
           <>
             {/* Identity */}
             <IdentityCard
@@ -207,12 +220,14 @@ export default function ProfilePage() {
 
             {/* Metrics Grid */}
             <div className="mt-5">
-              <div className="text-sm font-black mb-3" style={{ color: "var(--text-low)" }}>
+              <div className="text-sm font-black mb-3 text-muted-foreground">
                 身体数据
               </div>
               {bodyDataLoading && records.length === 0 ? (
-                <div className="flex items-center justify-center py-10">
-                  <Loader2 className="w-6 h-6 animate-spin" style={{ color: 'var(--accent)' }} />
+                <div className="grid grid-cols-2 gap-3">
+                  {[1,2,3,4].map(i => (
+                    <div key={i} className="rounded-2xl h-20 animate-pulse bg-secondary" />
+                  ))}
                 </div>
               ) : (
                 <div className="grid grid-cols-2 gap-3">

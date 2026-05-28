@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { Activity, Battery, AlertTriangle } from 'lucide-react';
-import { logger } from "@/lib/logger";
+import React from 'react';
+import { Battery, AlertTriangle } from 'lucide-react';
+import { useCachedFetch } from '@/lib/client-cache';
 
 interface FatigueData {
   fatigueScore: number;
@@ -11,106 +11,65 @@ interface FatigueData {
   recommendation: string;
 }
 
+const STATUS_CLASSES: Record<FatigueData['status'], { card: string; icon: string; text: string }> = {
+  ready:  { card: 'bg-green-500/10 border-green-500/30',   icon: 'text-green-500',  text: 'text-green-500'  },
+  medium: { card: 'bg-yellow-400/10 border-yellow-400/30', icon: 'text-yellow-400', text: 'text-yellow-400' },
+  high:   { card: 'bg-red-500/10 border-red-500/30',       icon: 'text-red-500',    text: 'text-red-500'    },
+};
+const STATUS_EMOJI: Record<FatigueData['status'], string> = {
+  ready: '🟢', medium: '🟡', high: '🔴',
+};
+
 export const FatigueScore: React.FC = () => {
-  const [fatigueData, setFatigueData] = useState<FatigueData | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { data: fatigueData, isLoading } = useCachedFetch<FatigueData>(
+    '/api/analysis/fatigue',
+    { credentials: 'include' }
+  );
 
-  useEffect(() => {
-    const fetchFatigueData = async () => {
-      try {
-        const response = await fetch('/api/analysis/fatigue', {
-          credentials: "include"
-        });
-        if (response.ok) {
-          const data = await response.json();
-          setFatigueData(data);
-        }
-      } catch (error) {
-        logger.error('Error fetching fatigue data:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchFatigueData();
-  }, []);
-
-  if (loading) {
+  if (isLoading) {
     return (
-      <div className="rounded-2xl p-4 animate-pulse" style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
+      <div className="rounded-2xl p-4 bg-secondary border border-border animate-pulse">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-secondary"></div>
+          <div className="w-10 h-10 rounded-xl bg-muted" />
           <div className="flex-1">
-            <div className="h-4 bg-secondary rounded w-1/2 mb-2"></div>
-            <div className="h-3 bg-secondary rounded w-3/4"></div>
+            <div className="h-4 bg-muted rounded w-1/2 mb-2" />
+            <div className="h-3 bg-muted rounded w-3/4" />
           </div>
+          <div className="w-8 h-6 bg-muted rounded" />
         </div>
       </div>
     );
   }
 
-  if (!fatigueData) {
-    return null;
-  }
+  if (!fatigueData) return null;
 
-  const getStatusColor = () => {
-    switch (fatigueData.status) {
-      case 'ready':
-        return { bg: 'rgba(34,197,94,0.1)', border: 'rgba(34,197,94,0.3)', dot: '#22c55e', text: '#22c55e' };
-      case 'medium':
-        return { bg: 'rgba(250,204,21,0.1)', border: 'rgba(250,204,21,0.3)', dot: '#facc15', text: '#facc15' };
-      case 'high':
-        return { bg: 'rgba(239,68,68,0.1)', border: 'rgba(239,68,68,0.3)', dot: '#ef4444', text: '#ef4444' };
-    }
-  };
-
-  const statusColors = getStatusColor();
-
-  const getStatusEmoji = () => {
-    switch (fatigueData.status) {
-      case 'ready':
-        return '🟢';
-      case 'medium':
-        return '🟡';
-      case 'high':
-        return '🔴';
-    }
-  };
+  const cls = STATUS_CLASSES[fatigueData.status];
 
   return (
-    <div 
-      className="rounded-2xl p-4 transition-all"
-      style={{ 
-        background: statusColors.bg, 
-        border: `1px solid ${statusColors.border}` 
-      }}
-    >
+    <div className={`rounded-2xl p-4 transition-all border ${cls.card}`}>
       <div className="flex items-center gap-3">
-        <div 
-          className="w-10 h-10 rounded-xl flex items-center justify-center"
-          style={{ background: 'var(--surface-3)' }}
-        >
+        <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-background/50">
           {fatigueData.status === 'high' ? (
-            <AlertTriangle className="w-5 h-5" style={{ color: statusColors.dot }} />
+            <AlertTriangle className={`w-5 h-5 ${cls.icon}`} />
           ) : (
-            <Battery className="w-5 h-5" style={{ color: statusColors.dot }} />
+            <Battery className={`w-5 h-5 ${cls.icon}`} />
           )}
         </div>
         <div className="flex-1">
           <div className="flex items-center gap-2 mb-1">
-            <span className="text-sm font-bold" style={{ color: statusColors.text }}>
-              {getStatusEmoji()} {fatigueData.statusText}
+            <span className={`text-sm font-bold ${cls.text}`}>
+              {STATUS_EMOJI[fatigueData.status]} {fatigueData.statusText}
             </span>
           </div>
-          <div className="text-xs" style={{ color: 'var(--text-low)' }}>
+          <div className="text-xs text-muted-foreground">
             {fatigueData.recommendation}
           </div>
         </div>
         <div className="text-right">
-          <div className="text-lg font-black" style={{ color: statusColors.text }}>
+          <div className={`text-lg font-black ${cls.text}`}>
             {fatigueData.fatigueScore}
           </div>
-          <div className="text-xs" style={{ color: 'var(--text-low)' }}>疲劳指数</div>
+          <div className="text-xs text-muted-foreground">疲劳指数</div>
         </div>
       </div>
     </div>

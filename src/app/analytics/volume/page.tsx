@@ -8,6 +8,7 @@ import {
   Tooltip, Legend, ResponsiveContainer, ComposedChart
 } from 'recharts';
 import { logger } from '@/lib/logger';
+import { getCached, setCached } from '@/lib/client-cache';
 import { SkeletonChart, SkeletonStatGrid } from '@/components/Skeleton';
 import { EmptyState } from '@/components/EmptyState';
 import { PageShell, PageHeader, PageContent } from "@/components/layout";
@@ -18,46 +19,65 @@ interface VolumeData {
   trend: number;
 }
 
+const VOLUME_CACHE = (tr: number) => `volume-trends:${tr}`;
+
+function buildBuckets(workouts: Array<{ date: string; totalVolume: number }>, timeRange: number): VolumeData[] {
+  const now = new Date();
+  const buckets: VolumeData[] = [];
+  for (let i = timeRange; i > 0; i--) {
+    const weekEnd = new Date(now);
+    weekEnd.setDate(now.getDate() - (i - 1) * 7);
+    weekEnd.setHours(23, 59, 59, 999);
+    const weekStart = new Date(now);
+    weekStart.setDate(now.getDate() - i * 7 + 1);
+    weekStart.setHours(0, 0, 0, 0);
+    const label = `${weekStart.getMonth() + 1}/${weekStart.getDate()}`;
+    const volume = workouts
+      .filter(w => { const d = new Date(w.date); return d >= weekStart && d <= weekEnd; })
+      .reduce((sum, w) => sum + (w.totalVolume || 0), 0);
+    buckets.push({ week: label, volume: Math.round(volume), trend: 0 });
+  }
+  buckets.forEach((b, i) => {
+    const slice = buckets.slice(Math.max(0, i - 2), i + 1);
+    b.trend = Math.round(slice.reduce((s, x) => s + x.volume, 0) / slice.length);
+  });
+  return buckets;
+}
+
 export default function VolumeTrendsPage() {
   const router = useRouter();
   const [timeRange, setTimeRange] = useState(4);
-  const [volumeData, setVolumeData] = useState<VolumeData[]>([]);
-  const [loading, setLoading] = useState(true);
+
+  const seedBuckets = getCached<VolumeData[]>(VOLUME_CACHE(4));
+  const [volumeData, setVolumeData] = useState<VolumeData[]>(seedBuckets ?? []);
+  const [loading, setLoading] = useState(!seedBuckets);
   const [error, setError] = useState(false);
 
-  const fetchVolumeData = useCallback(async () => {
+  const fetchVolumeData = useCallback(async (tr = timeRange) => {
+    const ck = VOLUME_CACHE(tr);
+    const cached = getCached<VolumeData[]>(ck);
+    if (cached) {
+      setVolumeData(cached);
+      setLoading(false);
+      fetch('/api/workout?limit=200', { credentials: 'include' })
+        .then(r => r.ok ? r.json() : null)
+        .then(json => {
+          if (!json) return;
+          const buckets = buildBuckets(json.data || [], tr);
+          setCached(ck, buckets);
+          setVolumeData(buckets);
+        })
+        .catch(() => {});
+      return;
+    }
     setLoading(true);
     setError(false);
     try {
       const res = await fetch('/api/workout?limit=200', { credentials: 'include' });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json = await res.json();
-      const workouts: Array<{ date: string; totalVolume: number }> = json.data || [];
-
-      const now = new Date();
-      const buckets: VolumeData[] = [];
-
-      for (let i = timeRange; i > 0; i--) {
-        const weekEnd = new Date(now);
-        weekEnd.setDate(now.getDate() - (i - 1) * 7);
-        weekEnd.setHours(23, 59, 59, 999);
-        const weekStart = new Date(now);
-        weekStart.setDate(now.getDate() - i * 7 + 1);
-        weekStart.setHours(0, 0, 0, 0);
-
-        const label = `${weekStart.getMonth() + 1}/${weekStart.getDate()}`;
-        const volume = workouts
-          .filter(w => { const d = new Date(w.date); return d >= weekStart && d <= weekEnd; })
-          .reduce((sum, w) => sum + (w.totalVolume || 0), 0);
-
-        buckets.push({ week: label, volume: Math.round(volume), trend: 0 });
-      }
-
-      buckets.forEach((b, i) => {
-        const slice = buckets.slice(Math.max(0, i - 2), i + 1);
-        b.trend = Math.round(slice.reduce((s, x) => s + x.volume, 0) / slice.length);
-      });
-
+      const buckets = buildBuckets(json.data || [], tr);
+      setCached(ck, buckets);
       setVolumeData(buckets);
     } catch (err) {
       logger.error('获取训练量数据失败:', err);
@@ -67,7 +87,7 @@ export default function VolumeTrendsPage() {
     }
   }, [timeRange]);
 
-  useEffect(() => { fetchVolumeData(); }, [fetchVolumeData]);
+  useEffect(() => { fetchVolumeData(timeRange); }, [timeRange]);
 
   const avgVolume = volumeData.length
     ? Math.round(volumeData.reduce((s, d) => s + d.volume, 0) / volumeData.length) : 0;

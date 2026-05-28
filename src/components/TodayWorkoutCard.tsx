@@ -121,7 +121,7 @@ export default function TodayWorkoutCard({ plans, loading, todayDone, userStatus
             查看记录
           </button>
           <button
-            onClick={() => router.push(hasActiveSession ? '/workout' : '/intent')}
+            onClick={() => router.push('/workout')}
             className="flex-1 py-2.5 rounded-xl text-sm font-semibold flex items-center justify-center gap-1 transition-all active:scale-95"
             style={{ background: t.surface2, color: t.textMuted }}
           >
@@ -232,7 +232,7 @@ export default function TodayWorkoutCard({ plans, loading, todayDone, userStatus
         </p>
         <div className="flex gap-2">
           <button
-            onClick={() => router.push('/intent')}
+            onClick={() => router.push('/workout')}
             className="flex-1 py-2.5 rounded-xl text-xs font-semibold transition-all active:scale-95"
             style={{ background: t.surface2, color: t.textMuted }}
           >

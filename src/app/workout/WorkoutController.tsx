@@ -23,6 +23,8 @@ import type { RecoveryWorkoutPlan } from '@/types/workout-plan';
 import RestTimerPill from '@/components/workout/RestTimerPill';
 import ActiveExerciseCard from '@/components/workout/ActiveExerciseCard';
 import SessionRecoveryDialog from '@/components/workout/SessionRecoveryDialog';
+import SetRow from '@/components/workout/SetRow';
+import NumberPad from '@/components/workout/NumberPad';
 import { useWorkoutSession } from '@/stores/workoutSession';
 
 // ── Lazy-loaded heavy components (split into separate chunks) ──────────────
@@ -30,15 +32,11 @@ import { useWorkoutSession } from '@/stores/workoutSession';
 
 const WarmupPanel = dynamic(() => import('@/app/workout/components/WarmupPanel'), { ssr: false });
 const ExerciseQuickLauncher = dynamic(() => import('@/app/workout/components/ExerciseQuickLauncher'), { ssr: false });
-const TrainingTypeModal = dynamic(() => import('@/components/TrainingTypeModal').then(m => ({ default: m.default })), { ssr: false });
-const RestOverlay = dynamic(() => import('@/components/workout/RestOverlay'), { ssr: false });
 const ExerciseHistoryStrip = dynamic(() => import('@/components/workout/ExerciseHistoryStrip'), { ssr: false });
 const WarmupCard = dynamic(() => import('@/components/workout/WarmupCard'), { ssr: false });
-const SetRow = dynamic(() => import('@/components/workout/SetRow'), { ssr: false });
 const WorkoutCompletionCard = dynamic(() => import('@/components/workout/WorkoutCompletionCard'), { ssr: false });
 const ShareWorkoutCard = dynamic(() => import('@/components/workout/ShareWorkoutCard'), { ssr: false });
 const TrainingStatusBar = dynamic(() => import('@/components/workout/TrainingStatusBar'), { ssr: false });
-const NumberPad = dynamic(() => import('@/components/workout/NumberPad'), { ssr: false });
 const PRArchive = dynamic(() => import('@/components/workout/PRArchive'), { ssr: false });
 
 // ── Training OS Intelligence Layer (Phase 4B) ──────────────────────────────
@@ -46,8 +44,13 @@ const PRArchive = dynamic(() => import('@/components/workout/PRArchive'), { ssr:
 
 const TrainingOSLayer = dynamic(() => import('@/app/workout/components/TrainingOSLayer'), { ssr: false });
 
-// Type re-exports from dynamically imported modules (for type usage only)
-import type { TrainingType, CardioParams } from '@/components/TrainingTypeModal';
+type TrainingType = 'strength' | 'treadmill' | 'stairclimber' | 'free';
+
+interface CardioParams {
+  speed: number;
+  incline: number;
+  level: number;
+}
 
 interface Set {
   id?: string;
@@ -262,23 +265,6 @@ const CardioTimerDisplay = memo(function CardioTimerDisplay({
   );
 });
 
-/** Full-screen mode-entry overlay, auto-dismissed by caller after ~1.6s. */
-const IntroOverlay = memo(function IntroOverlay({
-  visible, icon, title, subtitle,
-}: { visible: boolean; icon: React.ReactNode; title: string; subtitle: string }) {
-  if (!visible) return null;
-  return (
-    <div className="fixed inset-0 z-[95] flex items-center justify-center pointer-events-none"
-      style={{ background: 'color-mix(in srgb, rgb(var(--background)) 92%, transparent)', backdropFilter: 'blur(14px)' }}>
-      <div className="text-center px-8">
-        <div className="mb-5 flex items-center justify-center">{icon}</div>
-        <h2 className="text-2xl font-black mb-2 text-foreground">{title}</h2>
-        <p className="text-sm text-muted-foreground">{subtitle}</p>
-      </div>
-    </div>
-  );
-});
-
 /** Live 2×2 cardio stats. Isolates the 500 ms re-renders from the parent. */
 const CardioStatsGrid = memo(function CardioStatsGrid({
   trainingType, speed, incline, level,
@@ -443,7 +429,6 @@ export default function WorkoutController() {
   );
   const [warmupDone, setWarmupDone] = useState(false);
   const [detailExerciseName, setDetailExerciseName] = useState<string | null>(null);
-  const [showCardioSetup, setShowCardioSetup] = useState(false);
   const [trainingType, setTrainingType] = useState<TrainingType | null>(() => {
     if ((storeSessionPhase === 'active' || storeSessionPhase === 'paused') && storeSessionType) {
       return storeSessionType as TrainingType;
@@ -467,8 +452,6 @@ export default function WorkoutController() {
   const [recoveryStepIdx, setRecoveryStepIdx] = useState(0);
 
   // ── Phase 2: UX separation state ─────────────────────────────────────────────
-  const [introVisible, setIntroVisible] = useState(false);
-  const [introContent, setIntroContent] = useState<{ icon: React.ReactNode; title: string; subtitle: string } | null>(null);
   const [setFeedback, setSetFeedback] = useState<string | null>(null);
   const [planHeaderCollapsed, setPlanHeaderCollapsed] = useState(false);
   const [cardioTargetMin, setCardioTargetMin] = useState(30);
@@ -545,11 +528,11 @@ export default function WorkoutController() {
       const label = MG_LABELS[mg] ?? mg;
       storeSetSessionType('strength');
       storeStartTraining();
-      startTransition(() => {
-        setIntroContent({ icon: <Dumbbell className="w-16 h-16 text-primary" />, title: `今天练${label}`, subtitle: '热身后开始正式训练' });
-        setIntroVisible(true);
-      });
-      setTimeout(() => startTransition(() => setIntroVisible(false)), 1600);
+      startTransition(() => setTrainingType('strength'));
+    } else if (mode === 'strength') {
+      storeSetSessionType('strength');
+      storeStartTraining();
+      startTransition(() => setTrainingType('strength'));
     } else if (mode === 'cardio') {
       const ct = (params.get('cardioType') as TrainingType) || 'treadmill';
       const ctLabel = ct === 'treadmill' ? '跑步机快走' : '爬楼机训练';
@@ -558,10 +541,7 @@ export default function WorkoutController() {
       storeStartTraining();
       startTransition(() => {
         setTrainingType(ct);
-        setIntroContent({ icon: ct === 'treadmill' ? <Footprints className="w-16 h-16 text-blue-400" /> : <Activity className="w-16 h-16 text-blue-400" />, title: `开始${ctLabel}`, subtitle: '记录时间、速度和消耗' });
-        setIntroVisible(true);
       });
-      setTimeout(() => startTransition(() => setIntroVisible(false)), 1600);
     } else if (mode === 'recovery') {
       const focus = params.get('focus') ?? 'full_body';
       const FOCUS_LABELS: Record<string, string> = {
@@ -586,10 +566,7 @@ export default function WorkoutController() {
           steps,
         });
         setTrainingType('free');
-        setIntroContent({ icon: <Timer className="w-16 h-16 text-recovery" />, title: `开始${focusLabel}`, subtitle: '跟随节奏，慢慢放松' });
-        setIntroVisible(true);
       });
-      setTimeout(() => startTransition(() => setIntroVisible(false)), 1600);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -832,7 +809,6 @@ export default function WorkoutController() {
   /** 用户选择训练类型后的处理 */
   const handleTrainingTypeSelect = (type: TrainingType, params?: CardioParams) => {
     setTrainingType(type);
-    setShowCardioSetup(false);
     if (type === 'strength') {
       storeSetSessionType('strength');
       storeStartTraining();
@@ -1387,119 +1363,6 @@ export default function WorkoutController() {
       setIsLoading(false);
     }
   };
-
-  // ── Inline selection screen (shown before any training type is chosen) ──
-  // NOTE: deliberately NOT gated on dbExercisesLoaded to avoid the flash where the
-  // strength UI briefly renders before the exercise library finishes loading.
-  const urlHasMode = !!(searchParams.get('mg') || searchParams.get('mode'));
-  const showSelectionScreen = !trainingType && storeSessionPhase === 'idle' && !urlHasMode;
-
-  if (showSelectionScreen) {
-    return (
-      <div className="min-h-screen flex flex-col bg-background text-foreground">
-        <div className="relative flex flex-col flex-1 px-4 pt-5 pb-8 sm:max-w-sm md:max-w-md mx-auto w-full">
-          {/* Header */}
-          <div className="flex items-center gap-3 mb-10">
-            <button onClick={() => router.push('/')}
-              className="p-2.5 rounded-xl" style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
-              <ArrowLeft className="w-5 h-5" />
-            </button>
-            <div>
-              <h1 className="text-xl font-black">今天练什么？</h1>
-              <p className="text-xs mt-0.5" style={{ color: 'var(--text-low)' }}>选择训练模式开始记录</p>
-            </div>
-          </div>
-
-          {/* Cards */}
-          <div className="flex flex-col gap-4 flex-1">
-            {/* 力量训练 */}
-            <button
-              onClick={() => handleTrainingTypeSelect('strength')}
-              className="w-full text-left rounded-3xl p-6 transition-all active:scale-[0.98]"
-              style={{ background: 'var(--accent-dim)', border: '1px solid var(--border)' }}
-            >
-              <div className="flex items-center gap-4">
-                <div className="w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 bg-primary/10">
-                  <Dumbbell className="w-8 h-8 text-primary" />
-                </div>
-                <div className="flex-1">
-                  <p className="text-lg font-black">力量训练</p>
-                  <p className="text-sm mt-0.5" style={{ color: 'var(--text-low)' }}>
-                    组数 · 次数 · 重量 · RIR
-                  </p>
-                </div>
-                <ChevronRight className="w-5 h-5 shrink-0" style={{ color: 'var(--accent-glow)' }} />
-              </div>
-              <div className="mt-4 flex gap-2 flex-wrap">
-                {['胸部', '背部', '腿部', '肩膀', '手臂'].map(g => (
-                  <span key={g} className="text-xs px-2.5 py-1 rounded-full font-medium"
-                    style={{ background: 'var(--accent-dim)', color: 'var(--accent)' }}>{g}</span>
-                ))}
-              </div>
-            </button>
-
-            {/* 有氧训练 */}
-            <button
-              onClick={() => setShowCardioSetup(true)}
-              className="w-full text-left rounded-3xl p-6 transition-all active:scale-[0.98]"
-              style={{ background: 'rgba(96,165,250,0.06)', border: '1px solid rgba(96,165,250,0.2)' }}
-            >
-              <div className="flex items-center gap-4">
-                <div className="w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 bg-blue-500/10">
-                  <Activity className="w-8 h-8 text-blue-400" />
-                </div>
-                <div className="flex-1">
-                  <p className="text-lg font-black">有氧训练</p>
-                  <p className="text-sm mt-0.5" style={{ color: 'var(--text-low)' }}>
-                    自动计算距离与卡路里消耗
-                  </p>
-                </div>
-                <ChevronRight className="w-5 h-5 shrink-0" style={{ color: 'rgba(96,165,250,0.5)' }} />
-              </div>
-              <div className="mt-4 flex gap-2">
-                <span className="text-xs px-2.5 py-1 rounded-full font-medium bg-blue-500/10 text-blue-400">跑步机</span>
-                <span className="text-xs px-2.5 py-1 rounded-full font-medium bg-blue-500/10 text-blue-400">爬楼机</span>
-              </div>
-            </button>
-
-            {/* 自由记录 */}
-            <button
-              onClick={() => handleTrainingTypeSelect('free')}
-              className="w-full text-left rounded-3xl p-6 transition-all active:scale-[0.98]"
-              style={{ background: 'rgba(168,85,247,0.06)', border: '1px solid rgba(168,85,247,0.2)' }}
-            >
-              <div className="flex items-center gap-4">
-                <div className="w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 bg-purple-500/10">
-                  <FileText className="w-8 h-8 text-purple-400" />
-                </div>
-                <div className="flex-1">
-                  <p className="text-lg font-black">自由记录</p>
-                  <p className="text-sm mt-0.5" style={{ color: 'var(--text-low)' }}>
-                    自由填写内容，灵活记录
-                  </p>
-                </div>
-                <ChevronRight className="w-5 h-5 shrink-0" style={{ color: 'rgba(168,85,247,0.5)' }} />
-              </div>
-              <div className="mt-4 flex gap-2 flex-wrap">
-                {['拉伸', '康复训练', '体能测试', '其他运动'].map(t => (
-                  <span key={t} className="text-xs px-2.5 py-1 rounded-full font-medium"
-                    style={{ background: 'rgba(168,85,247,0.1)', color: 'rgba(168,85,247,0.8)' }}>{t}</span>
-                ))}
-              </div>
-            </button>
-          </div>
-        </div>
-
-        {/* Cardio Setup Modal */}
-        <TrainingTypeModal
-          isOpen={showCardioSetup}
-          initialStep="cardio"
-          onSelect={handleTrainingTypeSelect}
-          onClose={() => setShowCardioSetup(false)}
-        />
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen px-4 py-5 sm:p-6 safe-bottom bg-background text-foreground">
@@ -2254,14 +2117,6 @@ export default function WorkoutController() {
           );
         })()}
 
-        {/* Cardio Setup Modal (有氧子选择) */}
-        <TrainingTypeModal
-          isOpen={showCardioSetup}
-          initialStep="cardio"
-          onSelect={handleTrainingTypeSelect}
-          onClose={() => setShowCardioSetup(false)}
-        />
-
       </div>
 
       {/* Rest overlay moved to global RestBar in ClientProviders — no full-screen overlay here */}
@@ -2315,16 +2170,6 @@ export default function WorkoutController() {
             </div>
           </div>
         </div>
-      )}
-
-      {/* ── F: Mode-entry intro overlay (auto-dismissed after ~1.6s) ── */}
-      {introContent && (
-        <IntroOverlay
-          visible={introVisible}
-          icon={introContent.icon}
-          title={introContent.title}
-          subtitle={introContent.subtitle}
-        />
       )}
 
       {/* ── Exit confirmation modal ── */}

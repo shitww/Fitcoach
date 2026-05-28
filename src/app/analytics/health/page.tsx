@@ -1,6 +1,5 @@
 "use client";
 
-import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import {
@@ -8,7 +7,7 @@ import {
   AlertTriangle, CheckCircle, Info, TrendingUp, TrendingDown,
   Clock, Activity,
 } from 'lucide-react';
-import { logger } from '@/lib/logger';
+import { useCachedFetch } from '@/lib/client-cache';
 import { SkeletonScoreCard, SkeletonCard } from '@/components/Skeleton';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -188,40 +187,27 @@ function FactorChip({ factor }: { factor: RiskFactor }) {
 export default function HealthDashboardPage() {
   const router = useRouter();
   const { status } = useSession();
-  const [data, setData] = useState<HealthData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
-  const fetchSnapshot = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await fetch('/api/analysis/health-snapshot', { credentials: 'include' });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const json = await res.json();
-      setData(json.data);
-    } catch (e) {
-      logger.error('[health-dashboard]', e);
-      setError('加载失败，请检查网络后重试。');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const url = status === 'authenticated' ? '/api/analysis/health-snapshot' : null;
+  const { data: raw, isLoading, error, refresh } = useCachedFetch<{ data: HealthData }>(
+    url,
+    { credentials: 'include' }
+  );
+  const data = raw?.data ?? null;
 
-  useEffect(() => {
-    if (status === 'unauthenticated') router.replace('/auth/signin');
-    if (status === 'authenticated') fetchSnapshot();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status]);
+  if (status === 'unauthenticated') {
+    router.replace('/auth/signin');
+    return null;
+  }
 
-  // ── Loading ──────────────────────────────────────────────────────────────────
-  if (loading) {
+  // ── Loading (no cache) ────────────────────────────────────────────────────
+  if (isLoading) {
     return (
-      <div className="min-h-screen" style={{ background: 'var(--background)', color: 'var(--foreground)' }}>
-        <div className="max-w-2xl mx-auto px-4 py-6 space-y-4">
+      <div className="page-shell bg-background text-foreground">
+        <div className="px-4 py-6 space-y-4">
           <div className="flex items-center gap-3 mb-6">
-            <div className="w-9 h-9 rounded-xl animate-pulse" style={{ background: 'var(--surface-2)' }} />
-            <div className="w-32 h-5 rounded-lg animate-pulse" style={{ background: 'var(--surface-2)' }} />
+            <div className="w-9 h-9 rounded-xl animate-pulse bg-secondary" />
+            <div className="w-32 h-5 rounded-lg animate-pulse bg-secondary" />
           </div>
           <SkeletonScoreCard />
           <SkeletonCard />
@@ -231,13 +217,13 @@ export default function HealthDashboardPage() {
     );
   }
 
-  // ── Error ────────────────────────────────────────────────────────────────────
+  // ── Error / empty (never had data) ───────────────────────────────────────
   if (error || !data) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center gap-4 px-6 text-center" style={{ background: 'var(--background)', color: 'var(--foreground)' }}>
-        <AlertTriangle className="w-10 h-10" style={{ color: '#ef4444' }} />
-        <p className="text-sm" style={{ color: 'var(--text-low)' }}>{error ?? '暂无数据，完成几次训练后再来查看。'}</p>
-        <button onClick={fetchSnapshot} className="px-5 py-2.5 rounded-xl text-sm font-bold text-black" style={{ background: 'var(--accent)' }}>
+      <div className="page-shell bg-background text-foreground flex flex-col items-center justify-center gap-4 px-6 text-center">
+        <AlertTriangle className="w-10 h-10 text-red-500" />
+        <p className="text-sm text-muted-foreground">{error?.message ?? '暂无数据，完成几次训练后再来查看。'}</p>
+        <button onClick={refresh} className="px-5 py-2.5 rounded-xl text-sm font-bold bg-primary text-primary-foreground">
           重试
         </button>
       </div>
@@ -253,25 +239,25 @@ export default function HealthDashboardPage() {
   const calSign = calBalance >= 0 ? '+' : '';
 
   return (
-    <div className="min-h-screen pb-24" style={{ background: 'var(--background)', color: 'var(--foreground)' }}>
+    <div className="page-shell bg-background text-foreground pb-24">
       {/* ── Header ── */}
-      <div className="sticky top-0 z-10 backdrop-blur px-4 py-3 flex items-center gap-3" style={{ background: 'var(--top-bg)', borderBottom: '1px solid var(--border)' }}>
-        <button onClick={() => router.back()} className="p-2 rounded-lg transition-all active:scale-95" style={{ background: 'var(--surface-2)' }}>
-          <ArrowLeft className="w-5 h-5" style={{ color: 'var(--text-med)' }} />
+      <div className="sticky top-0 z-10 backdrop-blur px-4 py-3 flex items-center gap-3 bg-background/80 border-b border-border">
+        <button onClick={() => router.back()} className="p-2 rounded-lg transition-all active:scale-95 bg-secondary">
+          <ArrowLeft className="w-5 h-5 text-foreground" />
         </button>
         <h1 className="flex-1 text-base font-semibold">健康状态</h1>
-        <button onClick={fetchSnapshot} className="p-2 rounded-lg transition-all active:scale-95" style={{ background: 'var(--surface-2)' }}>
-          <RefreshCw className="w-5 h-5" style={{ color: 'var(--text-low)' }} />
+        <button onClick={refresh} className="p-2 rounded-lg transition-all active:scale-95 bg-secondary">
+          <RefreshCw className="w-5 h-5 text-muted-foreground" />
         </button>
       </div>
 
       <div className="px-4 pt-4 space-y-4">
 
         {/* ── Overall banner ── */}
-        <div className="rounded-2xl p-4" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
+        <div className="rounded-2xl p-4 bg-card border border-border">
           <div className="flex items-center justify-between mb-1">
-            <span className="text-xs" style={{ color: 'var(--text-low)' }}>综合健康指数</span>
-            <span className="text-xs flex items-center gap-1" style={{ color: 'var(--text-faint)' }}>
+            <span className="text-xs text-muted-foreground">综合健康指数</span>
+            <span className="text-xs flex items-center gap-1 text-muted-foreground/60">
               <Clock className="w-3 h-3" />
               {new Date(data.generatedAt).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}
             </span>
@@ -280,23 +266,23 @@ export default function HealthDashboardPage() {
             <ArcGauge score={fatigue.score} color={fatigueColor} label="疲劳评分" />
             <div className="flex-1 space-y-3 pb-1">
               <div>
-                <p className="text-xs mb-0.5" style={{ color: 'var(--text-low)' }}>ACWR（急慢负荷比）</p>
+                <p className="text-xs mb-0.5 text-muted-foreground">ACWR（急慢负荷比）</p>
                 <div className="flex items-baseline gap-1.5">
-                  <span className="text-xl font-bold" style={{ color: 'var(--foreground)' }}>{fatigue.acwr.toFixed(2)}</span>
-                  <span className="text-xs" style={{ color: 'var(--text-low)' }}>安全区 0.8-1.3</span>
+                  <span className="text-xl font-bold">{fatigue.acwr.toFixed(2)}</span>
+                  <span className="text-xs text-muted-foreground">安全区 0.8-1.3</span>
                 </div>
               </div>
               <div>
-                <p className="text-xs mb-0.5" style={{ color: 'var(--text-low)' }}>距上次训练</p>
-                <span className="text-xl font-bold" style={{ color: 'var(--foreground)' }}>{fatigue.daysSinceLastWorkout}</span>
-                <span className="text-xs ml-1" style={{ color: 'var(--text-low)' }}>天</span>
+                <p className="text-xs mb-0.5 text-muted-foreground">距上次训练</p>
+                <span className="text-xl font-bold">{fatigue.daysSinceLastWorkout}</span>
+                <span className="text-xs ml-1 text-muted-foreground">天</span>
               </div>
             </div>
           </div>
         </div>
 
         {/* ── Fatigue ── */}
-        <div className="rounded-2xl p-4" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
+        <div className="rounded-2xl p-4 bg-card border border-border">
           <SectionTitle icon={<Zap className="w-4 h-4" style={{ color: fatigueColor }} />} title="训练疲劳" />
 
           <div className="flex items-center gap-2 mb-3">
@@ -304,7 +290,7 @@ export default function HealthDashboardPage() {
               style={{ backgroundColor: fatigueColor + '22', color: fatigueColor, border: `1px solid ${fatigueColor}55` }}>
               {CN_LEVEL[fatigue.level]}
             </span>
-            <span className="text-xs" style={{ color: 'var(--text-low)' }}>疲劳评分 {fatigue.score} / 100</span>
+            <span className="text-xs text-muted-foreground">疲劳评分 {fatigue.score} / 100</span>
           </div>
 
           <div className="grid grid-cols-2 gap-3 mb-4">
@@ -314,21 +300,21 @@ export default function HealthDashboardPage() {
               { label: '训练单调性', value: fatigue.monotony.toFixed(2) },
               { label: '训练应激', value: `${Math.round(fatigue.strain / 1000)}k` },
             ].map(m => (
-              <div key={m.label} className="rounded-xl p-3" style={{ background: 'var(--surface-2)' }}>
-                <p className="text-xs mb-0.5" style={{ color: 'var(--text-low)' }}>{m.label}</p>
-                <p className="text-lg font-semibold" style={{ color: 'var(--foreground)' }}>{m.value}</p>
+              <div key={m.label} className="rounded-xl p-3 bg-secondary">
+                <p className="text-xs mb-0.5 text-muted-foreground">{m.label}</p>
+                <p className="text-lg font-semibold">{m.value}</p>
               </div>
             ))}
           </div>
 
-          <div className="rounded-xl p-3 flex gap-2" style={{ background: 'var(--surface-2)' }}>
-            <Activity className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: 'var(--accent)' }} />
-            <p className="text-sm" style={{ color: 'var(--text-med)' }}>{fatigue.recommendation}</p>
+          <div className="rounded-xl p-3 flex gap-2 bg-secondary">
+            <Activity className="w-4 h-4 flex-shrink-0 mt-0.5 text-primary" />
+            <p className="text-sm text-foreground">{fatigue.recommendation}</p>
           </div>
         </div>
 
         {/* ── Injury Risk ── */}
-        <div className="rounded-2xl p-4" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
+        <div className="rounded-2xl p-4 bg-card border border-border">
           <SectionTitle icon={<ShieldAlert className="w-4 h-4" style={{ color: riskColor }} />} title="受伤风险" />
 
           <div className="flex items-center gap-3 mb-4">
@@ -339,7 +325,7 @@ export default function HealthDashboardPage() {
                   strokeDasharray={`${(injuryRisk.score / 100) * 163.4} 163.4`} strokeLinecap="round"
                   transform="rotate(-90 32 32)" />
               </svg>
-              <span className="absolute inset-0 flex items-center justify-center text-lg font-bold" style={{ color: 'var(--foreground)' }}>
+              <span className="absolute inset-0 flex items-center justify-center text-lg font-bold">
                 {injuryRisk.score}
               </span>
             </div>
@@ -348,7 +334,7 @@ export default function HealthDashboardPage() {
                 style={{ backgroundColor: riskColor + '22', color: riskColor, border: `1px solid ${riskColor}55` }}>
                 {CN_LEVEL[injuryRisk.level]}风险
               </span>
-              <p className="text-xs" style={{ color: 'var(--text-low)' }}>{injuryRisk.triggeredFactors.length} 个风险因子触发</p>
+              <p className="text-xs text-muted-foreground">{injuryRisk.triggeredFactors.length} 个风险因子触发</p>
             </div>
           </div>
 
@@ -359,43 +345,42 @@ export default function HealthDashboardPage() {
               ))}
             </div>
           ) : (
-            <div className="flex items-center gap-2 rounded-xl p-3 mb-4"
-              style={{ background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.2)' }}>
-              <CheckCircle className="w-4 h-4 flex-shrink-0" style={{ color: '#22c55e' }} />
-              <p className="text-sm" style={{ color: '#22c55e' }}>所有风险因子均在安全范围内</p>
+            <div className="flex items-center gap-2 rounded-xl p-3 mb-4 bg-green-500/10 border border-green-500/20">
+              <CheckCircle className="w-4 h-4 flex-shrink-0 text-green-500" />
+              <p className="text-sm text-green-500">所有风险因子均在安全范围内</p>
             </div>
           )}
 
-          <div className="rounded-xl p-3 flex gap-2" style={{ background: 'var(--surface-2)' }}>
-            <ShieldAlert className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: '#FBBF24' }} />
-            <p className="text-sm" style={{ color: 'var(--text-med)' }}>{injuryRisk.recommendation}</p>
+          <div className="rounded-xl p-3 flex gap-2 bg-secondary">
+            <ShieldAlert className="w-4 h-4 flex-shrink-0 mt-0.5 text-yellow-400" />
+            <p className="text-sm text-foreground">{injuryRisk.recommendation}</p>
           </div>
         </div>
 
         {/* ── Nutrition ── */}
-        <div className="rounded-2xl p-4" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
+        <div className="rounded-2xl p-4 bg-card border border-border">
           <SectionTitle icon={<Salad className="w-4 h-4" style={{ color: macroColor }} />} title="营养平衡" />
 
           <div className="flex items-center gap-4 mb-4">
-            <div className="flex-1 rounded-xl p-3" style={{ background: 'var(--surface-2)' }}>
-              <p className="text-xs mb-0.5" style={{ color: 'var(--text-low)' }}>日均热量</p>
-              <p className="text-lg font-bold" style={{ color: 'var(--foreground)' }}>{nutrition.avgDailyCalories} <span className="text-xs font-normal" style={{ color: 'var(--text-low)' }}>kcal</span></p>
+            <div className="flex-1 rounded-xl p-3 bg-secondary">
+              <p className="text-xs mb-0.5 text-muted-foreground">日均热量</p>
+              <p className="text-lg font-bold">{nutrition.avgDailyCalories} <span className="text-xs font-normal text-muted-foreground">kcal</span></p>
             </div>
-            <div className="flex-1 rounded-xl p-3" style={{ background: 'var(--surface-2)' }}>
-              <p className="text-xs mb-0.5" style={{ color: 'var(--text-low)' }}>热量缺口</p>
+            <div className="flex-1 rounded-xl p-3 bg-secondary">
+              <p className="text-xs mb-0.5 text-muted-foreground">热量缺口</p>
               <div className="flex items-center gap-1">
                 {calBalance >= 0
-                  ? <TrendingUp className="w-4 h-4" style={{ color: '#F97316' }} />
-                  : <TrendingDown className="w-4 h-4" style={{ color: '#22c55e' }} />
+                  ? <TrendingUp className="w-4 h-4 text-orange-400" />
+                  : <TrendingDown className="w-4 h-4 text-green-500" />
                 }
-                <p className="text-lg font-bold" style={{ color: calBalance > 300 ? '#F97316' : calBalance < -500 ? '#ef4444' : '#22c55e' }}>
-                  {calSign}{calBalance} <span className="text-xs font-normal" style={{ color: 'var(--text-low)' }}>kcal</span>
+                <p className={`text-lg font-bold ${calBalance > 300 ? 'text-orange-400' : calBalance < -500 ? 'text-red-400' : 'text-green-500'}`}>
+                  {calSign}{calBalance} <span className="text-xs font-normal text-muted-foreground">kcal</span>
                 </p>
               </div>
             </div>
-            <div className="flex-1 rounded-xl p-3" style={{ background: 'var(--surface-2)' }}>
-              <p className="text-xs mb-0.5" style={{ color: 'var(--text-low)' }}>估算 TDEE</p>
-              <p className="text-lg font-bold" style={{ color: 'var(--foreground)' }}>{nutrition.estimatedTDEE} <span className="text-xs font-normal" style={{ color: 'var(--text-low)' }}>kcal</span></p>
+            <div className="flex-1 rounded-xl p-3 bg-secondary">
+              <p className="text-xs mb-0.5 text-muted-foreground">估算 TDEE</p>
+              <p className="text-lg font-bold">{nutrition.estimatedTDEE} <span className="text-xs font-normal text-muted-foreground">kcal</span></p>
             </div>
           </div>
 
@@ -409,7 +394,7 @@ export default function HealthDashboardPage() {
           </div>
 
           <div className="flex items-center gap-2 mb-4">
-            <span className="text-xs" style={{ color: 'var(--text-low)' }}>宏量平衡：</span>
+            <span className="text-xs text-muted-foreground">宏量平衡：</span>
             <span className="px-2 py-0.5 rounded-full text-xs font-medium"
               style={{ backgroundColor: macroColor + '22', color: macroColor, border: `1px solid ${macroColor}55` }}>
               {CN_LEVEL[nutrition.macroBalance]}
@@ -419,9 +404,9 @@ export default function HealthDashboardPage() {
           {nutrition.issues.length > 0 && (
             <div className="space-y-2 mb-3">
               {nutrition.issues.map((issue, i) => (
-                <div key={i} className="flex gap-2 rounded-xl p-3" style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.25)' }}>
-                  <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: '#ef4444' }} />
-                  <p className="text-xs" style={{ color: '#f87171' }}>{issue}</p>
+                <div key={i} className="flex gap-2 rounded-xl p-3 bg-red-500/10 border border-red-500/20">
+                  <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5 text-red-400" />
+                  <p className="text-xs text-red-400">{issue}</p>
                 </div>
               ))}
             </div>
@@ -430,9 +415,9 @@ export default function HealthDashboardPage() {
           {nutrition.suggestions.length > 0 && (
             <div className="space-y-2">
               {nutrition.suggestions.map((s, i) => (
-                <div key={i} className="flex gap-2 rounded-xl p-3" style={{ background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.25)' }}>
-                  <Info className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: '#3b82f6' }} />
-                  <p className="text-xs" style={{ color: '#60a5fa' }}>{s}</p>
+                <div key={i} className="flex gap-2 rounded-xl p-3 bg-blue-500/10 border border-blue-500/20">
+                  <Info className="w-4 h-4 flex-shrink-0 mt-0.5 text-blue-400" />
+                  <p className="text-xs text-blue-400">{s}</p>
                 </div>
               ))}
             </div>

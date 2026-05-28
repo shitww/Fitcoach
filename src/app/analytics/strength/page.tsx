@@ -8,6 +8,7 @@ import {
   Tooltip, Legend, ResponsiveContainer
 } from 'recharts';
 import { logger } from '@/lib/logger';
+import { getCached, setCached } from '@/lib/client-cache';
 import { SkeletonChart, SkeletonStatGrid } from '@/components/Skeleton';
 import { EmptyState } from '@/components/EmptyState';
 import { PageShell, PageHeader, PageContent } from "@/components/layout";
@@ -23,22 +24,37 @@ export default function StrengthTrendsPage() {
   const router = useRouter();
   const [selectedExercise, setSelectedExercise] = useState('卧推');
   const [timeRange, setTimeRange] = useState('3个月');
-  const [trendData, setTrendData] = useState<TrendData[]>([]);
-  const [loading, setLoading] = useState(true);
+
+  const cacheKey = (ex: string, tr: string) => {
+    const months = tr === '1个月' ? 1 : tr === '3个月' ? 3 : tr === '6个月' ? 6 : 12;
+    return `/api/analysis/trends?exercise=${ex}&months=${months}`;
+  };
+
+  const seed = getCached<{ data: TrendData[] }>(cacheKey(selectedExercise, timeRange));
+  const [trendData, setTrendData] = useState<TrendData[]>(seed?.data ?? []);
+  const [loading, setLoading] = useState(!seed);
   const [error, setError] = useState(false);
 
-  useEffect(() => { fetchTrends(); }, [selectedExercise, timeRange]);
-
-  const fetchTrends = async () => {
+  const fetchTrends = async (ex = selectedExercise, tr = timeRange) => {
+    const url = cacheKey(ex, tr);
+    const cached = getCached<{ data: TrendData[] }>(url);
+    if (cached) {
+      setTrendData(cached.data ?? []);
+      setLoading(false);
+      // background revalidate
+      fetch(url, { credentials: 'include' })
+        .then(r => r.ok ? r.json() : null)
+        .then(d => { if (d) { setCached(url, d); setTrendData(d.data ?? []); } })
+        .catch(() => {});
+      return;
+    }
     setLoading(true);
     setError(false);
     try {
-      const months = timeRange === '1个月' ? 1 : timeRange === '3个月' ? 3 : timeRange === '6个月' ? 6 : 12;
-      const response = await fetch(`/api/analysis/trends?exercise=${selectedExercise}&months=${months}`, {
-        credentials: 'include'
-      });
+      const response = await fetch(url, { credentials: 'include' });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const data = await response.json();
+      setCached(url, data);
       setTrendData(data.data || []);
     } catch (err) {
       logger.error('获取趋势数据失败:', err);
@@ -48,6 +64,8 @@ export default function StrengthTrendsPage() {
       setLoading(false);
     }
   };
+
+  useEffect(() => { fetchTrends(selectedExercise, timeRange); }, [selectedExercise, timeRange]);
 
   const exercises = ['卧推', '深蹲', '硬拉', '肩上推举', '引体向上'];
   const timeRanges = ['1个月', '3个月', '6个月', '1年'];

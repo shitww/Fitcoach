@@ -1,7 +1,6 @@
 'use client';
 
 import { memo, useCallback } from 'react';
-import { motion, useReducedMotion } from 'framer-motion';
 import { Delete, ChevronDown } from 'lucide-react';
 
 interface NumberPadProps {
@@ -23,8 +22,6 @@ const NumberPad = memo(function NumberPad({
   label,
   allowDecimal = true,
 }: NumberPadProps) {
-  const reduce = useReducedMotion();
-
   const handlePress = useCallback((key: string) => {
     if (key === 'backspace') {
       onChange(value.slice(0, -1));
@@ -48,32 +45,20 @@ const NumberPad = memo(function NumberPad({
     allowDecimal ? ['.', '0', 'backspace'] : ['clear', '0', 'backspace'],
   ];
 
+  const isActionKey = (k: string) => k === 'backspace' || k === 'clear';
+
   return (
-    <motion.div
-      initial={reduce ? false : { y: '100%' }}
-      animate={{ y: 0 }}
-      exit={reduce ? undefined : { y: '100%' }}
-      transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-      className="fixed bottom-0 left-0 right-0 z-[90] sm:max-w-md sm:left-1/2 sm:-translate-x-1/2"
-      style={{
-        background: 'var(--surface)',
-        borderTop: '1px solid var(--border)',
-        boxShadow: '0 -8px 32px rgba(0,0,0,0.3)',
-        paddingBottom: 'env(safe-area-inset-bottom)',
-      }}
-    >
+    <div className="fixed bottom-0 left-0 right-0 z-[90] bg-card border-t border-border shadow-[0_-8px_32px_rgba(0,0,0,0.3)] sm:max-w-md sm:left-1/2 sm:-translate-x-1/2"
+      style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-2 border-b"
-        style={{ borderColor: 'var(--border)' }}>
-        <span className="text-xs font-bold" style={{ color: 'var(--text-low)' }}>
+      <div className="flex items-center justify-between px-4 py-2 border-b border-border">
+        <span className="text-xs font-bold text-muted-foreground">
           {label ?? '输入数值'}
         </span>
         <div className="flex items-center gap-3">
-          <span className="text-sm font-black tabular-nums" style={{ color: 'var(--text-high)' }}>
-            {value || '0'}
-          </span>
-          <button onClick={onClose} className="p-1">
-            <ChevronDown className="w-4 h-4" style={{ color: 'var(--text-faint)' }} />
+          <span className="text-sm font-black tabular-nums">{value || '0'}</span>
+          <button onClick={onClose} className="p-1 text-muted-foreground">
+            <ChevronDown className="w-4 h-4" />
           </button>
         </div>
       </div>
@@ -86,19 +71,12 @@ const NumberPad = memo(function NumberPad({
               <button
                 key={key}
                 onClick={() => handlePress(key)}
-                className="flex-1 h-12 rounded-xl text-sm font-bold transition-all active:scale-95 flex items-center justify-center"
-                style={{
-                  background: key === 'backspace' || key === 'clear'
-                    ? 'rgba(239,68,68,0.08)'
-                    : 'var(--surface-2)',
-                  color: key === 'backspace' || key === 'clear'
-                    ? '#ef4444'
-                    : 'var(--text-high)',
-                  border: `1px solid ${key === 'backspace' || key === 'clear'
-                    ? 'rgba(239,68,68,0.15)'
-                    : 'var(--border)'}`,
-                  touchAction: 'manipulation',
-                }}
+                className={`flex-1 h-12 rounded-xl text-sm font-bold transition-all active:scale-95 flex items-center justify-center border ${
+                  isActionKey(key)
+                    ? 'bg-red-500/8 text-red-400 border-red-500/15'
+                    : 'bg-secondary text-foreground border-border'
+                }`}
+                style={{ touchAction: 'manipulation' }}
               >
                 {key === 'backspace' ? (
                   <Delete className="w-4 h-4" />
@@ -115,17 +93,13 @@ const NumberPad = memo(function NumberPad({
         {/* Confirm */}
         <button
           onClick={onConfirm}
-          className="w-full h-12 rounded-xl text-sm font-black transition-all active:scale-[0.97] mt-1"
-          style={{
-            background: 'var(--accent)',
-            color: 'var(--accent-text)',
-            touchAction: 'manipulation',
-          }}
+          className="w-full h-12 rounded-xl text-sm font-black transition-all active:scale-[0.97] mt-1 bg-primary text-primary-foreground"
+          style={{ touchAction: 'manipulation' }}
         >
           确认
         </button>
       </div>
-    </motion.div>
+    </div>
   );
 });
 
