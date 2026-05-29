@@ -8,6 +8,7 @@ import type { QuickEntryData } from "@/lib/dashboard-bootstrap"
 
 interface Props {
   data: QuickEntryData
+  momentumInsight?: string | null
 }
 
 const STATUS_META: Record<string, { label: string; dot: string; bg: string; text: string }> = {
@@ -17,7 +18,7 @@ const STATUS_META: Record<string, { label: string; dot: string; bg: string; text
   REST_DAY:       { label: "今日休息", dot: "#60A5FA", bg: "rgba(96,165,250,0.1)", text: "#60A5FA" },
 }
 
-export default function QuickWorkoutEntry({ data }: Props) {
+export default function QuickWorkoutEntry({ data, momentumInsight }: Props) {
   const { t } = useTheme()
   const { isTrainingActive, isPaused, currentExercise } = useWorkoutTimer()
   const hasActiveSession = isTrainingActive || isPaused
@@ -58,7 +59,7 @@ export default function QuickWorkoutEntry({ data }: Props) {
             {currentExercise || "继续当前训练"}
           </h3>
           <p className="text-xs" style={{ color: t.textFaint }}>
-            {data.coachInsight || "点击继续完成今日训练目标"}
+            {data.coachInsight || momentumInsight || "点击继续完成今日训练目标"}
           </p>
         </div>
 
@@ -163,9 +164,9 @@ export default function QuickWorkoutEntry({ data }: Props) {
           <h3 className="text-base font-bold leading-snug mb-0.5" style={{ color: t.text }}>
             {data.todayPlanDay.dayName || `${data.dayLabel}训练`}
           </h3>
-          {data.activePlan && (
+          {(data.activePlan || momentumInsight) && (
             <p className="text-xs" style={{ color: t.textFaint }}>
-              {data.activePlan.name}
+              {data.activePlan?.name}{data.activePlan && momentumInsight ? ' · ' : ''}{momentumInsight ?? ''}
             </p>
           )}
         </div>
@@ -300,7 +301,7 @@ export default function QuickWorkoutEntry({ data }: Props) {
           自由训练
         </h3>
         <p className="text-xs" style={{ color: t.textFaint }}>
-          {data.coachInsight || "准备好，开始今天的训练吧"}
+          {data.coachInsight || momentumInsight || "准备好，开始今天的训练吧"}
         </p>
       </div>
 

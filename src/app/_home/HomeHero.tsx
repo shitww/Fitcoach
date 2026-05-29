@@ -2,6 +2,8 @@ import QuickWorkoutEntry from "./QuickWorkoutEntry"
 import HeroMetricsRow from "./HeroMetricsRow"
 import RecentExercisesStrip from "./RecentExercisesStrip"
 import LiveWorkoutResume from "./LiveWorkoutResume"
+import MomentumBand from "./MomentumBand"
+import { buildMomentumSurface } from "@/lib/emotional-runtime/momentum/buildMomentumSurface"
 import type { DashboardBootstrap } from "@/lib/dashboard-bootstrap"
 
 interface Props {
@@ -19,10 +21,16 @@ interface Props {
  *    - LiveWorkoutResume  (isolated, mounts only when session active)
  */
 export default function HomeHero({ bootstrap, userId }: Props) {
+  const { momentum } = buildMomentumSurface(bootstrap.progress, bootstrap.recovery)
+  const momentumInsight = momentum.subheadline
+
   return (
     <section className="mb-2">
+      {/* Momentum band — emotional intelligence insight strip */}
+      <MomentumBand progress={bootstrap.progress} recovery={bootstrap.recovery} />
+
       {/* Critical CTA — always rendered server-side, 0ms clickable */}
-      <QuickWorkoutEntry data={bootstrap.quickEntry} />
+      <QuickWorkoutEntry data={bootstrap.quickEntry} momentumInsight={momentumInsight} />
 
       {/* Live session overlay — client island, isolated refresh */}
       <LiveWorkoutResume />

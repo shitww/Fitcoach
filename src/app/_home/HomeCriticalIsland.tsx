@@ -5,6 +5,7 @@ import { getDashboardBootstrapCached } from "@/lib/dashboard-bootstrap"
 import StreakCard from "@/components/StreakCard"
 import DashboardMeta from "@/components/DashboardMeta"
 import HomeHero from "./HomeHero"
+import ConsistencyRhythmCard from "./ConsistencyRhythmCard"
 
 export default async function HomeCriticalIsland() {
   const session = await auth()
@@ -26,6 +27,12 @@ export default async function HomeCriticalIsland() {
         <div className="reveal-item" style={{ "--delay": "0ms" } as React.CSSProperties}>
           {snapshot?.stale && <DashboardMeta updatedAt={snapshot.updatedAt} />}
           <StreakCard data={instantStatus} loading={false} />
+          {bootstrap && (
+            <ConsistencyRhythmCard
+              progress={bootstrap.progress}
+              recovery={bootstrap.recovery}
+            />
+          )}
         </div>
       </div>
 
