@@ -572,3 +572,51 @@ html {
 .touch-manipulation {
   touch-action: manipulation;
 }
+
+/* ── Phase 8: Workout Runtime Motion System ───────────────── */
+
+/* Exercise name enter/exit */
+@keyframes rt-name-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0);    }
+}
+@keyframes rt-name-out {
+  from { opacity: 1; transform: translateY(0);     }
+  to   { opacity: 0; transform: translateY(-10px); }
+}
+
+/* Sheet slide up (completion surface) */
+@keyframes rt-slide-up {
+  from { opacity: 0; transform: translateY(40px); }
+  to   { opacity: 1; transform: translateY(0);    }
+}
+
+/* Breathing pulse (rest ring) */
+@keyframes rt-breathe {
+  0%, 100% { opacity: 0.06; transform: scale(1); }
+  50%       { opacity: 0.14; transform: scale(1.06); }
+}
+
+/* Set completion micro-bounce */
+@keyframes rt-set-complete {
+  0%   { transform: scale(1); }
+  30%  { transform: scale(1.04); }
+  70%  { transform: scale(0.98); }
+  100% { transform: scale(1); }
+}
+
+/* Queue item activate */
+@keyframes rt-queue-activate {
+  from { transform: scale(0.9); opacity: 0.6; }
+  to   { transform: scale(1.1); opacity: 1;   }
+}
+
+/* Fade up (used by rest insight) */
+@keyframes rt-fade-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0);   }
+}
+
+/* No scrollbar utility */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }

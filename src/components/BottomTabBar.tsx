@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Home, Dumbbell, Utensils, Clock, User } from 'lucide-react'
+import { useWorkoutTimer } from '@/stores/workoutTimer'
 
 export type BottomTab = 'home' | 'training' | 'diet' | 'history' | 'profile'
 
@@ -23,7 +24,7 @@ const TABS: Array<{
   matchPrefix: string
 }> = [
   { id: 'home',    label: '首页', icon: Home,     path: '/',              matchPrefix: '/' },
-  { id: 'training',label: '训练', icon: Dumbbell,  path: '/training-log',  matchPrefix: '/training-log' },
+  { id: 'training',label: '训练', icon: Dumbbell,  path: '/workout',       matchPrefix: '/workout' },
   { id: 'diet',    label: '饮食', icon: Utensils,  path: '/diet-analysis', matchPrefix: '/diet-analysis' },
   { id: 'history', label: '历史', icon: Clock,     path: '/history',       matchPrefix: '/history' },
   { id: 'profile', label: '我的', icon: User,      path: '/profile',       matchPrefix: '/profile' },
@@ -35,6 +36,7 @@ const TABS: Array<{
  */
 export default function BottomTabBar({ active, style }: BottomTabBarProps) {
   const pathname = usePathname()
+  const isTrainingActive = useWorkoutTimer(s => s.isTrainingActive || s.isPaused)
 
   const resolved: BottomTab | undefined =
     active ??
@@ -73,12 +75,20 @@ export default function BottomTabBar({ active, style }: BottomTabBarProps) {
                 aria-label={tab.label}
                 aria-current={isActive ? 'page' : undefined}
               >
-                <tab.icon
-                  className={`w-5 h-5 transition-transform ${isActive ? 'scale-110' : ''}`}
-                  strokeWidth={isActive ? 2.5 : 1.75}
-                />
+                <div className="relative">
+                  <tab.icon
+                    className={`w-5 h-5 transition-transform ${isActive ? 'scale-110' : ''}`}
+                    strokeWidth={isActive ? 2.5 : 1.75}
+                  />
+                  {tab.id === 'training' && isTrainingActive && (
+                    <span
+                      className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full"
+                      style={{ background: 'var(--color-accent)', animation: 'rt-breathe 2s ease-in-out infinite' }}
+                    />
+                  )}
+                </div>
                 <span className={`text-[10px] leading-tight font-${isActive ? 'bold' : 'medium'}`}>
-                  {tab.label}
+                  {tab.id === 'training' && isTrainingActive ? '进行中' : tab.label}
                 </span>
               </Link>
             )
