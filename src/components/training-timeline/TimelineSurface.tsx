@@ -14,9 +14,9 @@ interface Workout {
 
 interface TimelineSurfaceProps {
   workouts: Workout[];
-  currentStreak: number;
-  maxStreak: number;
-  thisMonthCount: number;
+  currentStreak?: number;
+  maxStreak?: number;
+  thisMonthCount?: number;
 }
 
 function fmtDate(dateStr: string) {
@@ -38,42 +38,46 @@ const TimelineSurface = memo(function TimelineSurface({
   const router = useRouter();
   if (workouts.length === 0) return null;
 
+  const hasInsights = currentStreak !== undefined && maxStreak !== undefined && thisMonthCount !== undefined;
+
   return (
     <div className="px-5 space-y-4">
-      {/* Narrative header */}
-      <MotionLayer state="active">
-        <div className="rounded-3xl p-5 rvl-surface-elevated">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: 'var(--rvl-active-dim)', color: 'var(--rvl-active)' }}>
-              <Zap className="w-5 h-5" />
+      {/* Narrative header — only rendered when Growth layer provides insights */}
+      {hasInsights && (
+        <MotionLayer state="active">
+          <div className="rounded-3xl p-5 rvl-surface-elevated">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: 'var(--rvl-active-dim)', color: 'var(--rvl-active)' }}>
+                <Zap className="w-5 h-5" />
+              </div>
+              <div>
+                <p className="text-sm font-black" style={{ color: 'var(--rvl-text-high)' }}>
+                  {currentStreak! > 0 ? '连续 ' + currentStreak + ' 天训练' : '准备好开始'}
+                </p>
+                <p className="text-xs" style={{ color: 'var(--rvl-text-faint)' }}>
+                  {thisMonthCount} 次训练 · 最长连续 {maxStreak} 天
+                </p>
+              </div>
             </div>
-            <div>
-              <p className="text-sm font-black" style={{ color: 'var(--rvl-text-high)' }}>
-                {currentStreak > 0 ? '连续 ' + currentStreak + ' 天训练' : '准备好开始'}
-              </p>
-              <p className="text-xs" style={{ color: 'var(--rvl-text-faint)' }}>
-                {thisMonthCount} 次训练 · 最长连续 {maxStreak} 天
-              </p>
+            {/* Activity strip — last 14 days */}
+            <div className="flex gap-1">
+              {Array.from({ length: 14 }).map((_, i) => {
+                const d = new Date();
+                d.setDate(d.getDate() - (13 - i));
+                const ds = d.toISOString().slice(0, 10);
+                const has = workouts.some(w => new Date(w.date).toISOString().slice(0, 10) === ds);
+                return (
+                  <div key={i} className="flex-1 flex flex-col items-center gap-1">
+                    <div className="w-full aspect-square rounded-md"
+                      style={{ background: has ? 'var(--rvl-active)' : 'var(--rvl-surface-3)', opacity: has ? 1 : 0.4, boxShadow: has ? '0 0 8px var(--rvl-active-glow)' : 'none' }} />
+                    <span className="text-[9px] font-bold" style={{ color: 'var(--rvl-text-faint)' }}>{d.getDate()}</span>
+                  </div>
+                );
+              })}
             </div>
           </div>
-          {/* Activity strip — last 14 days */}
-          <div className="flex gap-1">
-            {Array.from({ length: 14 }).map((_, i) => {
-              const d = new Date();
-              d.setDate(d.getDate() - (13 - i));
-              const ds = d.toISOString().slice(0, 10);
-              const has = workouts.some(w => new Date(w.date).toISOString().slice(0, 10) === ds);
-              return (
-                <div key={i} className="flex-1 flex flex-col items-center gap-1">
-                  <div className="w-full aspect-square rounded-md"
-                    style={{ background: has ? 'var(--rvl-active)' : 'var(--rvl-surface-3)', opacity: has ? 1 : 0.4, boxShadow: has ? '0 0 8px var(--rvl-active-glow)' : 'none' }} />
-                  <span className="text-[9px] font-bold" style={{ color: 'var(--rvl-text-faint)' }}>{d.getDate()}</span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </MotionLayer>
+        </MotionLayer>
+      )}
 
       {/* Sessions as narrative nodes */}
       {workouts.slice(0, 20).map((w, i) => {

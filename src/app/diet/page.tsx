@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { 
   ArrowLeft, Plus, Trash2, Droplets, RotateCcw,
-  Coffee, Sun, Cloud, Moon, Cookie, Pencil, Minus, X, Settings2, Dumbbell,
+  Coffee, Sun, Cloud, Moon, Cookie, Pencil, Minus, X, Dumbbell,
   Clock, Zap, ChevronRight
 } from 'lucide-react';
 import FoodSearch from '@/components/FoodSearch';
@@ -54,7 +54,6 @@ function MacroBar({ label, value, max, color }: { label: string; value: number; 
 }
 
 interface Goals { calories: number; carbs: number; protein: number; fat: number; }
-type GoalInputs = { calories: string; carbs: string; protein: string; fat: string; }
 
 function RingProgress({ value, max, color, label, themeColors }: { value: number; max: number; color: string; label: string; themeColors: { border: string; text: string; textMuted: string; textSec: string } }) {
   const r = 28;
@@ -142,8 +141,6 @@ export default function DietPage() {
   const [editGrams, setEditGrams] = useState(100);
   const [editSaving, setEditSaving] = useState(false);
   const [goals, setGoals] = useState<Goals>(FALLBACK_GOALS);
-  const [showGoalEditor, setShowGoalEditor] = useState(false);
-  const [editGoals, setEditGoals] = useState<GoalInputs>({ calories: '2000', carbs: '250', protein: '150', fat: '65' });
   const [showMealPicker, setShowMealPicker] = useState(false);
   const { toast } = useToast();
 
@@ -174,7 +171,6 @@ export default function DietPage() {
         if (data) {
           const g: Goals = { calories: data.targetCalories, carbs: data.targetCarbs, protein: data.targetProtein, fat: data.targetFat };
           setGoals(g);
-          setEditGoals({ calories: String(g.calories), carbs: String(g.carbs), protein: String(g.protein), fat: String(g.fat) });
         }
       })
       .catch(() => {});
@@ -186,34 +182,6 @@ export default function DietPage() {
     if (savedWater) setWaterCount(parseInt(savedWater, 10) || 0);
     else setWaterCount(0);
   }, [selectedDate, loadLogs]);
-
-  const saveGoals = async () => {
-    const parsed: Goals = {
-      calories: parseFloat(editGoals.calories) || 0,
-      carbs: parseFloat(editGoals.carbs) || 0,
-      protein: parseFloat(editGoals.protein) || 0,
-      fat: parseFloat(editGoals.fat) || 0,
-    };
-    setGoals(parsed);
-    setShowGoalEditor(false);
-    try {
-      await fetch('/api/nutrition-goals', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ targetCalories: parsed.calories, targetCarbs: parsed.carbs, targetProtein: parsed.protein, targetFat: parsed.fat }),
-      });
-    } catch (e) {
-      logger.warn('[Diet] 保存目标失败:', e);
-    }
-  };
-
-  const updateGoalMacro = (key: 'carbs' | 'protein' | 'fat', val: string) => {
-    const c = parseFloat(key === 'carbs' ? val : editGoals.carbs) || 0;
-    const p = parseFloat(key === 'protein' ? val : editGoals.protein) || 0;
-    const f = parseFloat(key === 'fat' ? val : editGoals.fat) || 0;
-    setEditGoals(prev => ({ ...prev, [key]: val, calories: String(Math.round(c * 4 + p * 4 + f * 9)) }));
-  };
 
   const handleSelectFood = async (food: FoodItem, grams: number) => {
     try {
@@ -326,10 +294,7 @@ export default function DietPage() {
             <ArrowLeft className="w-5 h-5 text-muted-foreground" />
           </button>
           <h1 className="text-base font-bold">饮食记录</h1>
-          <button onClick={() => { setEditGoals({ calories: String(goals.calories), carbs: String(goals.carbs), protein: String(goals.protein), fat: String(goals.fat) }); setShowGoalEditor(true); }}
-            className="p-2 rounded-xl hover:bg-secondary transition-colors">
-            <Settings2 className="w-4 h-4 text-muted-foreground" />
-          </button>
+          <div className="w-10" />
         </div>
       </div>
 
@@ -574,38 +539,6 @@ export default function DietPage() {
                   </button>
                 );
               })}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Goal editor */}
-      {showGoalEditor && (
-        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="w-full max-w-xs rounded-2xl border border-border bg-card shadow-2xl overflow-hidden">
-            <div className="flex items-center justify-between p-4 border-b border-border">
-              <span className="text-base font-bold">设置营养目标</span>
-              <button onClick={() => setShowGoalEditor(false)} className="p-1.5 rounded-lg hover:bg-secondary"><X className="w-4 h-4 text-muted-foreground" /></button>
-            </div>
-            <div className="p-4 space-y-3">
-              <div>
-                <label className="text-xs text-muted-foreground">热量目标 (kcal)</label>
-                <input type="text" inputMode="numeric" value={editGoals.calories}
-                  onChange={e => setEditGoals(prev => ({ ...prev, calories: e.target.value }))}
-                  className="w-full mt-1 px-3 py-2.5 rounded-xl border border-border bg-card text-sm" />
-              </div>
-              {([ { key: 'carbs' as const, label: '碳水目标' }, { key: 'protein' as const, label: '蛋白质目标' }, { key: 'fat' as const, label: '脂肪目标' }, ]).map(({ key, label }) => (
-                <div key={key}>
-                  <label className="text-xs text-muted-foreground">{label} (g)</label>
-                  <input type="text" inputMode="decimal" value={editGoals[key]}
-                    onChange={e => updateGoalMacro(key, e.target.value)}
-                    className="w-full mt-1 px-3 py-2.5 rounded-xl border border-border bg-card text-sm" />
-                </div>
-              ))}
-              <div className="flex gap-2 pt-1">
-                <button onClick={() => setShowGoalEditor(false)} className="flex-1 py-3 rounded-xl text-sm font-bold border border-border bg-card">取消</button>
-                <button onClick={saveGoals} className="flex-1 py-3 rounded-xl text-sm font-bold bg-primary text-primary-foreground active:scale-95 transition-all">保存</button>
-              </div>
             </div>
           </div>
         </div>

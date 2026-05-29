@@ -238,3 +238,95 @@
     transform: none;
   }
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   Layer Visual Language Lock
+   Each system layer has distinct surface, typography, and motion
+   semantics so users can infer page purpose without reading code.
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── Execution (Training) ── High contrast, interactive, kinetic */
+.layer-execution {
+  --layer-surface: var(--rvl-surface-2);
+  --layer-border: var(--rvl-active);
+  --layer-accent: var(--rvl-active);
+  --layer-accent-dim: var(--rvl-active-dim);
+  --layer-text: var(--rvl-text-high);
+  --layer-motion: rvl-pulse-active;
+  --layer-shadow: var(--rvl-active-glow);
+}
+.layer-execution .layer-cta {
+  background: linear-gradient(135deg, var(--rvl-active) 0%, var(--rvl-active-dim) 100%);
+  color: var(--rvl-accent-text);
+  box-shadow: 0 0 20px var(--rvl-active-glow);
+}
+
+/* ── Memory (History) ── Neutral, timeline, chronological */
+.layer-memory {
+  --layer-surface: var(--rvl-surface-1);
+  --layer-border: var(--rvl-border-subtle);
+  --layer-accent: var(--rvl-text-med);
+  --layer-accent-dim: var(--rvl-surface-3);
+  --layer-text: var(--rvl-text-high);
+  --layer-motion: none;
+  --layer-shadow: none;
+}
+.layer-memory .layer-timeline-item {
+  border-left: 2px solid var(--rvl-border-subtle);
+}
+.layer-memory .layer-timeline-item[data-active="true"] {
+  border-left-color: var(--rvl-active);
+}
+
+/* ── Intelligence (Growth) ── Analytical, chart-driven, calm */
+.layer-intelligence {
+  --layer-surface: var(--rvl-surface-1);
+  --layer-border: var(--rvl-border-subtle);
+  --layer-accent: #60A5FA;
+  --layer-accent-dim: rgba(96, 165, 250, 0.12);
+  --layer-text: var(--rvl-text-high);
+  --layer-motion: none;
+  --layer-shadow: none;
+}
+.layer-intelligence .layer-chart {
+  background: var(--rvl-surface-1);
+  border: 1px solid var(--rvl-border-subtle);
+}
+
+/* ── Identity (Profile) ── Minimal, static, portrait/card */
+.layer-identity {
+  --layer-surface: var(--rvl-surface-1);
+  --layer-border: var(--rvl-border-subtle);
+  --layer-accent: var(--rvl-text-med);
+  --layer-accent-dim: var(--rvl-surface-2);
+  --layer-text: var(--rvl-text-high);
+  --layer-motion: none;
+  --layer-shadow: none;
+}
+.layer-identity .layer-card {
+  background: var(--rvl-surface-1);
+  border: 1px solid var(--rvl-border-subtle);
+  border-radius: var(--radius-xl);
+}
+
+/* ── Control (Settings) ── Form-based, utilitarian */
+.layer-control {
+  --layer-surface: var(--rvl-surface-1);
+  --layer-border: var(--rvl-border-subtle);
+  --layer-accent: var(--rvl-text-med);
+  --layer-accent-dim: var(--rvl-surface-2);
+  --layer-text: var(--rvl-text-high);
+  --layer-motion: none;
+  --layer-shadow: none;
+}
+.layer-control .layer-input {
+  background: var(--rvl-surface-2);
+  border: 1px solid var(--rvl-border-subtle);
+  border-radius: var(--radius-lg);
+}
+.layer-control .layer-toggle {
+  background: var(--rvl-surface-3);
+}
+.layer-control .layer-toggle[data-on="true"] {
+  background: var(--rvl-active);
+}

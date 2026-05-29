@@ -48,7 +48,7 @@ export default function SignUpPage() {
             </text>
           </svg>
           <p className="mt-1" style={{ color: 'rgba(255,255,255,0.25)', letterSpacing: '0.3em', fontFamily: "'Space Grotesk', sans-serif" }}>
-            AI FITNESS COACH
+            SMART FITNESS SYSTEM
           </p>
         </div>
 

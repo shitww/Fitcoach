@@ -4,8 +4,8 @@ import { useSession, signOut } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import { useState, useEffect, useMemo } from "react"
 import {
-  User, Calendar, LogOut, ChevronRight, Loader2, Bell, Shield, Flame, Palette, Download,
-  Trophy, TrendingUp, Zap, Target, Award, Dumbbell, TrendingDown, TrendingUpDown
+  User, Calendar, LogOut, ChevronRight, Loader2, Bell, Shield, Palette, Download,
+  TrendingDown, TrendingUpDown, TrendingUp
 } from "lucide-react"
 import { logger } from "@/lib/logger";
 import { getCached, setCached } from "@/lib/client-cache";
@@ -14,21 +14,11 @@ import { useTheme } from "@/contexts/ThemeContext";
 import { PageShell, PageHeader, PageContent } from "@/components/layout";
 import { isRunningStandalone, showInstallPrompt } from "@/lib/pwa-utils";
 import { useToast } from "@/components/Toast";
-import { METRICS, type BodyDataRecord, type MetricConfig, findRecordByLocalDay, startOfLocalDay, isSameLocalDay } from "@/lib/body-metrics";
-import { MetricEditorSheet } from "./_components/MetricEditorSheet";
+import { type BodyDataRecord, isSameLocalDay } from "@/lib/body-metrics";
 
 const BODY_CACHE = '/api/body-data?limit=30';
-const PR_CACHE = '/api/analysis/personal-records';
-const WORKOUT_CACHE = '/api/workout?limit=200';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
-
-function formatTimeText(dateStr: string): string {
-  const d = new Date(dateStr);
-  const now = new Date();
-  if (isSameLocalDay(d, now)) return "今天";
-  return `${d.getMonth() + 1}月${d.getDate()}日`;
-}
 
 function findLatestMetric(records: BodyDataRecord[], key: keyof BodyDataRecord): { value: number; date: string } | null {
   for (const r of records) {
@@ -44,36 +34,6 @@ function computeWeightDelta(records: BodyDataRecord[]): number | null {
   const latest = withWeight[0].weight!;
   const prev = withWeight[1].weight!;
   return Math.round((latest - prev) * 10) / 10;
-}
-
-/** Compute training streak from workout dates */
-function computeStreak(workouts: Array<{ date: string }>): number {
-  if (!workouts.length) return 0;
-  const days = new Set(workouts.map(w => w.date.split('T')[0]));
-  let streak = 0;
-  const check = new Date();
-  for (let i = 0; i < 365; i++) {
-    const ds = check.toISOString().split('T')[0];
-    if (days.has(ds)) streak++;
-    else if (i > 0) break;
-    check.setDate(check.getDate() - 1);
-  }
-  return streak;
-}
-
-/** Compute level from total workout count */
-function computeLevel(workoutCount: number): { level: number; title: string; next: number; progress: number } {
-  const thresholds = [0, 5, 15, 30, 60, 100, 150, 220, 300, 400];
-  let level = 1;
-  for (let i = 1; i < thresholds.length; i++) {
-    if (workoutCount >= thresholds[i]) level = i + 1;
-    else break;
-  }
-  const titles = ['新手', '入门', '进阶', '熟练', '精英', '大师', '传奇', '神话', '不朽', '封神'];
-  const curr = thresholds[level - 1] ?? 0;
-  const next = thresholds[level] ?? 9999;
-  const progress = Math.min(100, Math.round(((workoutCount - curr) / (next - curr)) * 100));
-  return { level, title: titles[level - 1] ?? '新手', next, progress };
 }
 
 /** Mini sparkline SVG from number array */
@@ -97,9 +57,8 @@ function Sparkline({ data, color = "hsl(var(--primary))", height = 40, strokeWid
 
 // ── Components ─────────────────────────────────────────────────────────────────
 
-function AthleteHeader({ name, email, avatar, streak, level }: {
+function AthleteHeader({ name, email, avatar }: {
   name?: string | null; email?: string | null; avatar?: string | null;
-  streak: number; level: { level: number; title: string; progress: number };
 }) {
   return (
     <div className="rounded-2xl p-5 bg-card border border-border">
@@ -113,40 +72,21 @@ function AthleteHeader({ name, email, avatar, streak, level }: {
         </div>
         <div className="flex-1 min-w-0">
           <h2 className="text-lg font-black truncate">{name || '健身爱好者'}</h2>
-          <div className="flex items-center gap-2 mt-1 flex-wrap">
-            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-primary/10 text-primary border border-primary/20">
-              Lv.{level.level} {level.title}
-            </span>
-            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-orange-500/10 text-orange-400 border border-orange-500/20 flex items-center gap-1">
-              <Flame className="w-3 h-3" />
-              {streak} 天连续
-            </span>
-          </div>
           {email && <p className="text-xs text-muted-foreground truncate mt-1">{email}</p>}
-        </div>
-      </div>
-      {/* Level progress bar */}
-      <div className="mt-3">
-        <div className="flex items-center justify-between text-[10px] text-muted-foreground mb-1">
-          <span>等级进度</span>
-          <span>{level.progress}%</span>
-        </div>
-        <div className="h-1.5 rounded-full bg-secondary overflow-hidden">
-          <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${level.progress}%` }} />
         </div>
       </div>
     </div>
   );
 }
 
-function TrendCard({ label, value, unit, delta, data, onClick }: {
-  label: string; value: string; unit: string; delta?: number | null; data: number[]; onClick?: () => void;
+function TrendCard({ label, value, unit, delta, data }: {
+  label: string; value: string; unit: string; delta?: number | null; data: number[];
 }) {
   const isPos = (delta ?? 0) > 0;
   const isNeg = (delta ?? 0) < 0;
   const deltaText = delta != null ? `${delta > 0 ? '+' : ''}${delta.toFixed(1)}${unit}` : null;
   return (
-    <button onClick={onClick} className="w-full text-left rounded-2xl p-4 bg-card border border-border transition-colors active:scale-[0.99]">
+    <div className="w-full text-left rounded-2xl p-4 bg-card border border-border">
       <div className="flex items-center justify-between">
         <div>
           <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{label}</div>
@@ -162,17 +102,6 @@ function TrendCard({ label, value, unit, delta, data, onClick }: {
           <Sparkline data={data} />
         </div>
       </div>
-    </button>
-  );
-}
-
-function AchievementBadge({ icon: Icon, label, unlocked }: { icon: React.ComponentType<{ className?: string }>; label: string; unlocked: boolean }) {
-  return (
-    <div className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border ${unlocked ? 'bg-card border-border' : 'bg-secondary border-border opacity-40'}`}>
-      <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${unlocked ? 'bg-primary/10' : 'bg-muted'}`}>
-        <Icon className={`w-4 h-4 ${unlocked ? 'text-primary' : 'text-muted-foreground'}`} />
-      </div>
-      <span className="text-[10px] font-bold text-center leading-tight">{label}</span>
     </div>
   );
 }
@@ -187,14 +116,6 @@ export default function ProfilePage() {
   const [records, setRecords] = useState<BodyDataRecord[]>(
     () => getCached<{ records: BodyDataRecord[] }>(BODY_CACHE)?.records ?? []
   )
-  const [prs, setPrs] = useState<Array<{ exercise: string; weight: number; reps: number; estimated1RM: number }>>(
-    () => getCached<{ records: any[] }>(PR_CACHE)?.records ?? []
-  )
-  const [workoutCount, setWorkoutCount] = useState(0)
-  const [streak, setStreak] = useState(0)
-
-  const [activeMetric, setActiveMetric] = useState<MetricConfig | null>(null)
-  const [editorOpen, setEditorOpen] = useState(false)
 
   const user = session?.user
 
@@ -216,37 +137,6 @@ export default function ProfilePage() {
     }
   }, [status]);
 
-  // Load PRs
-  useEffect(() => {
-    if (status !== "authenticated") return;
-    const cached = getCached<{ records: any[] }>(PR_CACHE);
-    if (cached) setPrs(cached.records ?? []);
-    fetch(PR_CACHE, { credentials: "include" })
-      .then(r => r.ok ? r.json() : null)
-      .then(d => { if (d) { setCached(PR_CACHE, d); setPrs(d.records ?? []); } })
-      .catch(() => {});
-  }, [status]);
-
-  // Load workouts for streak & level
-  useEffect(() => {
-    if (status !== "authenticated") return;
-    const cached = getCached<{ data: Array<{ date: string }> }>(WORKOUT_CACHE);
-    const data = cached?.data ?? [];
-    setWorkoutCount(data.length);
-    setStreak(computeStreak(data));
-    fetch(WORKOUT_CACHE, { credentials: "include" })
-      .then(r => r.ok ? r.json() : null)
-      .then(d => {
-        if (d) {
-          setCached(WORKOUT_CACHE, d);
-          const w = d.data ?? [];
-          setWorkoutCount(w.length);
-          setStreak(computeStreak(w));
-        }
-      })
-      .catch(() => {});
-  }, [status]);
-
   // Fresh avatar
   useEffect(() => {
     if (status !== 'authenticated') return
@@ -255,8 +145,6 @@ export default function ProfilePage() {
       .then(d => setFreshAvatar(d?.user?.avatar ?? null))
       .catch(() => {})
   }, [status])
-
-  const level = useMemo(() => computeLevel(workoutCount), [workoutCount]);
 
   const weightInfo = findLatestMetric(records, "weight");
   const bodyFatInfo = findLatestMetric(records, "bodyFat");
@@ -270,30 +158,6 @@ export default function ProfilePage() {
   const bodyFatTrend = useMemo(() => {
     return records.filter(r => r.bodyFat != null).map(r => r.bodyFat!).reverse();
   }, [records]);
-
-  const openEditor = (metric: MetricConfig) => { setActiveMetric(metric); setEditorOpen(true); };
-
-  const handleSave = async (value: number) => {
-    if (!activeMetric) return;
-    const metricKey = activeMetric.key as keyof BodyDataRecord;
-    const todayISO = startOfLocalDay(new Date()).toISOString();
-    const todayRecord = findRecordByLocalDay(records, new Date());
-    try {
-      if (todayRecord?.id) {
-        await fetch(`/api/body-data/${todayRecord.id}`, {
-          method: "PATCH", headers: { "Content-Type": "application/json" }, credentials: "include",
-          body: JSON.stringify({ [metricKey]: value }),
-        });
-      } else {
-        await fetch("/api/body-data", {
-          method: "POST", headers: { "Content-Type": "application/json" }, credentials: "include",
-          body: JSON.stringify({ date: todayISO, [metricKey]: value }),
-        });
-      }
-      const res = await fetch(BODY_CACHE, { credentials: "include" });
-      if (res.ok) { const d = await res.json(); setCached(BODY_CACHE, d); setRecords(d.records ?? []); }
-    } catch (err) { logger.error("Save error:", err); toast({ message: "保存失败", type: "error" }); }
-  };
 
   const handleLogout = async () => {
     setLoggingOut(true)
@@ -314,7 +178,7 @@ export default function ProfilePage() {
 
   const menuItems = [
     { icon: User, label: '个人资料', desc: '查看和编辑个人信息', path: '/profile/edit' },
-    { icon: Flame, label: '营养目标', desc: '设置每日热量和宏量目标', path: '/settings?tab=nutrition' },
+    { icon: TrendingUp, label: '营养目标', desc: '设置每日热量和宏量目标', path: '/settings?tab=nutrition' },
     { icon: Bell, label: '通知设置', desc: '训练提醒和系统通知', path: '/settings?tab=notifications' },
     { icon: Shield, label: '账号安全', desc: '修改密码和隐私设置', path: '/settings?tab=security' },
     { icon: Calendar, label: '训练目标', desc: '设置周训练计划和目标', path: '/goals' },
@@ -332,8 +196,6 @@ export default function ProfilePage() {
               name={user.name}
               email={user.email}
               avatar={(freshAvatar ?? user.avatar) as string | null}
-              streak={streak}
-              level={level}
             />
 
             {/* ═══════ Body Trends (trend card + sparkline) ═══════ */}
@@ -344,66 +206,13 @@ export default function ProfilePage() {
                 unit="kg"
                 delta={weightDelta}
                 data={weightTrend.length >= 2 ? weightTrend : [70, 70]}
-                onClick={() => { const w = METRICS.find(m => m.key === 'weight'); if (w) openEditor(w); }}
               />
               <TrendCard
                 label="体脂"
                 value={bodyFatInfo?.value != null ? bodyFatInfo.value.toFixed(1) : '—'}
                 unit="%"
                 data={bodyFatTrend.length >= 2 ? bodyFatTrend : [20, 20]}
-                onClick={() => { const m = METRICS.find(m => m.key === 'bodyFat'); if (m) openEditor(m); }}
               />
-            </div>
-
-            {/* ═══════ PR Section ═══════ */}
-            <div className="rounded-2xl p-4 bg-card border border-border">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <Trophy className="w-4 h-4 text-primary" />
-                  <h2 className="text-sm font-bold">个人最佳</h2>
-                </div>
-                <button onClick={() => router.push('/analytics')} className="text-[11px] font-bold text-primary">
-                  查看全部
-                </button>
-              </div>
-              {prs.length > 0 ? (
-                <div className="space-y-2">
-                  {prs.slice(0, 3).map((pr, i) => (
-                    <div key={pr.exercise} className="flex items-center justify-between py-2 border-b border-border last:border-0">
-                      <div className="flex items-center gap-2">
-                        <span className={`w-5 h-5 rounded-md flex items-center justify-center text-[10px] font-black ${i === 0 ? 'bg-primary/10 text-primary' : 'bg-secondary text-muted-foreground'}`}>
-                          {i + 1}
-                        </span>
-                        <span className="text-sm font-medium">{pr.exercise}</span>
-                      </div>
-                      <div className="text-right">
-                        <span className="text-sm font-bold">{pr.weight}kg × {pr.reps}次</span>
-                        <span className="text-[10px] text-muted-foreground ml-1">1RM ≈ {Math.round(pr.estimated1RM)}kg</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-xs text-muted-foreground py-2">完成训练后自动生成</p>
-              )}
-            </div>
-
-            {/* ═══════ Achievements ═══════ */}
-            <div className="rounded-2xl p-4 bg-card border border-border">
-              <div className="flex items-center gap-2 mb-3">
-                <Award className="w-4 h-4 text-primary" />
-                <h2 className="text-sm font-bold">成就</h2>
-              </div>
-              <div className="grid grid-cols-4 gap-2">
-                <AchievementBadge icon={Flame} label="连续训练" unlocked={streak >= 3} />
-                <AchievementBadge icon={Dumbbell} label="百次训练" unlocked={workoutCount >= 100} />
-                <AchievementBadge icon={Trophy} label="突破PR" unlocked={prs.length > 0} />
-                <AchievementBadge icon={Target} label="目标达成" unlocked={workoutCount >= 10} />
-                <AchievementBadge icon={TrendingUp} label="持之以恒" unlocked={streak >= 7} />
-                <AchievementBadge icon={Zap} label="力量爆发" unlocked={prs.some(p => p.estimated1RM >= 100)} />
-                <AchievementBadge icon={Calendar} label="月度达人" unlocked={workoutCount >= 20} />
-                <AchievementBadge icon={Award} label="精英会员" unlocked={level.level >= 5} />
-              </div>
             </div>
 
             {/* Theme Toggle */}
@@ -467,7 +276,7 @@ export default function ProfilePage() {
             </button>
 
             <p className="text-center text-xs text-muted-foreground pb-4">
-              XFITX v1.0.0 · AI 健身私人教练
+              XFITX v1.0.0 · 智能健身系统
             </p>
           </div>
         ) : (
@@ -484,16 +293,6 @@ export default function ProfilePage() {
         )}
       </PageContent>
 
-      {activeMetric && (
-        <MetricEditorSheet
-          open={editorOpen}
-          onOpenChange={setEditorOpen}
-          metric={activeMetric}
-          latestValue={findLatestMetric(records, activeMetric.key as keyof BodyDataRecord)?.value ?? null}
-          latestDateText={findLatestMetric(records, activeMetric.key as keyof BodyDataRecord)?.date ? formatTimeText(findLatestMetric(records, activeMetric.key as keyof BodyDataRecord)!.date) : null}
-          onSave={handleSave}
-        />
-      )}
     </PageShell>
   )
 }

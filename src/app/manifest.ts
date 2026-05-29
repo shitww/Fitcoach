@@ -2,7 +2,7 @@ import type { MetadataRoute } from 'next'
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'XFITX - AI 健身私人教练',
+    name: 'XFITX - 智能健身系统',
     short_name: 'XFITX',
     description: '智能健身训练记录与数据分析',
     start_url: '/',
@@ -28,9 +28,9 @@ export default function manifest(): MetadataRoute.Manifest {
         icons: [{ src: '/icon', sizes: '96x96' }],
       },
       {
-        name: 'AI 教练',
-        short_name: 'AI',
-        description: '与 AI 私人教练对话',
+        name: '智能教练',
+        short_name: '教练',
+        description: '与智能私人教练对话',
         url: '/chat',
         icons: [{ src: '/icon', sizes: '96x96' }],
       },

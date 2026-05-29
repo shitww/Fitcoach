@@ -6,3 +6,6 @@ export type { RestTimerProjection, RestPhase } from "./useRestTimerProjection";
 
 export { useWorkoutMetricsProjection } from "./useWorkoutMetricsProjection";
 export type { WorkoutMetricsProjection, SyncState } from "./useWorkoutMetricsProjection";
+
+export { useAIObserver, useAISuggestions, useAIVoiceLog } from "./useAIObserver";
+export type { AIInsight, AIObserverState } from "./useAIObserver";

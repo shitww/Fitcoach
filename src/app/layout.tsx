@@ -21,7 +21,7 @@ const spaceGrotesk = Space_Grotesk({
 })
 
 export const metadata: Metadata = {
-  title: "XFITX - AI 健身私人教练",
+  title: "XFITX - 智能健身系统",
   description: "智能健身训练记录与数据分析",
   applicationName: "XFITX",
   appleWebApp: {

@@ -7,8 +7,7 @@ import { useRouter } from "next/navigation";
 import { 
   ArrowLeft, Activity, Trophy, Zap, Target, Clock, 
   Dumbbell, Flame, CheckCircle, AlertTriangle,
-  Calendar, Loader2, BookOpen,
-  Edit2, Save, X, RefreshCw
+  Calendar, Loader2, BookOpen
 } from 'lucide-react';
 import { logger } from "@/lib/logger";
 import { SkeletonCard } from '@/components/Skeleton';
@@ -68,16 +67,9 @@ function SummaryContent() {
   const workoutId = searchParams.get("id");
   const prsParam = searchParams.get("prs");
 
-  const [aiFeedback, setAiFeedback] = useState<AIResponse | null>(null);
-  const [feedbackStatus, setFeedbackStatus] = useState<'checking'|'none'|'generating'|'done'>('checking');
   const [fetching, setFetching] = useState(true);
   const [workout, setWorkout] = useState<Workout | null>(null);
   const [newPRs, setNewPRs] = useState<PRRecord[]>([]);
-  // Edit mode
-  const [editMode, setEditMode] = useState(false);
-  const [editedSets, setEditedSets] = useState<Record<string, { weight: number; reps: number; rir: number; isFailure: boolean }>>({});
-  const [editedNotes, setEditedNotes] = useState('');
-  const [saveLoading, setSaveLoading] = useState(false);
 
   // 从 URL 参数解析 PRs
   useEffect(() => {
@@ -200,85 +192,6 @@ function SummaryContent() {
   const isCardioRecord = !!workout && workout.exercises.some((ex: any) =>
     ex.sets.some((s: any) => s.isCardio));
 
-  // Build payload for AI generation
-  const buildPayload = (w: Workout) => {
-    if (isFreeRecord) return { workoutId: workoutId!, workoutType: 'free', duration: w.duration, notes: w.notes };
-    if (isCardioRecord) {
-      const ex0 = w.exercises[0];
-      const s0 = ex0?.sets[0] as any;
-      const machineName = ex0?.name?.toLowerCase().includes('stair') ? 'stairclimber' : 'treadmill';
-      let notesData: any = {};
-      try { notesData = w.notes ? JSON.parse(w.notes) : {}; } catch {}
-      return { workoutId: workoutId!, workoutType: 'cardio', duration: w.duration, cardioData: { machine: notesData.activity ?? machineName, speed: notesData.speed ?? s0?.weight ?? 0, incline: notesData.incline ?? 0, level: notesData.level ?? 0, distance: notesData.distance ?? s0?.weight ?? 0, calories: notesData.calories ?? s0?.rir ?? 0 } };
-    }
-    const totalSets = w.exercises.reduce((s, ex) => s + ex.sets.length, 0);
-    const maxWeight = w.exercises.reduce((m, ex) => ex.sets.reduce((mm, s) => Math.max(mm, s.weight), m), 0);
-    return { workoutId: workoutId!, workoutType: 'strength', duration: w.duration, totalVolume: w.totalVolume, totalSets, maxWeight, exercises: w.exercises };
-  };
-
-  // Check feedback cache, then auto-generate if nothing cached
-  useEffect(() => {
-    if (!workout || !workoutId) return;
-    setFeedbackStatus('checking');
-    fetch(`/api/analysis/workout-feedback?workoutId=${workoutId}`, { credentials: 'include' })
-      .then(r => r.json())
-      .then(d => {
-        if (d.cached && d.feedback) { setAiFeedback(d.feedback); setFeedbackStatus('done'); }
-        else autoGenerate(workout);
-      })
-      .catch(() => autoGenerate(workout));
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [workout]);
-
-  const autoGenerate = async (w: Workout) => {
-    setFeedbackStatus('generating');
-    try {
-      const r = await fetch('/api/analysis/workout-feedback', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        credentials: 'include', body: JSON.stringify(buildPayload(w)),
-      });
-      const data = await r.json();
-      if (data.success && data.feedback?.coach) { setAiFeedback(data.feedback); setFeedbackStatus('done'); }
-      else setFeedbackStatus('none');
-    } catch {
-      setFeedbackStatus('none');
-    }
-  };
-
-  const handleGenerateFeedback = async () => {
-    if (!workout) return;
-    autoGenerate(workout);
-  };
-
-  // Enter edit mode
-  const enterEdit = () => {
-    if (!workout) return;
-    const map: Record<string, { weight: number; reps: number; rir: number; isFailure: boolean }> = {};
-    workout.exercises.forEach(ex => ex.sets.forEach(s => { map[s.id] = { weight: s.weight, reps: s.reps, rir: s.rir ?? 0, isFailure: s.isFailure }; }));
-    setEditedSets(map);
-    setEditedNotes(workout.notes ?? '');
-    setEditMode(true);
-  };
-
-  // Save edits
-  const saveEdit = async () => {
-    if (!workout || !workoutId) return;
-    setSaveLoading(true);
-    try {
-      const sets = Object.entries(editedSets).map(([id, v]) => ({ id, ...v }));
-      const r = await fetch(`/api/workout?id=${workoutId}`, {
-        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-        credentials: 'include', body: JSON.stringify({ notes: editedNotes, sets }),
-      });
-      if (r.ok) {
-        const d = await r.json();
-        setWorkout(d.data);
-        setEditMode(false);
-        setAiFeedback(null);
-        setFeedbackStatus('none');
-      }
-    } finally { setSaveLoading(false); }
-  };
 
 
 
@@ -366,24 +279,7 @@ function SummaryContent() {
       <PageHeader
         title="训练总结"
         onBack={() => router.push('/')}
-        action={
-          !isFreeRecord && !isCardioRecord ? (
-            editMode ? (
-              <div className="flex gap-2">
-                <button onClick={() => setEditMode(false)} className="px-3 py-2 rounded-xl text-sm flex items-center gap-1.5 bg-secondary border border-border text-muted-foreground">
-                  <X className="w-3.5 h-3.5" />取消
-                </button>
-                <button onClick={saveEdit} disabled={saveLoading} className="px-3 py-2 rounded-xl text-sm font-bold flex items-center gap-1.5 bg-primary text-primary-foreground hover:bg-primary/90">
-                  {saveLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}保存
-                </button>
-              </div>
-            ) : (
-              <button onClick={enterEdit} className="px-3 py-2 rounded-xl text-sm flex items-center gap-1.5 bg-secondary border border-border text-foreground">
-                <Edit2 className="w-3.5 h-3.5" />编辑
-              </button>
-            )
-          ) : undefined
-        }
+        action={undefined}
       />
       <PageContent>
 
@@ -492,70 +388,16 @@ function SummaryContent() {
           </div>
         )}
 
-        {/* AI Feedback */}
-        <div className="rounded-2xl p-6 mb-8 bg-card border border-border">
-          <div className="flex items-center justify-between gap-3 mb-6">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-primary/10">
-                {isFreeRecord ? <BookOpen className="w-5 h-5 text-primary" /> : isCardioRecord ? <Flame className="w-5 h-5 text-primary" /> : <Zap className="w-5 h-5 text-primary" />}
-              </div>
-              <div>
-                <h3 className="text-lg font-black text-primary">
-                  {isFreeRecord ? 'AI 智能解读' : 'AI 教练反馈'}
-                </h3>
-                {feedbackStatus === 'done' && (
-                  <div className="text-[11px] mt-0.5 text-muted-foreground">已缓存 · 编辑后可重新生成</div>
-                )}
-              </div>
-            </div>
-            {feedbackStatus === 'done' && (
-              <button onClick={handleGenerateFeedback} className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-secondary border border-border text-muted-foreground hover:bg-muted transition-colors">
-                <RefreshCw className="w-3 h-3" />重新生成
-              </button>
-            )}
-          </div>
-          {(feedbackStatus === 'checking' || feedbackStatus === 'generating' || fetching) ? (
-            <div>
-              <SkeletonCard />
-              <p className="text-xs text-center mt-2 text-muted-foreground">
-                {feedbackStatus === 'generating' ? 'AI 教练分析中…' : '读取缓存…'}
-              </p>
-            </div>
-          ) : feedbackStatus === 'none' ? (
-            <div className="text-center py-4">
-              <p className="text-sm mb-4 text-muted-foreground">AI 分析暂时不可用</p>
-              <button onClick={handleGenerateFeedback}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm mx-auto text-primary-foreground bg-primary hover:bg-primary/90">
-                <RefreshCw className="w-3.5 h-3.5" />重试
-              </button>
-            </div>
-          ) : aiFeedback?.coach ? (
-            <p className="text-sm leading-relaxed whitespace-pre-wrap text-foreground">
-              {aiFeedback.coach}
-            </p>
-          ) : null}
-        </div>
-
         {/* Training Notes — hide for free records (already shown in the record card above) */}
-        {(workout.notes || editMode) && !isFreeRecord && (
-          <div className={`rounded-2xl p-6 mb-8 bg-card border ${editMode ? 'border-primary/30' : 'border-border'}`}>
+        {workout.notes && !isFreeRecord && (
+          <div className="rounded-2xl p-6 mb-8 bg-card border border-border">
             <div className="flex items-center gap-3 mb-4">
               <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-primary/10">
                 <BookOpen className="w-5 h-5 text-primary" />
               </div>
               <h3 className="text-lg font-black text-primary">训练心得</h3>
             </div>
-            {editMode ? (
-              <textarea
-                value={editedNotes}
-                onChange={e => setEditedNotes(e.target.value)}
-                rows={4}
-                placeholder="写下本次训练感受、注意事项…"
-                className="w-full rounded-xl px-4 py-3 text-sm outline-none resize-none bg-secondary border border-border text-foreground"
-              />
-            ) : (
-              <div className="text-sm text-foreground">{workout.notes}</div>
-            )}
+            <div className="text-sm text-foreground">{workout.notes}</div>
           </div>
         )}
 
@@ -586,24 +428,7 @@ function SummaryContent() {
                       {ex.name.split(' (')[0]}
                     </div>
                     <div className="text-xs mt-0.5 truncate text-muted-foreground">
-                      {editMode && !isWarmupEx && !isCardioEx ? (
-                        ex.sets.map((set: any, si: number) => {
-                          const draft = editedSets[set.id] ?? { weight: set.weight, reps: set.reps, rir: set.rir ?? 0, isFailure: set.isFailure };
-                          return (
-                            <span key={si} className="inline-flex items-center gap-1 mr-2">
-                              <span className="text-muted-foreground">{si + 1}.</span>
-                              {!set.isBodyweight && (
-                                <input type="text" inputMode="decimal" value={draft.weight}
-                                  onChange={e => setEditedSets(p => ({ ...p, [set.id]: { ...p[set.id], weight: Number(e.target.value) } }))}
-                                  className="w-12 text-xs text-center font-bold bg-transparent outline-none border-b border-primary text-foreground" />
-                              )}
-                              <input type="text" inputMode="numeric" value={draft.reps}
-                                onChange={e => setEditedSets(p => ({ ...p, [set.id]: { ...p[set.id], reps: Number(e.target.value) } }))}
-                                className="w-10 text-xs text-center font-bold bg-transparent outline-none border-b border-primary text-foreground" />
-                            </span>
-                          );
-                        })
-                      ) : isCardioEx ? (
+                      {isCardioEx ? (
                         (() => {
                           const s = ex.sets[0] as any;
                           const parts: string[] = [];
@@ -622,21 +447,10 @@ function SummaryContent() {
                       )}
                     </div>
                   </div>
-                  {vol > 0 && !editMode && (
+                  {vol > 0 && (
                     <div className="text-xs font-bold shrink-0 text-muted-foreground">
                       {vol}kg
                     </div>
-                  )}
-                  {editMode && !isWarmupEx && !isCardioEx && (
-                    <button onClick={() => setEditedSets(p => {
-                      const s0 = ex.sets[0] as any;
-                      const d = p[s0?.id];
-                      if (!d) return p;
-                      return { ...p, [s0.id]: { ...d, isFailure: !d.isFailure } };
-                    })}
-                      className="px-2 py-0.5 rounded-full text-xs shrink-0 bg-secondary text-muted-foreground border border-border">
-                      力竭
-                    </button>
                   )}
                 </div>
               );

@@ -35,7 +35,7 @@ export default function UnauthenticatedContent() {
             欢迎使用 XFITX
           </h2>
           <p className="text-base mb-8 max-w-md mx-auto leading-relaxed" style={{ color: t.textSec }}>
-            智能健身训练记录与 AI 分析系统<br />记录每一次进步，助你达成目标
+            智能健身训练记录与进展追踪系统<br />记录每一次进步，助你达成目标
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center max-w-sm mx-auto">
             <button

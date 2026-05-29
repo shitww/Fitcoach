@@ -10,7 +10,6 @@ import { EmptyState } from '@/components/EmptyState'
 import { PageShell, PageHeader, PageContent } from "@/components/layout"
 import {
   BodyIntelligenceSurface,
-  ReadinessBalance,
   ProgressionVelocity,
 } from '@/components/runtime-analytics'
 
@@ -99,13 +98,6 @@ export default function AnalyticsPage() {
   const consistencyScore = Math.min(1, records.length / 20)
   const fatigueTrend: 'rising' | 'falling' | 'stable' = records.length > 10 ? 'rising' : records.length > 5 ? 'stable' : 'falling'
 
-  const muscles = [
-    { name: '胸部', readiness: 0.82, lastTrained: '2天前' },
-    { name: '背部', readiness: 0.65, lastTrained: '1天前' },
-    { name: '腿部', readiness: 0.45, lastTrained: '今天' },
-    { name: '肩部', readiness: 0.78, lastTrained: '3天前' },
-  ]
-
   return (
     <PageShell>
       <PageHeader
@@ -127,11 +119,6 @@ export default function AnalyticsPage() {
                 : '开始训练，建立你的力量基线'
             }
           />
-        )}
-
-        {/* Muscle Readiness Balance */}
-        {!loading && records.length > 0 && (
-          <ReadinessBalance muscles={muscles} />
         )}
 
         {/* Search */}

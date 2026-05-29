@@ -1,0 +1,146 @@
+# FitCoach Design System — AI Code Generation Guardrail
+
+description: Enforces simplified 3-layer public API for all UI code generation
+globs: ["src/**/*.tsx", "src/**/*.ts", "src/**/*.css"]
+
+---
+
+## NON-NEGOTIABLE RULE
+
+The FitCoach design system has ONLY 3 public concepts.
+
+1. **theme** — semantic tokens (bg-background, text-foreground, etc.)
+2. **ui** — primitive components and contracts
+3. **viz** — ONE function: `useDesignViz(domain, value)`
+
+If you need a color → **default to THEME DOMAIN ONLY**
+If you need a viz color → **use `useDesignViz()` ONLY**
+
+---
+
+## Mental Model (15 Seconds)
+
+```
+Need a UI color?    → use theme tokens
+Need a layout?      → use ui primitives
+Need a health viz?  → use useDesignViz()
+```
+
+That's it. No renderer, no registry, no scale, no mapper.
+Those are internal. You never import them.
+
+---
+
+## Public API Reference
+
+### Theme
+```tsx
+// Allowed
+<div className="bg-card border border-border rounded-xl p-4">
+  <h2 className="text-foreground font-bold">Title</h2>
+  <p className="text-muted-foreground">Description</p>
+</div>
+```
+
+**Allowed tokens:** `bg-background`, `text-foreground`, `border-border`, `bg-card`, `bg-muted`, `text-muted-foreground`, `bg-primary`, `text-primary-foreground`, `bg-accent`, `text-accent-foreground`, `bg-destructive`, `text-destructive-foreground`, `bg-success`, `text-success-foreground`, `bg-warning`, `text-warning-foreground`
+
+**Forbidden:** `text-white`, `bg-black`, `bg-zinc-950`, `text-gray-400`, `#FFFFFF`, `rgba(255,255,255,0.3)`
+
+### UI Primitives
+```tsx
+import { PRIMITIVE_COLOR_MAP, PrimitiveVariant } from "@/design-system/ui";
+```
+
+### Visualization (ONLY this)
+```tsx
+import { useDesignViz } from "@/design-system/viz";
+
+const visual = useDesignViz("fatigue", 75);
+// visual.tailwind.bg  → "bg-warning/40"
+// visual.tailwind.text → "text-warning"
+// visual.surface       → CSS color string
+
+<div className={visual.tailwind.bg}>
+  <span className={visual.tailwind.text}>High Fatigue</span>
+</div>
+```
+
+**❌ FORBIDDEN (will fail lint + scanner):**
+```tsx
+import { renderVisualState } from "@/design-system/visualization/core/renderer"
+import { mapFatigueToScale } from "@/design-system/visualization/domains/fatigue"
+import { getDomain } from "@/design-system/visualization/registry"
+import { fatiguePalette } from "@/design-system/visualization/fatigue"
+```
+
+---
+
+## Before Generating Code
+
+Ask yourself ONE question:
+
+> Is this color describing a physiological/business state?
+
+- **No** → Use theme tokens
+- **Yes** → Use `useDesignViz()`
+
+---
+
+## Violation Examples (NEVER GENERATE)
+
+```tsx
+// ❌ WRONG: hardcoded colors
+<div className="bg-zinc-950 text-white">
+
+// ❌ WRONG: viz color in UI
+<button className="bg-orange-500">Start Workout</button>
+
+// ❌ WRONG: direct internal viz import
+import { renderVisualState } from "@/design-system/visualization/core/renderer";
+
+// ❌ WRONG: inline hex
+<div style={{ background: '#0a0a0a' }}>
+
+// ❌ WRONG: rgba without semantic var
+<div style={{ color: 'rgba(255,255,255,0.4)' }}>
+```
+
+---
+
+## File Location Rules (Phase 13)
+
+| File Path | Allowed Imports |
+|-----------|---------------|
+| `src/design-system/theme/*` | Theme only |
+| `src/design-system/ui/*` | Theme, Primitive |
+| `src/design-system/viz/*` | Visualization internals (registry, renderer) |
+| `src/components/**` | `@/design-system/theme`, `@/design-system/ui`, `@/design-system/viz` |
+| `src/app/**` | `@/design-system/theme`, `@/design-system/ui`, `@/design-system/viz` |
+
+**Critical:** Components in `src/components/` and `src/app/` may ONLY import from the 3 public APIs (`theme/`, `ui/`, `viz/`). Never from `visualization/`, `primitives/`, or `core/`.
+
+---
+
+## Consequence of Violation
+
+If you generate code that violates these rules:
+1. CI will fail (`pnpm lint`)
+2. Boundary scanner will fail (`npx tsx scripts/enforce-design-boundaries.ts`)
+3. Cognitive load scanner will fail (`npx tsx scripts/check-cognitive-load.ts`)
+4. Theme will break for dark OR light mode
+5. Future AI edits will compound the damage
+
+**When in doubt, use the most restrictive option (Theme token).**
+
+---
+
+## Simplicity Principle
+
+Prefer mental simplicity over architectural cleverness.
+
+If you find yourself needing:
+- multiple imports from design-system
+- complex viz configuration
+- custom renderers or scales
+
+→ You are over-engineering. Use `useDesignViz()` and move on.

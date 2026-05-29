@@ -27,41 +27,7 @@ export default function GoalsPage() {
     targetWeight: '',
     targetReps: ''
   })
-  const [weeklyProgress, setWeeklyProgress] = useState(0)
-  const [weekStart, setWeekStart] = useState('')
-  const [weekEnd, setWeekEnd] = useState('')
-
   const user = session?.user
-
-  // 计算本周日期范围 + 获取真实训练次数
-  useEffect(() => {
-    const today = new Date()
-    const dayOfWeek = today.getDay()
-    const diff = today.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1)
-    const start = new Date(today)
-    start.setDate(diff)
-    start.setHours(0, 0, 0, 0)
-    const end = new Date(start)
-    end.setDate(start.getDate() + 6)
-    end.setHours(23, 59, 59, 999)
-
-    setWeekStart(start.toLocaleDateString('zh-CN'))
-    setWeekEnd(end.toLocaleDateString('zh-CN'))
-
-    if (status === 'authenticated') {
-      fetch('/api/workout?limit=50', { credentials: 'include' })
-        .then(r => r.ok ? r.json() : null)
-        .then(json => {
-          if (!json) return
-          const count = (json.data || []).filter((w: { date: string }) => {
-            const d = new Date(w.date)
-            return d >= start && d <= end
-          }).length
-          setWeeklyProgress(count)
-        })
-        .catch(err => logger.warn('本周训练次数获取失败:', err))
-    }
-  }, [status])
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target
@@ -133,50 +99,6 @@ export default function GoalsPage() {
         }
       />
       <PageContent>
-
-        {/* Weekly Progress */}
-        <div className="rounded-2xl p-6 mb-6 bg-card border border-border">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h2 className="text-lg font-bold">本周训练进度</h2>
-              <p className="text-sm mt-1 text-muted-foreground">
-                {weekStart} - {weekEnd}
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="font-bold text-lg text-primary">
-                {weeklyProgress}/{goals.weeklyWorkouts}
-              </span>
-              <span className="text-sm text-muted-foreground">次</span>
-            </div>
-          </div>
-          
-          <div className="w-full h-3 rounded-full bg-muted">
-            <div
-              className="h-full rounded-full transition-all bg-primary"
-              style={{ width: `${Math.min((weeklyProgress / goals.weeklyWorkouts) * 100, 100)}%` }}
-            />
-          </div>
-          
-          <div className="grid grid-cols-3 gap-4 mt-6">
-            <div className="text-center">
-              <div className="text-2xl font-black text-primary">{weeklyProgress}</div>
-              <div className="text-xs mt-1 text-muted-foreground">已完成</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-black text-primary/70">
-                {Math.max(0, goals.weeklyWorkouts - weeklyProgress)}
-              </div>
-              <div className="text-xs mt-1 text-muted-foreground">剩余</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-black text-primary">
-                {Math.round((weeklyProgress / goals.weeklyWorkouts) * 100)}%
-              </div>
-              <div className="text-xs mt-1 text-muted-foreground">完成率</div>
-            </div>
-          </div>
-        </div>
 
         {/* Goal Settings */}
         <div className="rounded-2xl p-6 mb-6 bg-card border border-border">

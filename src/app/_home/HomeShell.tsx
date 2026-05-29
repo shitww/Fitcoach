@@ -24,7 +24,7 @@ export default function HomeShell({ children }: Props) {
           </svg>
           <div className="w-px h-4 bg-border" />
           <span className="text-[10px] font-bold tracking-[0.25em] text-muted-foreground uppercase">
-            AI Coach
+            Training System
           </span>
         </div>
         <button

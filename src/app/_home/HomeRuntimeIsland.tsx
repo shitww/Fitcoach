@@ -17,12 +17,11 @@ function getHeadline(quickEntry: DashboardBootstrap["quickEntry"]) {
   return "准备好训练了吗";
 }
 
-function getSubheadline(quickEntry: DashboardBootstrap["quickEntry"], recovery: DashboardBootstrap["recovery"]) {
-  if (quickEntry.todayDone) return quickEntry.coachInsight || "恢复中，明天继续";
-  if (recovery.fatigueLevel === "high") return "疲劳较高，建议轻量恢复";
-  if (recovery.fatigueLevel === "medium") return "状态良好，可以训练";
-  if (recovery.daysSinceLastWorkout > 3) return "几天没练了，动起来吧";
-  return quickEntry.coachInsight || "保持节奏，继续进步";
+function getSubheadline(quickEntry: DashboardBootstrap["quickEntry"]) {
+  if (quickEntry.todayDone) return "好好休息，明天继续";
+  if (quickEntry.isRestDay) return "享受你的休息日";
+  if (quickEntry.todayPlanDay) return `今日计划：${quickEntry.todayPlanDay.exercises.length} 个动作`;
+  return "开始今天的训练";
 }
 
 export default function HomeRuntimeIsland({ bootstrap }: Props) {
@@ -30,13 +29,13 @@ export default function HomeRuntimeIsland({ bootstrap }: Props) {
   const { isTrainingActive, isPaused } = useWorkoutTimer();
   const hasActiveSession = isTrainingActive || isPaused;
 
-  const { quickEntry, recovery } = bootstrap;
+  const { quickEntry } = bootstrap;
 
   return (
     <div className="pb-6">
       <RuntimeHero
         headline={getHeadline(quickEntry)}
-        subheadline={getSubheadline(quickEntry, recovery)}
+        subheadline={getSubheadline(quickEntry)}
         onStart={() => router.push("/workout")}
         isTrainingActive={hasActiveSession}
         onResume={() => router.push("/workout")}

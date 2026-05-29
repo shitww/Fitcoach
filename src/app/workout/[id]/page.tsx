@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { ArrowLeft, Edit, Trash2, Calendar, Clock, Dumbbell, Flame, AlertCircle, Zap, RefreshCw, Activity, Trophy } from 'lucide-react';
+import { ArrowLeft, Edit, Trash2, Calendar, Clock, Dumbbell, Flame, AlertCircle, Activity, Trophy } from 'lucide-react';
 import { logger } from "@/lib/logger";
 import { SkeletonList, SkeletonStatGrid } from '@/components/Skeleton';
 import { EmptyState } from '@/components/EmptyState';
@@ -14,40 +14,7 @@ export default function WorkoutDetailPage() {
   const [workout, setWorkout] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
-  const [aiFeedback, setAiFeedback] = useState<string | null>(null);
-  const [feedbackLoading, setFeedbackLoading] = useState(false);
-  const [feedbackChecked, setFeedbackChecked] = useState(false);
-
   useEffect(() => { fetchWorkout(); }, [params.id]);
-
-  useEffect(() => {
-    if (!params.id) return;
-    fetch(`/api/analysis/workout-feedback?workoutId=${params.id}`, { credentials: 'include' })
-      .then(r => r.json())
-      .then(d => { if (d.cached && d.feedback?.coach) setAiFeedback(d.feedback.coach); })
-      .catch(() => {})
-      .finally(() => setFeedbackChecked(true));
-  }, [params.id]);
-
-  const generateFeedback = async () => {
-    if (!workout || !params.id || feedbackLoading) return;
-    setFeedbackLoading(true);
-    try {
-      const exercises = (workout.exercises || []).map((ex: any) => ({
-        name: ex.name,
-        sets: (ex.sets || []).map((s: any) => ({ weight: s.weight, reps: s.reps, rir: s.rir, isFailure: s.isFailure, isWarmup: s.isWarmup }))
-      }));
-      const totalSets = exercises.reduce((n: number, ex: any) => n + ex.sets.length, 0);
-      const maxWeight = exercises.reduce((m: number, ex: any) => ex.sets.reduce((mm: number, s: any) => Math.max(mm, s.weight || 0), m), 0);
-      const r = await fetch('/api/analysis/workout-feedback', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
-        body: JSON.stringify({ workoutId: params.id, workoutType: 'strength', duration: workout.duration, totalVolume: workout.totalVolume, totalSets, maxWeight, exercises }),
-      });
-      const data = await r.json();
-      if (data.success && data.feedback?.coach) setAiFeedback(data.feedback.coach);
-    } catch (e) { logger.error('feedback generate error:', e); }
-    finally { setFeedbackLoading(false); }
-  };
 
   const fetchWorkout = async () => {
     if (!params.id) return;
@@ -260,42 +227,6 @@ export default function WorkoutDetailPage() {
             )}
           </div>
         ))}
-
-        {/* AI Coach Feedback */}
-        {feedbackChecked && (
-          <div className="rounded-2xl p-5 mb-6 bg-card border border-border">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-lg flex items-center justify-center bg-primary/10">
-                  <Zap className="w-3.5 h-3.5 text-primary" />
-                </div>
-                <span className="text-sm font-bold text-primary">AI 教练反馈</span>
-              </div>
-              {aiFeedback && (
-                <button onClick={generateFeedback} disabled={feedbackLoading}
-                  className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-lg bg-secondary text-muted-foreground border border-border hover:bg-muted transition-colors">
-                  <RefreshCw className="w-3 h-3" />重新生成
-                </button>
-              )}
-            </div>
-            {feedbackLoading ? (
-              <div className="flex items-center gap-2 py-2 text-muted-foreground">
-                <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                <span className="text-sm">AI 分析中…</span>
-              </div>
-            ) : aiFeedback ? (
-              <p className="text-sm leading-relaxed whitespace-pre-wrap text-foreground">{aiFeedback}</p>
-            ) : (
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">暂无 AI 反馈</span>
-                <button onClick={generateFeedback}
-                  className="flex items-center gap-1.5 text-sm font-semibold px-4 py-2 rounded-xl text-primary-foreground bg-primary hover:bg-primary/90 transition-colors">
-                  <Zap className="w-3.5 h-3.5" />生成反馈
-                </button>
-              </div>
-            )}
-          </div>
-        )}
 
         <div className="mt-6 flex justify-center">
           <button onClick={() => router.push('/')}

@@ -88,7 +88,7 @@ export default function BottomTabBar({ active, style }: BottomTabBarProps) {
                   )}
                 </div>
                 <span className={`text-[10px] leading-tight font-${isActive ? 'bold' : 'medium'}`}>
-                  {tab.id === 'training' && isTrainingActive ? '进行中' : tab.label}
+                  {tab.label}
                 </span>
               </Link>
             )
