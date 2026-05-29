@@ -1,67 +1,28 @@
 import { Suspense } from "react"
 import { auth } from "@/lib/auth"
+import { getDashboardBootstrapCached } from "@/lib/dashboard-bootstrap"
 import HomeShell from "./_home/HomeShell"
-import HomeCriticalIsland from "./_home/HomeCriticalIsland"
-import HomeDeferredIsland from "./_home/HomeDeferredIsland"
+import HomeRuntimeIsland from "./_home/HomeRuntimeIsland"
 import UnauthenticatedContent from "./_home/UnauthenticatedContent"
 
-function CriticalSkeleton() {
+function RuntimeSkeleton() {
   return (
-    <div className="space-y-4">
-      {/* Streak */}
-      <div className="rounded-2xl p-4 bg-card border border-border space-y-3 animate-pulse">
-        <div className="flex items-center justify-between">
-          <div className="h-6 w-28 rounded-lg bg-muted" />
-          <div className="h-5 w-20 rounded-full bg-muted" />
+    <div className="space-y-4 animate-pulse px-5">
+      <div className="rounded-3xl p-6 space-y-4" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+        <div className="flex items-center gap-4">
+          <div className="w-[120px] h-[120px] rounded-full" style={{ background: "var(--surface-3)" }} />
+          <div className="space-y-2 flex-1">
+            <div className="h-5 w-32 rounded-md" style={{ background: "var(--surface-3)" }} />
+            <div className="h-3 w-40 rounded-md" style={{ background: "var(--surface-3)" }} />
+          </div>
         </div>
-        <div className="flex gap-1">
-          {Array.from({ length: 14 }).map((_, i) => (
-            <div key={i} className="flex-1 h-1.5 rounded-full bg-muted" />
-          ))}
-        </div>
+        <div className="h-12 rounded-2xl" style={{ background: "var(--surface-3)" }} />
       </div>
-      {/* Hero */}
-      <section className="mb-2 space-y-3">
-        <div className="rounded-2xl p-4 bg-card border border-border space-y-3 animate-pulse">
-          <div className="flex items-center justify-between">
-            <div className="space-y-2">
-              <div className="h-4 w-24 rounded-md bg-muted" />
-              <div className="h-3 w-32 rounded-md bg-muted" />
-            </div>
-            <div className="h-10 w-24 rounded-xl bg-muted" />
-          </div>
-        </div>
-        <div className="grid grid-cols-2 gap-3">
-          <div className="rounded-2xl p-4 bg-card border border-border space-y-2 animate-pulse">
-            <div className="h-3 w-16 rounded-md bg-muted" />
-            <div className="h-8 w-12 rounded-md bg-muted" />
-            <div className="h-1.5 w-full rounded-full bg-muted" />
-          </div>
-          <div className="rounded-2xl p-4 bg-card border border-border space-y-2 animate-pulse">
-            <div className="h-3 w-16 rounded-md bg-muted" />
-            <div className="h-8 w-12 rounded-md bg-muted" />
-            <div className="h-1.5 w-full rounded-full bg-muted" />
-          </div>
-        </div>
-        <div className="flex gap-2 overflow-hidden">
-          {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="flex-shrink-0 rounded-xl px-4 py-2 bg-card border border-border animate-pulse">
-              <div className="h-3 w-16 rounded-md bg-muted" />
-            </div>
-          ))}
-        </div>
-      </section>
-    </div>
-  )
-}
-
-function DeferredSkeleton() {
-  return (
-    <div className="rounded-2xl p-4 bg-card border border-border space-y-3 animate-pulse">
-      <div className="h-4 w-20 rounded-md bg-muted" />
-      <div className="h-8 w-16 rounded-md bg-muted" />
-      <div className="h-1.5 w-full rounded-full bg-muted" />
-      <div className="h-3 w-24 rounded-md bg-muted" />
+      <div className="grid grid-cols-2 gap-2">
+        <div className="rounded-2xl p-4 h-20" style={{ background: "var(--surface)", border: "1px solid var(--border)" }} />
+        <div className="rounded-2xl p-4 h-20" style={{ background: "var(--surface)", border: "1px solid var(--border)" }} />
+      </div>
+      <div className="rounded-2xl p-4 h-32" style={{ background: "var(--surface)", border: "1px solid var(--border)" }} />
     </div>
   )
 }
@@ -71,17 +32,15 @@ export default async function HomePage() {
   const userId = session?.user?.id as string | undefined
   if (!userId) return <UnauthenticatedContent />
 
+  const bootstrap = await getDashboardBootstrapCached(userId).catch(() => null)
+
   return (
     <HomeShell>
-      {/* Layer A — Critical Instant: streak + hero grouped into one streaming unit */}
-      <Suspense fallback={<CriticalSkeleton />}>
-        <HomeCriticalIsland />
-      </Suspense>
-
-      {/* Layer B — Deferred: nutrition data streams after critical paint */}
-      <Suspense fallback={<DeferredSkeleton />}>
-        <HomeDeferredIsland />
-      </Suspense>
+      {bootstrap ? (
+        <HomeRuntimeIsland bootstrap={bootstrap} userId={userId} />
+      ) : (
+        <RuntimeSkeleton />
+      )}
     </HomeShell>
   )
 }

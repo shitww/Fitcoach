@@ -1,0 +1,67 @@
+'use client';
+import { memo } from 'react';
+import { Activity, ArrowRight } from 'lucide-react';
+
+interface RuntimeHeroProps {
+  headline: string;
+  subheadline: string;
+  readinessPct: number;
+  onStart: () => void;
+  isTrainingActive?: boolean;
+  onResume?: () => void;
+}
+
+const RuntimeHero = memo(function RuntimeHero({
+  headline, subheadline, readinessPct, onStart, isTrainingActive, onResume
+}: RuntimeHeroProps) {
+  const R = 56;
+  const circ = 2 * Math.PI * R;
+  const dash = circ * Math.min(1, Math.max(0, readinessPct));
+  const color = readinessPct > 0.7 ? '#34D399' : readinessPct > 0.4 ? '#FBBF24' : '#F87171';
+
+  return (
+    <div className="relative px-5 pt-6 pb-8">
+      <div className="relative rounded-3xl p-6 overflow-hidden"
+        style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
+        {/* Glow */}
+        <div className="absolute -top-10 -right-10 w-40 h-40 rounded-full pointer-events-none"
+          style={{ background: color, opacity: 0.08, filter: 'blur(40px)' }} />
+
+        <div className="flex items-center gap-4">
+          {/* Readiness ring */}
+          <div className="relative flex items-center justify-center" style={{ width: 120, height: 120 }}>
+            <svg width={120} height={120} className="absolute" style={{ transform: 'rotate(-90deg)' }}>
+              <circle cx={60} cy={60} r={R} fill="none" stroke="var(--surface-3)" strokeWidth={8} />
+              <circle cx={60} cy={60} r={R} fill="none" stroke={color} strokeWidth={8}
+                strokeDasharray={dash + ' ' + (circ - dash)} strokeLinecap="round"
+                style={{ transition: 'stroke-dasharray 0.8s ease-out' }} />
+            </svg>
+            <div className="text-center z-10">
+              <p className="text-2xl font-black tabular-nums" style={{ color }}>{Math.round(readinessPct * 100)}</p>
+              <p className="text-[10px] font-bold" style={{ color: 'var(--text-faint)' }}>就绪度</p>
+            </div>
+          </div>
+
+          <div className="flex-1 min-w-0">
+            <h1 className="text-xl font-black leading-tight mb-1" style={{ color: 'var(--text-high)' }}>
+              {headline}
+            </h1>
+            <p className="text-xs leading-relaxed" style={{ color: 'var(--text-low)' }}>{subheadline}</p>
+          </div>
+        </div>
+
+        <button
+          onClick={isTrainingActive ? onResume : onStart}
+          className="mt-5 w-full flex items-center justify-center gap-2 rounded-2xl py-4 font-black text-base transition-all active:scale-[0.97]"
+          style={{ background: 'var(--accent)', color: '#000', boxShadow: '0 0 28px var(--accent-dim)' }}
+        >
+          <Activity className="w-5 h-5" />
+          {isTrainingActive ? '继续训练' : '开始训练'}
+          <ArrowRight className="w-4 h-4" />
+        </button>
+      </div>
+    </div>
+  );
+});
+
+export default RuntimeHero;

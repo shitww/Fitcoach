@@ -37,6 +37,10 @@ export interface ActiveExerciseCardProps {
   contextualTips?: ContextualTip[];
   warmupPlan?: WarmupPlan | null;
   onLogWarmupSet?: (weight: number, reps: number) => void;
+  // V2 Runtime projection
+  recommendedWeight?: number;
+  decisionMessage?: string;
+  fatigueScore?: number;
 }
 
 const RIR_META = [
@@ -92,6 +96,9 @@ const ActiveExerciseCard = memo(function ActiveExerciseCard({
   contextualTips,
   warmupPlan,
   onLogWarmupSet,
+  recommendedWeight,
+  decisionMessage,
+  fatigueScore,
 }: ActiveExerciseCardProps) {
   const [showSecondary, setShowSecondary] = useState(false);
   const [cdActive, setCdActive] = useState(false);
@@ -335,6 +342,31 @@ const ActiveExerciseCard = memo(function ActiveExerciseCard({
           </div>
         )}
       </div>
+
+      {/* ── V2 Runtime projection ── */}
+      {(recommendedWeight != null || decisionMessage) && (
+        <div className="px-5 pt-3 pb-1" style={{ borderBottom: '1px solid var(--border)' }}>
+          <div className="flex items-center gap-3 text-xs">
+            {recommendedWeight != null && recommendedWeight > 0 && (
+              <span style={{ color: 'var(--text-low)' }}>
+                建议: <span className="font-black" style={{ color: 'var(--accent)' }}>{recommendedWeight}kg</span>
+              </span>
+            )}
+            {decisionMessage && (
+              <span className="truncate" style={{ color: 'var(--text-faint)' }}>{decisionMessage}</span>
+            )}
+            {fatigueScore != null && (
+              <span className="ml-auto shrink-0 px-2 py-0.5 rounded-full text-[10px] font-bold"
+                style={{
+                  background: fatigueScore > 50 ? 'rgba(248,113,113,0.1)' : 'rgba(251,191,36,0.08)',
+                  color: fatigueScore > 50 ? '#F87171' : '#FBBF24',
+                }}>
+                疲劳 {fatigueScore.toFixed(0)}
+              </span>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* ── V2 Intelligence layer ── */}
       {warmupPlan && (

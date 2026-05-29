@@ -26,6 +26,11 @@ import SessionRecoveryDialog from '@/components/workout/SessionRecoveryDialog';
 import SetRow from '@/components/workout/SetRow';
 import NumberPad from '@/components/workout/NumberPad';
 import { useWorkoutSession } from '@/stores/workoutSession';
+import { createSessionLoop, createFatigueModel, computeSetResult, computeScore, generateDecision } from '@/lib/workout-runtime/v2';
+import type { V2SessionLog } from '@/lib/workout-runtime/v2';
+import { IntelligenceFeed } from '@/components/workout/intelligence';
+import { WorkoutRuntimeSurface } from '@/components/workout/runtime-surface';
+import type { SurfacePhase } from '@/components/workout/runtime-surface';
 
 // ── Lazy-loaded heavy components (split into separate chunks) ──────────────
 // These are only needed once the user enters an active session.
@@ -474,6 +479,33 @@ export default function WorkoutController() {
   const [numberPadValue, setNumberPadValue] = useState('');
   const [numberPadTarget, setNumberPadTarget] = useState<'weight' | 'reps' | null>(null);
 
+  // ── V2 Runtime projection (pure refs, no UI state mutation) ────────────────
+  const sessionLoopRef = useRef(createSessionLoop());
+  const fatigueModelRef = useRef(createFatigueModel());
+  const [intelligenceLogs, setIntelligenceLogs] = useState<V2SessionLog[]>([]);
+  const [v2Projection, setV2Projection] = useState<{
+    recommendedWeight?: number;
+    decisionMessage?: string;
+    fatigueScore?: number;
+  }>({});
+
+  // ── Surface phase state machine (active | transition | rest | completion) ──
+  const [surfacePhase, setSurfacePhase] = useState<SurfacePhase>('active');
+  const transitionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Monitor rest timer to auto-return to active surface
+  const restSecs = useWorkoutTimer(selectRestSecondsRemaining);
+  useEffect(() => {
+    if (surfacePhase === 'rest' && restSecs <= 0) {
+      startTransition(() => setSurfacePhase('active'));
+    }
+  }, [surfacePhase, restSecs]);
+
+  const handleSkipRest = () => {
+    storeSkipRest();
+    startTransition(() => setSurfacePhase('active'));
+  };
+
   // Suppress SW auto-reload while training to avoid interrupting active sessions
   useEffect(() => {
     if (storeSessionPhase === 'active' || storeSessionPhase === 'paused') {
@@ -705,6 +737,13 @@ export default function WorkoutController() {
   };
 
   const selectExercise = async (exercise: string) => {
+    // V2: complete previous exercise before switching
+    const loop = sessionLoopRef.current;
+    const currentV2State = loop.getState();
+    if (currentV2State === 'EXERCISE_ACTIVE' || currentV2State === 'NEXT_SET_READY' || currentV2State === 'SET_COMPLETE') {
+      loop.completeExercise();
+    }
+
     setCurrentExercise(exercise);
     setTimerExercise(exercise.split(' (')[0]);
     if (!savedExercises.includes(exercise)) {
@@ -719,6 +758,10 @@ export default function WorkoutController() {
       if (userId) setUserStorageItem(userId, 'custom_exercises', JSON.stringify(updatedCustomExercises));
     }
     
+    // V2: start new exercise in runtime
+    const mg = getExerciseMuscleGroup(exercise);
+    loop.startExercise(exercise, mg);
+
     // 先检查当前训练中是否已有该动作的记录
     const lastExercise = exercises.find(e => e.name === exercise);
     if (lastExercise?.sets.length) {
@@ -1145,21 +1188,86 @@ export default function WorkoutController() {
     const prevSetCount = exercises.find(e => e.name === currentExercise)?.sets.length ?? 0;
     if (sessionPhase === 'idle') {
       storeStartTraining();
+      // Initialize V2 runtime
+      const loop = sessionLoopRef.current;
+      loop.startWorkout();
+      if (loop.getState() !== 'EXERCISE_ACTIVE') {
+        const mg = getExerciseMuscleGroup(currentExercise);
+        loop.startExercise(currentExercise, mg);
+      }
     }
-    
+
     // 检查动作是否在动作库中，如果不在，添加到自定义动作列表
     if (!exerciseCache.has(currentExercise) && !exerciseCache.has(currentExercise.split(' (')[0]) && !customExercises.includes(currentExercise)) {
       setCustomExercises(prev => [...prev, currentExercise]);
     }
-    
+
     const rirValue = rir ? Number(rir) : null;
     const newSet: Set = {
       weight: isBodyweight ? 0 : Number(weight), reps: Number(reps), rir: rirValue,
       isFailure: rirValue === 0,
       estimated1RM: isBodyweight ? 0 : Number(weight) * (1 + Number(reps) / 30),
       isBodyweight: isBodyweight,
-      completed: true // 直接标记为已完成
+      completed: true
     };
+
+    // ── V2 Runtime Pipeline ──
+    const loop = sessionLoopRef.current;
+    const fatigue = fatigueModelRef.current;
+    if (loop.getState() !== 'EXERCISE_ACTIVE') {
+      const mg = getExerciseMuscleGroup(currentExercise);
+      loop.startExercise(currentExercise, mg);
+    }
+
+    // 1. Normalize set
+    const setResult = computeSetResult({
+      weight: isBodyweight ? 0 : Number(weight),
+      reps: Number(reps),
+      rir: rirValue,
+      isBodyweight: isBodyweight,
+    });
+
+    // 2. Update fatigue
+    const muscleGroup = getExerciseMuscleGroup(currentExercise);
+    fatigue.addFatigue(muscleGroup, setResult.weight, setResult.reps);
+
+    // 3. Score (vs previous set in session)
+    const prevSets = loop.getCurrentExercise()?.sets ?? [];
+    const previousSet = prevSets.length > 0 ? prevSets[prevSets.length - 1] : null;
+    const targetReps = loop.getCurrentExercise()?.targetReps ?? 8;
+    const score = computeScore(setResult, previousSet, targetReps);
+
+    // 4. Generate decision
+    const fatigueState = fatigue.getState();
+    const decision = generateDecision(score, fatigueState, setResult, muscleGroup);
+
+    // 5. Advance runtime state machine
+    loop.completeSet(setResult, score, decision, fatigueState);
+    loop.readyNextSet();
+
+    // 6. Persist log & update projection
+    const log: V2SessionLog = {
+      set: setResult,
+      score,
+      decision,
+      fatigue: fatigueState,
+      timestamp: Date.now(),
+    };
+    startTransition(() => {
+      setIntelligenceLogs(prev => [...prev, log]);
+      setV2Projection({
+        recommendedWeight: decision.nextWeight,
+        decisionMessage: decision.message,
+        fatigueScore: fatigueState.score,
+      });
+    });
+
+    // 7. Surface phase: transition -> rest
+    if (transitionTimerRef.current) clearTimeout(transitionTimerRef.current);
+    startTransition(() => setSurfacePhase('transition'));
+    transitionTimerRef.current = setTimeout(() => {
+      startTransition(() => setSurfacePhase('rest'));
+    }, 800);
     
     // 添加到 completedSets
     setCompletedSets(prev => [...prev, {
@@ -1222,6 +1330,8 @@ export default function WorkoutController() {
     storeIncrementSets();
     // 自动触发休息倒计时 (store.startRest sets endAt for lock-screen recovery)
     storeStartRest(Number(restTime));
+    // V2: apply fatigue decay during rest
+    fatigueModelRef.current.decay(Number(restTime));
     // Brief set-completion feedback (A4)
     const feedbackMsg = `✓ 第 ${prevSetCount + 1} 组完成`;
     startTransition(() => setSetFeedback(feedbackMsg));
@@ -1230,8 +1340,19 @@ export default function WorkoutController() {
   };
 
   const finishWorkout = async () => {
+    if (isLoading) return;
     if (exercises.length === 0) { toast({ message: '请至少添加一组训练', type: 'error' }); return; }
-    
+
+    // Runtime-native strength mode: first finish click enters completion surface only
+    if (trainingType === 'strength' && surfacePhase !== 'completion') {
+      sessionLoopRef.current.finishWorkout();
+      startTransition(() => setSurfacePhase('completion'));
+      return;
+    }
+
+    sessionLoopRef.current.finishWorkout();
+    startTransition(() => setSurfacePhase('completion'));
+
     const { duration: snapshotDuration } = storeStopTraining();
     const totalSetsCompleted = exercises.reduce((s, e) => s + e.sets.length, 0);
     const uniqueExercisesCount = exercises.filter(e => e.sets.length > 0).length;
@@ -1311,6 +1432,10 @@ export default function WorkoutController() {
         setIsLoading(false);
         setCompletionWorkoutId(workoutId);
         setShowCompletionCard(true);
+        if (trainingType === 'strength') {
+          router.push('/workout/history');
+          return;
+        }
         return;
       }
     } catch (error) {
@@ -1410,6 +1535,39 @@ export default function WorkoutController() {
 
 
         <>
+            {/* ── Runtime Native Surface (strength mode immersive overlay) ── */}
+            {trainingType === 'strength' && currentExercise && (
+              <WorkoutRuntimeSurface
+                phase={surfacePhase}
+                currentExercise={currentExercise}
+                weight={weight}
+                reps={reps}
+                rir={rir}
+                isBodyweight={isBodyweight}
+                restTime={restTime}
+                onWeightChange={setWeight}
+                onRepsChange={setReps}
+                onRirChange={setRir}
+                onRestTimeChange={setRestTime}
+                onBodyweightToggle={() => setIsBodyweight(p => !p)}
+                onLogSet={logSet}
+                onSkipRest={handleSkipRest}
+                onFinishWorkout={finishWorkout}
+                onCloseCompletion={() => startTransition(() => setSurfacePhase('active'))}
+                onBack={() => {
+                  if (storeSessionPhase !== 'idle') { setShowExitModal(true); return; }
+                  router.push('/');
+                }}
+                recommendedWeight={v2Projection.recommendedWeight}
+                decisionMessage={v2Projection.decisionMessage}
+                fatigueScore={v2Projection.fatigueScore}
+                intelligenceLogs={intelligenceLogs}
+                exercises={exercises}
+                completedSetsCount={exercises.find(e => e.name === currentExercise)?.sets.length ?? 0}
+                showFinish={exercises.some(e => e.sets.length > 0)}
+              />
+            )}
+
             {/* ── Workout stats bar (strength mode) ── */}
             {trainingType === 'strength' && (sessionPhase === 'active' || sessionPhase === 'paused') && (
               <div className="mb-4">
@@ -1875,7 +2033,11 @@ export default function WorkoutController() {
                   isTimed={isCurrentExerciseTimed}
                   onCdActiveChange={setIsTimedCdActive}
                   prResult={prResult}
+                  recommendedWeight={v2Projection.recommendedWeight}
+                  decisionMessage={v2Projection.decisionMessage}
+                  fatigueScore={v2Projection.fatigueScore}
                 />
+                <IntelligenceFeed logs={intelligenceLogs} />
               </>
             )}
 

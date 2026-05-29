@@ -5,3 +5,4 @@ export { default as InsightRow } from './InsightRow';
 export { default as FatigueBanner } from './FatigueBanner';
 export { default as RecoveryStatusPill } from './RecoveryStatusPill';
 export { default as WorkoutIntelligenceLayer } from './WorkoutIntelligenceLayer';
+export { default as IntelligenceFeed } from './IntelligenceFeed';
