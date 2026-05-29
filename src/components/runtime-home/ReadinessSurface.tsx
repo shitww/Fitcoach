@@ -15,7 +15,7 @@ const ReadinessSurface = memo(function ReadinessSurface({
 }: ReadinessSurfaceProps) {
   return (
     <div className="px-5 pb-4 space-y-3">
-      <p className="text-xs font-bold tracking-widest uppercase" style={{ color: 'var(--text-faint)' }}>身体状态</p>
+      <p className="rvl-label-text">身体状态</p>
       <div className="grid grid-cols-2 gap-2">
         <RuntimeProjection
           label="恢复度"
@@ -23,7 +23,7 @@ const ReadinessSurface = memo(function ReadinessSurface({
           unit="%"
           trend={recovery > 0.7 ? 'up' : recovery > 0.4 ? 'neutral' : 'down'}
           icon={<Shield className="w-4 h-4" />}
-          accent="#34D399"
+          accent="var(--rvl-active)"
         />
         <RuntimeProjection
           label="疲劳累积"
@@ -31,12 +31,12 @@ const ReadinessSurface = memo(function ReadinessSurface({
           unit="%"
           trend={fatigue > 0.6 ? 'down' : 'neutral'}
           icon={<Zap className="w-4 h-4" />}
-          accent="#FBBF24"
+          accent="var(--rvl-fatigue)"
         />
       </div>
-      <div className="flex items-center gap-2 px-3 py-2 rounded-xl" style={{ background: 'var(--surface-2)' }}>
-        <Clock className="w-3.5 h-3.5" style={{ color: 'var(--text-faint)' }} />
-        <span className="text-xs font-medium" style={{ color: 'var(--text-low)' }}>
+      <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl" style={{ background: 'var(--rvl-surface-2)', border: '1px solid var(--rvl-border-subtle)' }}>
+        <Clock className="w-3.5 h-3.5" style={{ color: 'var(--rvl-text-faint)' }} />
+        <span className="text-xs font-medium" style={{ color: 'var(--rvl-text-med)' }}>
           {lastWorkoutDays === 0 ? '今天已训练' : lastWorkoutDays === 1 ? '昨天训练过' : '上次训练 ' + lastWorkoutDays + ' 天前'}
         </span>
       </div>

@@ -22,19 +22,19 @@ const RuntimeHeader = memo(function RuntimeHeader({ onBack, onFinish, showFinish
       <button
         onClick={onBack}
         className="p-2.5 rounded-xl transition-all active:scale-90"
-        style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}
+        style={{ background: 'var(--rvl-surface-2)', border: '1px solid var(--rvl-border-subtle)' }}
       >
-        <ArrowLeft className="w-5 h-5" />
+        <ArrowLeft className="w-5 h-5" style={{ color: 'var(--rvl-text-med)' }} />
       </button>
-      <div className="flex items-center gap-2 text-sm font-bold" style={{ color: 'var(--text-low)' }}>
-        <Activity className="w-4 h-4" style={{ color: 'var(--accent)' }} />
+      <div className="flex items-center gap-2 text-sm font-bold" style={{ color: 'var(--rvl-text-faint)' }}>
+        <Activity className="w-4 h-4" style={{ color: 'var(--rvl-active)' }} />
         {fmt(secs)}
       </div>
       {showFinish && (
         <button
           onClick={onFinish}
-          className="px-3 py-2 rounded-xl text-xs font-black text-black transition-all"
-          style={{ background: 'var(--accent)' }}
+          className="px-3 py-2 rounded-xl text-xs font-black transition-all"
+          style={{ background: 'var(--rvl-active)', color: '#000' }}
         >
           完成
         </button>

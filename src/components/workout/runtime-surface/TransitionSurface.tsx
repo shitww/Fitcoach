@@ -27,18 +27,20 @@ const TransitionSurface = memo(function TransitionSurface({ weight, reps, score,
   const Icon = meta.icon;
 
   return (
-    <div className="flex flex-col h-full px-6 text-center items-center justify-center" style={{ animation: 'p3-fade-up 0.35s ease-out' }}>
-      <div className="w-14 h-14 rounded-full flex items-center justify-center mb-5" style={{ background: 'rgba(52,211,153,0.1)' }}>
-        <Check className="w-7 h-7" style={{ color: '#34D399' }} />
+    <div className="flex flex-col h-full px-6 text-center items-center justify-center rvl-animate-enter">
+      <div className="w-16 h-16 rounded-full flex items-center justify-center mb-5 rvl-glow-active"
+        style={{ background: 'var(--rvl-active-dim)', border: '1px solid var(--rvl-active-glow)' }}>
+        <Check className="w-8 h-8" style={{ color: 'var(--rvl-active)' }} />
       </div>
-      <p className="text-3xl font-black tabular-nums mb-1" style={{ color: 'var(--text-high)' }}>
+      <p className="rvl-headline-text tabular-nums mb-1" style={{ color: 'var(--rvl-text-hero)' }}>
         {weight > 0 ? weight + 'kg' : '自重'} × {reps}
       </p>
-      <p className="text-sm font-bold mb-5" style={{ color: 'var(--text-low)' }}>得分 {score}</p>
+      <p className="rvl-label-text mb-6">得分 {score}</p>
 
-      <div className="flex items-center gap-2 px-4 py-3 rounded-2xl max-w-xs" style={{ background: meta.bg, border: '1px solid var(--border)' }}>
+      <div className="flex items-center gap-2 px-5 py-4 rounded-2xl max-w-xs rvl-surface-glass"
+        style={{ background: meta.bg, border: '1px solid ' + meta.color + '20' }}>
         <Icon className="w-4 h-4 shrink-0" style={{ color: meta.color }} />
-        <span className="text-xs font-semibold" style={{ color: 'var(--text-high)' }}>{message}</span>
+        <span className="text-xs font-bold" style={{ color: 'var(--rvl-text-high)' }}>{message}</span>
       </div>
     </div>
   );

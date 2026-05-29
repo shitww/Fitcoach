@@ -111,6 +111,9 @@
   /* VNext semantic overlays (no legacy hex/rgba) */
   --overlay: 0 0 0;
   --overlay-foreground: 245 245 245;
+
+  /* Shadow is always dark regardless of theme */
+  --shadow: 0 0 0;
 }
 
 /* ── Light theme ─────────────────────────────────────── */
@@ -124,7 +127,7 @@
   --secondary: 240 240 240;
   --secondary-foreground: 24 24 27;
   --muted: 228 228 231;
-  --muted-foreground: 100 100 108; /* 4.5:1 on white */
+  --muted-foreground: 60 60 68; /* 4.5:1 on muted (228,228,231) and 7.5:1 on white */
   --primary: 0 0 0;
   --primary-foreground: 255 255 255;
   --accent: 0 0 0;
@@ -146,6 +149,9 @@
   --ring: 0 0 0;
   --overlay: 255 255 255;
   --overlay-foreground: 18 18 22;
+
+  /* Shadow is always dark regardless of theme */
+  --shadow: 0 0 0;
 }
 
 /* Immediately apply background to html to prevent flash */

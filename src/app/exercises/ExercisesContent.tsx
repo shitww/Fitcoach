@@ -505,7 +505,7 @@ export default function ExercisesContent() {
 
               {/* Info grid */}
               {selectedExercise.equipment && (
-                <div className="rounded-xl p-4 bg-zinc-950 border border-border">
+                <div className="rounded-xl p-4 bg-secondary border border-border">
                   <div className="text-xs text-muted-foreground mb-1">器械</div>
                   <p className="text-sm font-semibold text-secondary-foreground">{translateEquipment(selectedExercise.equipment)}</p>
                 </div>
@@ -519,7 +519,7 @@ export default function ExercisesContent() {
                   </div>
                   <ol className="space-y-2">
                     {selectedExercise.instructions.split('\n').filter(s => s.trim()).map((step, i) => (
-                      <li key={i} className="flex items-start gap-3 rounded-xl p-3 bg-zinc-950 border border-border">
+                      <li key={i} className="flex items-start gap-3 rounded-xl p-3 bg-secondary border border-border">
                         <span className="flex-shrink-0 w-5 h-5 rounded-full bg-muted text-secondary-foreground text-xs font-bold flex items-center justify-center mt-0.5">{i + 1}</span>
                         <span className="text-sm text-muted-foreground leading-relaxed">{step.trim()}</span>
                       </li>
@@ -578,7 +578,7 @@ export default function ExercisesContent() {
                     : `/workout?exercise=${encodeURIComponent(selectedExercise.name)}`;
                   router.push(dest);
                 }}
-                className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm bg-white text-black hover:bg-zinc-200"
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm bg-primary text-primary-foreground hover:bg-primary/90"
               >
                 <Zap className="w-4 h-4" />{hasActiveSession ? '继续训练' : '开始训练'}
               </button>
@@ -604,7 +604,7 @@ export default function ExercisesContent() {
               <div>
                 <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">动作名称 *</label>
                 <input value={newForm.name} onChange={(e) => setNewForm({ ...newForm, name: e.target.value })}
-                  className="w-full rounded-xl px-4 py-3 text-foreground text-sm bg-zinc-950 border border-border focus:outline-none focus:border-border"
+                  className="w-full rounded-xl px-4 py-3 text-foreground text-sm bg-secondary border border-border focus:outline-none focus:border-border"
                   placeholder="例如：哑铃牧师凳弯举" />
               </div>
 
@@ -613,7 +613,7 @@ export default function ExercisesContent() {
                   <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">主练肌群</label>
                   <select value={newForm.muscleGroup}
                     onChange={(e) => setNewForm({ ...newForm, muscleGroup: e.target.value })}
-                    className="w-full rounded-xl px-4 py-3 text-foreground text-sm bg-zinc-950 border border-border focus:outline-none focus:border-border">
+                    className="w-full rounded-xl px-4 py-3 text-foreground text-sm bg-secondary border border-border focus:outline-none focus:border-border">
                     {muscleGroupOptions.map(g => <option key={g.value} value={g.value}>{g.label}</option>)}
                   </select>
                 </div>
@@ -621,7 +621,7 @@ export default function ExercisesContent() {
                   <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">难度</label>
                   <select value={newForm.difficulty}
                     onChange={(e) => setNewForm({ ...newForm, difficulty: e.target.value })}
-                    className="w-full rounded-xl px-4 py-3 text-foreground text-sm bg-zinc-950 border border-border focus:outline-none focus:border-border">
+                    className="w-full rounded-xl px-4 py-3 text-foreground text-sm bg-secondary border border-border focus:outline-none focus:border-border">
                     {difficultyOptions.map(d => <option key={d} value={d}>{d}</option>)}
                   </select>
                 </div>
@@ -632,7 +632,7 @@ export default function ExercisesContent() {
                 <input value={newForm.equipment}
                   onChange={(e) => setNewForm({ ...newForm, equipment: e.target.value })}
                   placeholder="例如：哑铃、杠铃、龙门架"
-                  className="w-full rounded-xl px-4 py-3 text-foreground text-sm bg-zinc-950 border border-border focus:outline-none focus:border-border" />
+                  className="w-full rounded-xl px-4 py-3 text-foreground text-sm bg-secondary border border-border focus:outline-none focus:border-border" />
               </div>
 
               <div>
@@ -640,7 +640,7 @@ export default function ExercisesContent() {
                 <textarea value={newForm.description}
                   onChange={(e) => setNewForm({ ...newForm, description: e.target.value })}
                   placeholder="简要描述这个动作锻炼哪些肌群"
-                  className="w-full rounded-xl px-4 py-3 text-foreground text-sm min-h-[80px] resize-none bg-zinc-950 border border-border focus:outline-none focus:border-border" />
+                  className="w-full rounded-xl px-4 py-3 text-foreground text-sm min-h-[80px] resize-none bg-secondary border border-border focus:outline-none focus:border-border" />
               </div>
 
               <div>
@@ -648,7 +648,7 @@ export default function ExercisesContent() {
                 <textarea value={newForm.instructions}
                   onChange={(e) => setNewForm({ ...newForm, instructions: e.target.value })}
                   placeholder="每行一个步骤，例如：\n1. 仰卧在平板凳上\n2. 双手握杠，宽度略宽于肩\n3. 控制速度下降\n4. 推起回到起始位置"
-                  className="w-full rounded-xl px-4 py-3 text-foreground text-sm min-h-[100px] resize-none bg-zinc-950 border border-border focus:outline-none focus:border-border font-sans" />
+                  className="w-full rounded-xl px-4 py-3 text-foreground text-sm min-h-[100px] resize-none bg-secondary border border-border focus:outline-none focus:border-border font-sans" />
               </div>
 
               <div>
@@ -669,7 +669,7 @@ export default function ExercisesContent() {
               <button
                 onClick={handleAddExercise}
                 disabled={saving || !newForm.name.trim()}
-                className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm bg-white text-black hover:bg-zinc-200 disabled:opacity-40 disabled:cursor-not-allowed"
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 {saving ? <><Loader2 className="w-4 h-4 animate-spin" />保存中…</> : <><Plus className="w-4 h-4" />添加动作</>}
               </button>
@@ -696,7 +696,7 @@ export default function ExercisesContent() {
                 <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">动作名称 *</label>
                 <input value={editTarget.name}
                   onChange={(e) => setEditTarget({ ...editTarget, name: e.target.value })}
-                  className="w-full rounded-xl px-4 py-3 text-foreground text-sm bg-zinc-950 border border-border focus:outline-none focus:border-border" />
+                  className="w-full rounded-xl px-4 py-3 text-foreground text-sm bg-secondary border border-border focus:outline-none focus:border-border" />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -704,7 +704,7 @@ export default function ExercisesContent() {
                   <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">主练肌群</label>
                   <select value={editTarget.muscleGroup}
                     onChange={(e) => setEditTarget({ ...editTarget, muscleGroup: e.target.value })}
-                    className="w-full rounded-xl px-4 py-3 text-foreground text-sm bg-zinc-950 border border-border focus:outline-none focus:border-border">
+                    className="w-full rounded-xl px-4 py-3 text-foreground text-sm bg-secondary border border-border focus:outline-none focus:border-border">
                     {muscleGroupOptions.map(g => <option key={g.value} value={g.value}>{g.label}</option>)}
                   </select>
                 </div>
@@ -712,7 +712,7 @@ export default function ExercisesContent() {
                   <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">难度</label>
                   <select value={editTarget.difficulty || '中等'}
                     onChange={(e) => setEditTarget({ ...editTarget, difficulty: e.target.value })}
-                    className="w-full rounded-xl px-4 py-3 text-foreground text-sm bg-zinc-950 border border-border focus:outline-none focus:border-border">
+                    className="w-full rounded-xl px-4 py-3 text-foreground text-sm bg-secondary border border-border focus:outline-none focus:border-border">
                     {difficultyOptions.map(d => <option key={d} value={d}>{d}</option>)}
                   </select>
                 </div>
@@ -722,21 +722,21 @@ export default function ExercisesContent() {
                 <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">器械需求</label>
                 <input value={editTarget.equipment || ''}
                   onChange={(e) => setEditTarget({ ...editTarget, equipment: e.target.value })}
-                  className="w-full rounded-xl px-4 py-3 text-foreground text-sm bg-zinc-950 border border-border focus:outline-none focus:border-border" />
+                  className="w-full rounded-xl px-4 py-3 text-foreground text-sm bg-secondary border border-border focus:outline-none focus:border-border" />
               </div>
 
               <div>
                 <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">动作描述</label>
                 <textarea value={editTarget.description || ''}
                   onChange={(e) => setEditTarget({ ...editTarget, description: e.target.value })}
-                  className="w-full rounded-xl px-4 py-3 text-foreground text-sm min-h-[80px] resize-none bg-zinc-950 border border-border focus:outline-none focus:border-border" />
+                  className="w-full rounded-xl px-4 py-3 text-foreground text-sm min-h-[80px] resize-none bg-secondary border border-border focus:outline-none focus:border-border" />
               </div>
 
               <div>
                 <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">执行步骤</label>
                 <textarea value={editTarget.instructions || ''}
                   onChange={(e) => setEditTarget({ ...editTarget, instructions: e.target.value })}
-                  className="w-full rounded-xl px-4 py-3 text-foreground text-sm min-h-[100px] resize-none bg-zinc-950 border border-border focus:outline-none focus:border-border font-sans" />
+                  className="w-full rounded-xl px-4 py-3 text-foreground text-sm min-h-[100px] resize-none bg-secondary border border-border focus:outline-none focus:border-border font-sans" />
               </div>
 
               <div>
@@ -758,7 +758,7 @@ export default function ExercisesContent() {
               <button
                 onClick={handleSaveEdit}
                 disabled={saving || !editTarget.name.trim()}
-                className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm bg-white text-black hover:bg-zinc-200 disabled:opacity-40 disabled:cursor-not-allowed"
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 {saving ? <><Loader2 className="w-4 h-4 animate-spin" />保存中...</> : '保存修改'}
               </button>

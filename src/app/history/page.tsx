@@ -103,7 +103,7 @@ export default function HistoryPage() {
             <p className="mb-4" style={{ color: 'var(--text-low)' }}>请先登录</p>
             <button
               onClick={() => router.push('/auth/signin')}
-              className="px-6 py-2.5 rounded-xl font-bold text-black"
+              className="px-6 py-2.5 rounded-xl font-bold text-accent-foreground"
               style={{ background: 'var(--accent)' }}>
               登录
             </button>

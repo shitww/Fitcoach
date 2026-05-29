@@ -1523,7 +1523,7 @@ export default function WorkoutController() {
             <button
               onClick={finishWorkout}
               disabled={isLoading}
-              className="px-4 py-2 rounded-xl font-bold text-sm text-black transition-all"
+              className="px-4 py-2 rounded-xl font-bold text-sm text-accent-foreground transition-all"
               style={{ background: 'var(--accent)', opacity: isLoading ? 0.6 : 1, cursor: isLoading ? 'not-allowed' : 'pointer' }}
             >
               {isLoading ? '保存中…' : '完成训练'}
@@ -2136,7 +2136,7 @@ export default function WorkoutController() {
                 <button
                   onClick={finishWorkout}
                   disabled={isLoading}
-                  className="w-full flex items-center justify-center gap-2 rounded-xl py-4 font-bold text-base text-black transition-all"
+                  className="w-full flex items-center justify-center gap-2 rounded-xl py-4 font-bold text-base text-accent-foreground transition-all"
                   style={{ background: 'var(--accent)', opacity: isLoading ? 0.6 : 1, cursor: isLoading ? 'not-allowed' : 'pointer' }}
                 >
                   {isLoading ? (
@@ -2269,7 +2269,7 @@ export default function WorkoutController() {
                     </p>
                   )}
                   <button onClick={() => setDetailExerciseName(null)}
-                    className="w-full rounded-2xl py-3.5 text-sm font-black text-black"
+                    className="w-full rounded-2xl py-3.5 text-sm font-black text-accent-foreground"
                     style={{ background: 'var(--accent)' }}>
                     知道了
                   </button>

@@ -112,7 +112,7 @@ function SignInContent() {
             )}
 
             <button type="submit" disabled={loading || initLoading}
-              className="w-full py-3.5 rounded-xl font-bold text-base text-black transition-all flex items-center justify-center gap-2"
+              className="w-full py-3.5 rounded-xl font-bold text-base text-accent-foreground transition-all flex items-center justify-center gap-2"
               style={{ background: 'var(--accent)', boxShadow: '0 0 20px var(--accent-glow)' }}>
               {loading ? <><Loader2 className="w-5 h-5 animate-spin" />登录中…</> : initLoading ? <><Loader2 className="w-5 h-5 animate-spin" />初始化中…</> : "登录"}
             </button>

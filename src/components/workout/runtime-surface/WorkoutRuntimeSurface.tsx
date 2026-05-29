@@ -54,6 +54,10 @@ const WorkoutRuntimeSurface = memo(function WorkoutRuntimeSurface(props: Workout
   } = props;
 
   const bgVariant = phase === 'rest' ? 'rest' : phase === 'completion' ? 'completion' : 'active';
+  const ambientClass =
+    phase === 'rest' ? 'rvl-ambient-rest' :
+    phase === 'completion' ? 'rvl-ambient-complete' :
+    'rvl-ambient-active';
   const lastLog = intelligenceLogs[intelligenceLogs.length - 1];
 
   // Completion stats
@@ -71,7 +75,7 @@ const WorkoutRuntimeSurface = memo(function WorkoutRuntimeSurface(props: Workout
   }
 
   return (
-    <div className="fixed inset-0 flex flex-col bg-background text-foreground" style={{ zIndex: 1 }}>
+    <div className={`fixed inset-0 flex flex-col text-foreground ${ambientClass}`} style={{ zIndex: 1 }}>
       <RuntimeBackground variant={bgVariant} />
       <RuntimeHeader onBack={onBack} onFinish={onFinishWorkout} showFinish={showFinish} />
 

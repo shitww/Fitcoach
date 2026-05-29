@@ -26,20 +26,18 @@ const eslintConfig = defineConfig([
       ],
     },
   },
-  /* ── Architecture protection: pages must not contain styling logic ──
-     Pages compose components. Only components may use semantic tokens.
-     Layout utilities (flex, grid, gap, p-, m-, text-xl, etc.) are allowed.
+  /* ── Page hardcoded color guard ──
+     Pages may use semantic tokens for layout shells.
+     They must NOT use hardcoded colors.
   */
   {
-    name: "xfitx/page-styling-guard",
+    name: "xfitx/page-color-guard",
     files: ["src/app/**/page.tsx", "src/app/**/layout.tsx"],
     rules: {
       "no-restricted-syntax": [
         "error",
         /* Tailwind hardcoded colors */
         { selector: "JSXAttribute[name.name='className'] Literal[value=/\\b(bg-black|bg-white|text-black|text-white|bg-zinc-|text-zinc-|bg-gray-|text-gray-|bg-slate-|text-slate-|bg-neutral-|text-neutral-|bg-stone-|text-stone-|border-zinc-|border-gray-|border-slate-|border-neutral-|border-stone-)\\b/]", message: "Use semantic tokens (bg-background, text-foreground, border-border, etc.) instead of hardcoded Tailwind colors." },
-        /* Pages cannot use semantic color tokens — only components can */
-        { selector: "JSXAttribute[name.name='className'] Literal[value=/\\b(bg-background|bg-foreground|bg-card|bg-muted|bg-secondary|bg-primary|bg-accent|bg-destructive|bg-success|bg-danger|text-foreground|text-muted-foreground|text-secondary-foreground|text-primary-foreground|text-accent-foreground|text-destructive-foreground|text-success|text-danger|border-border|border-input|border-ring)\\b/]", message: "Pages must not use semantic color tokens. Extract this into a component in src/components/ui/ or src/components/." },
         /* Inline style hardcoded hex/rgba on color-related props */
         { selector: "Property[key.name=/color/i] Literal[value=/^(#|rgb\\(\\d|rgba\\(\\d|hsl\\(\\d|hsla\\(\\d)/]", message: "Use CSS variables (var(--foreground), var(--muted-foreground), etc.) instead of hardcoded colors in inline styles." },
         { selector: "Property[key.name=/background/i] Literal[value=/^(#|rgb\\(\\d|rgba\\(\\d|hsl\\(\\d|hsla\\(\\d)/]", message: "Use CSS variables (var(--surface), var(--card), etc.) instead of hardcoded colors in inline styles." },

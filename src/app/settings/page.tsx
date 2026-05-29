@@ -310,7 +310,7 @@ function SettingsContent() {
                       onChange={() => handleNotificationChange('trainingReminders')}
                       className="sr-only peer"
                     />
-                    <div className={`w-11 h-6 rounded-full peer transition-colors after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full ${notificationSettings.trainingReminders ? 'bg-primary' : 'bg-secondary'}`}
+                    <div className={`w-11 h-6 rounded-full peer transition-colors after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-card after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full ${notificationSettings.trainingReminders ? 'bg-primary' : 'bg-secondary'}`}
                     />
                   </label>
                 </div>
@@ -330,7 +330,7 @@ function SettingsContent() {
                       onChange={() => handleNotificationChange('workoutCompletion')}
                       className="sr-only peer"
                     />
-                    <div className={`w-11 h-6 rounded-full peer transition-colors after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full ${notificationSettings.workoutCompletion ? 'bg-primary' : 'bg-secondary'}`}
+                    <div className={`w-11 h-6 rounded-full peer transition-colors after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-card after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full ${notificationSettings.workoutCompletion ? 'bg-primary' : 'bg-secondary'}`}
                     />
                   </label>
                 </div>
@@ -350,7 +350,7 @@ function SettingsContent() {
                       onChange={() => handleNotificationChange('achievementUnlocks')}
                       className="sr-only peer"
                     />
-                    <div className={`w-11 h-6 rounded-full peer transition-colors after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full ${notificationSettings.achievementUnlocks ? 'bg-primary' : 'bg-secondary'}`}
+                    <div className={`w-11 h-6 rounded-full peer transition-colors after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-card after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full ${notificationSettings.achievementUnlocks ? 'bg-primary' : 'bg-secondary'}`}
                     />
                   </label>
                 </div>
@@ -370,7 +370,7 @@ function SettingsContent() {
                       onChange={() => handleNotificationChange('systemUpdates')}
                       className="sr-only peer"
                     />
-                    <div className={`w-11 h-6 rounded-full peer transition-colors after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full ${notificationSettings.systemUpdates ? 'bg-primary' : 'bg-secondary'}`}
+                    <div className={`w-11 h-6 rounded-full peer transition-colors after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-card after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full ${notificationSettings.systemUpdates ? 'bg-primary' : 'bg-secondary'}`}
                     />
                   </label>
                 </div>
@@ -390,7 +390,7 @@ function SettingsContent() {
                       onChange={() => handleNotificationChange('emailNotifications')}
                       className="sr-only peer"
                     />
-                    <div className={`w-11 h-6 rounded-full peer transition-colors after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full ${notificationSettings.emailNotifications ? 'bg-primary' : 'bg-secondary'}`}
+                    <div className={`w-11 h-6 rounded-full peer transition-colors after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-card after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full ${notificationSettings.emailNotifications ? 'bg-primary' : 'bg-secondary'}`}
                     />
                   </label>
                 </div>

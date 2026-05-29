@@ -2,10 +2,10 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Home, Dumbbell, Utensils, Clock, User } from 'lucide-react'
+import { Home, Dumbbell, TrendingUp, Clock, User } from 'lucide-react'
 import { useWorkoutTimer } from '@/stores/workoutTimer'
 
-export type BottomTab = 'home' | 'training' | 'diet' | 'history' | 'profile'
+export type BottomTab = 'home' | 'training' | 'growth' | 'history' | 'profile'
 
 interface BottomTabBarProps {
   /** Explicitly set the active tab. If omitted, inferred from the current pathname. */
@@ -23,11 +23,11 @@ const TABS: Array<{
   /** Pathname prefix for auto-detection when active is not explicitly set */
   matchPrefix: string
 }> = [
-  { id: 'home',    label: '首页', icon: Home,     path: '/',              matchPrefix: '/' },
-  { id: 'training',label: '训练', icon: Dumbbell,  path: '/workout',       matchPrefix: '/workout' },
-  { id: 'diet',    label: '饮食', icon: Utensils,  path: '/diet-analysis', matchPrefix: '/diet-analysis' },
-  { id: 'history', label: '历史', icon: Clock,     path: '/history',       matchPrefix: '/history' },
-  { id: 'profile', label: '我的', icon: User,      path: '/profile',       matchPrefix: '/profile' },
+  { id: 'home',    label: '首页', icon: Home,       path: '/',              matchPrefix: '/' },
+  { id: 'training',label: '训练', icon: Dumbbell,   path: '/workout',       matchPrefix: '/workout' },
+  { id: 'growth',  label: '成长', icon: TrendingUp, path: '/analytics',     matchPrefix: '/analytics' },
+  { id: 'history', label: '历史', icon: Clock,      path: '/history',       matchPrefix: '/history' },
+  { id: 'profile', label: '我的', icon: User,       path: '/profile',       matchPrefix: '/profile' },
 ]
 
 /**

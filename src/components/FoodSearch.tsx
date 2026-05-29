@@ -66,7 +66,7 @@ const getCategoryColor = (category?: string | null) => {
     case '蛋类': return { bg: 'bg-yellow-500/20', text: 'text-yellow-400', border: 'border-yellow-500/30' };
     case '饮品': return { bg: 'bg-violet-500/20', text: 'text-violet-400', border: 'border-violet-500/30' };
     case '速食': return { bg: 'bg-rose-500/20', text: 'text-rose-400', border: 'border-rose-500/30' };
-    case '调味料': return { bg: 'bg-zinc-500/20', text: 'text-muted-foreground', border: 'border-border/30' };
+    case '调味料': return { bg: 'bg-muted/40', text: 'text-muted-foreground', border: 'border-border/30' };
     default: return { bg: 'bg-secondary', text: 'text-muted-foreground', border: 'border-border' };
   }
 };
@@ -882,7 +882,7 @@ export default function FoodSearch({
                     if (!isNaN(v) && v > 0 && v <= 5000) setGrams(v);
                     else if (e.target.value === '') setGrams(0);
                   }}
-                  className="w-20 text-center py-2 bg-transparent border-b-2 border-border focus:border-white text-2xl font-bold text-foreground outline-none transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  className="w-20 text-center py-2 bg-transparent border-b-2 border-border focus:border-primary text-2xl font-bold text-foreground outline-none transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                 />
                 <button
                   onClick={() => adjustGrams(10)}
@@ -1061,7 +1061,7 @@ export default function FoodSearch({
                       <button onClick={() => handleSelectFood(food)}
                         className="flex-1 min-w-0 text-left active:scale-[0.98]">
                         <div className="flex-1 min-w-0">
-                          <span className="text-xs text-zinc-200 block leading-snug mb-0.5">{food.name}</span>
+                          <span className="text-xs text-secondary-foreground block leading-snug mb-0.5">{food.name}</span>
                           <div className="flex flex-col gap-0.5 mt-0.5">
                             <span className="text-[10px] text-muted-foreground">{food.calories}kcal</span>
                             <div className="flex gap-1.5">
@@ -1113,7 +1113,7 @@ export default function FoodSearch({
                   return (
                     <button key={food.id} onClick={() => handleSelectFood(food)}
                       className="p-3 rounded-xl bg-card border border-border hover:bg-secondary/80 transition-all active:scale-[0.98] text-left">
-                      <span className="text-xs text-zinc-200 block leading-snug mb-0.5">{food.name}</span>
+                      <span className="text-xs text-secondary-foreground block leading-snug mb-0.5">{food.name}</span>
                       <div className="flex flex-col gap-0.5">
                         <span className="text-[10px] text-muted-foreground">{food.calories}kcal</span>
                         <div className="flex gap-1.5">
@@ -1140,7 +1140,7 @@ export default function FoodSearch({
                   return (
                     <button key={food.id} onClick={() => handleSelectFood(food)}
                       className="p-3 rounded-xl bg-card border border-border hover:bg-secondary/80 transition-all active:scale-[0.98] text-left">
-                      <span className="text-xs text-zinc-200 block leading-snug mb-0.5">{food.name}</span>
+                      <span className="text-xs text-secondary-foreground block leading-snug mb-0.5">{food.name}</span>
                       <div className="flex flex-col gap-0.5">
                         <span className="text-[10px] text-muted-foreground">{food.calories}kcal</span>
                         <div className="flex gap-1.5">

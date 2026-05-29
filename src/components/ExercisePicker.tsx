@@ -428,15 +428,15 @@ export default function ExercisePicker({
           {/* No search results */}
           {searchQuery && filteredExercises.length === 0 && (
             <div className="flex flex-col items-center justify-center py-16 px-4">
-              <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-4" style={{ background: '#151515', border: '1px solid #1e1e1e' }}>
-                <Search className="w-6 h-6" style={{ color: 'rgba(255,255,255,0.2)' }} />
+              <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-4 bg-secondary border border-border">
+                <Search className="w-6 h-6 text-muted-foreground/30" />
               </div>
               <h3 className="text-sm font-bold text-foreground mb-1">未找到 "{searchQuery}"</h3>
-              <p className="text-xs mb-6 text-center" style={{ color: 'rgba(255,255,255,0.3)' }}>点击下方按钮创建自定义动作</p>
+              <p className="text-xs mb-6 text-center text-muted-foreground/40">点击下方按钮创建自定义动作</p>
               <button
                 onClick={() => triggerCreate(searchQuery)}
-                className="flex items-center gap-2 px-6 py-3 rounded-2xl font-bold text-sm text-black active:scale-95 transition-all"
-                style={{ background: 'var(--accent)', color: 'var(--accent-text)', touchAction: 'manipulation' }}
+                className="flex items-center gap-2 px-6 py-3 rounded-2xl font-bold text-sm text-accent-foreground active:scale-95 transition-all"
+                style={{ background: 'var(--accent)', touchAction: 'manipulation' }}
               >
                 <Plus className="w-4 h-4" />
                 创建 "{searchQuery}"
@@ -768,8 +768,8 @@ export default function ExercisePicker({
               <div className="pt-2 pb-3">
                 <button
                   onClick={() => { handleSelectExercise(selectedExerciseDetail.name); setShowExerciseDetail(false); }}
-                  className="w-full flex items-center justify-center gap-2 rounded-2xl py-4 font-black text-sm text-black transition-all active:scale-[0.98]"
-                  style={{ background: 'var(--accent)', color: 'var(--accent-text)', touchAction: 'manipulation' }}
+                  className="w-full flex items-center justify-center gap-2 rounded-2xl py-4 font-black text-sm text-accent-foreground transition-all active:scale-[0.98]"
+                  style={{ background: 'var(--accent)', touchAction: 'manipulation' }}
                 >
                   <Check className="w-4 h-4" />
                   选择此动作

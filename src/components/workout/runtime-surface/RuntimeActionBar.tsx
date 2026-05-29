@@ -12,15 +12,14 @@ interface RuntimeActionBarProps {
 }
 
 const RuntimeActionBar = memo(function RuntimeActionBar({
-  primaryLabel, onPrimary, secondaryLabel, onSecondary, disabled, accent = 'var(--accent)'
+  primaryLabel, onPrimary, secondaryLabel, onSecondary, disabled, accent = 'var(--rvl-active)'
 }: RuntimeActionBarProps) {
   return (
     <div className="px-5 pb-6 pt-3 space-y-3">
       {secondaryLabel && onSecondary && (
         <button
           onClick={onSecondary}
-          className="w-full flex items-center justify-center gap-2 rounded-2xl py-3.5 text-sm font-bold transition-all active:scale-[0.97]"
-          style={{ background: 'var(--surface-2)', color: 'var(--text-med)', border: '1px solid var(--border)' }}
+          className="w-full flex items-center justify-center gap-2 rounded-2xl py-3.5 text-sm font-bold transition-all active:scale-[0.97] rvl-btn-ghost"
         >
           <ChevronRight className="w-4 h-4" />
           {secondaryLabel}
@@ -31,10 +30,11 @@ const RuntimeActionBar = memo(function RuntimeActionBar({
         disabled={disabled}
         className="w-full flex items-center justify-center gap-2 rounded-2xl py-5 font-black text-lg transition-all active:scale-[0.97]"
         style={{
-          background: accent,
+          background: 'linear-gradient(135deg, var(--rvl-active), #7CDD00)',
           color: '#000',
           opacity: disabled ? 0.45 : 1,
-          boxShadow: '0 0 28px ' + accent + '33',
+          boxShadow: '0 0 32px var(--rvl-active-glow), inset 0 1px 0 rgba(255,255,255,0.3)',
+          borderRadius: 'var(--rvl-radius-xl)',
         }}
       >
         <Dumbbell className="w-5 h-5" />

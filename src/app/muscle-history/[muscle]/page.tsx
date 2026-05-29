@@ -161,7 +161,7 @@ export default function MuscleHistoryPage() {
                   return (
                     <div key={w.id} className="rounded-2xl overflow-hidden"
                       style={{ background: 'var(--surface)', border: `1px solid ${isLatest ? accent + '55' : 'var(--border)'}` }}>
-                      <button className="w-full flex items-center gap-3 px-4 py-4 text-left transition-all active:bg-white/5"
+                      <button className="w-full flex items-center gap-3 px-4 py-4 text-left transition-all active:bg-foreground/5"
                         onClick={() => setExpandedWorkout(isOpen ? null : w.id)}>
                         {/* Date badge */}
                         <div className="rounded-xl px-2.5 py-2 text-center shrink-0"

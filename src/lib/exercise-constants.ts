@@ -44,7 +44,7 @@ export const MUSCLE_GROUP_COLORS: Record<string, { bg: string; text: string; bor
   'biceps':      { bg: 'bg-yellow-500/15',  text: 'text-yellow-400',  border: 'hover:border-yellow-500/40',  hex: '#FDE047' },
   'forearms':    { bg: 'bg-lime-500/15',    text: 'text-lime-400',    border: 'hover:border-lime-500/40',    hex: '#A3E635' },
   'traps':       { bg: 'bg-cyan-500/15',    text: 'text-cyan-400',    border: 'hover:border-cyan-500/40',    hex: '#22D3EE' },
-  'neck':        { bg: 'bg-slate-500/15',   text: 'text-muted-foreground',   border: 'hover:border-slate-500/40',   hex: '#94A3B8' },
+  'neck':        { bg: 'bg-muted/40',   text: 'text-muted-foreground',   border: 'hover:border-border/40',   hex: '#94A3B8' },
   'lats':        { bg: 'bg-blue-500/15',    text: 'text-blue-400',    border: 'hover:border-blue-500/40',    hex: '#60A5FA' },
   'middle back': { bg: 'bg-indigo-500/15',  text: 'text-indigo-400',  border: 'hover:border-indigo-500/40',  hex: '#818CF8' },
   'lower back':  { bg: 'bg-violet-500/15',  text: 'text-violet-400',  border: 'hover:border-violet-500/40',  hex: '#A78BFA' },
@@ -122,7 +122,7 @@ export function getMuscleGroupColor(group: string): { bg: string; text: string; 
   const key = MUSCLE_GROUP_REVERSE[group] || group;
   const c = MUSCLE_GROUP_COLORS[key];
   if (c) return c;
-  return { bg: 'bg-zinc-500/15', text: 'text-muted-foreground', border: 'hover:border-border/40', hex: '#71717A' };
+  return { bg: 'bg-muted/40', text: 'text-muted-foreground', border: 'hover:border-border/40', hex: '#71717A' };
 }
 
 export function getMuscleGroupLabel(group: string): string {

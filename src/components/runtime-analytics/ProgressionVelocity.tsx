@@ -18,15 +18,15 @@ const ProgressionVelocity = memo(function ProgressionVelocity({ exercise, data, 
   const max = Math.max(...data.map(d => d.estimated1RM), 1);
   const min = Math.min(...data.map(d => d.estimated1RM));
   const range = max - min || 1;
-  const velocityColor = velocity > 0.05 ? '#34D399' : velocity > 0 ? '#FBBF24' : '#F87171';
+  const velocityColor = velocity > 0.05 ? 'var(--rvl-active)' : velocity > 0 ? 'var(--rvl-complete)' : 'var(--rvl-fatigue)';
 
   return (
     <div className="px-5 pb-4">
-      <div className="rounded-2xl p-4" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
+      <div className="rounded-2xl p-4 rvl-surface">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
-            <TrendingUp className="w-3.5 h-3.5" style={{ color: 'var(--accent)' }} />
-            <span className="text-xs font-bold" style={{ color: 'var(--text-faint)' }}>{exercise}</span>
+            <TrendingUp className="w-3.5 h-3.5" style={{ color: 'var(--rvl-active)' }} />
+            <span className="rvl-label-text">{exercise}</span>
           </div>
           <span className="text-[10px] font-bold px-2 py-1 rounded-full"
             style={{ background: velocityColor + '18', color: velocityColor }}>
@@ -38,8 +38,9 @@ const ProgressionVelocity = memo(function ProgressionVelocity({ exercise, data, 
             <div key={i} className="flex-1 flex justify-center items-end">
               <div className="w-full rounded-t-sm transition-all" style={{
                 height: ((d.estimated1RM - min) / range * 60 + 20) + '%',
-                background: 'var(--accent)',
+                background: 'var(--rvl-active)',
                 opacity: 0.5 + (i / data.length) * 0.5,
+                boxShadow: i === data.length - 1 ? '0 0 8px var(--rvl-active-glow)' : 'none',
               }} />
             </div>
           ))}

@@ -1,0 +1,240 @@
+/* ═══════════════════════════════════════════════════════════════
+   FitCoach Runtime Semantic Token System
+   Theme-agnostic semantic variables for Runtime Training OS
+   Built on top of runtime-visual-language.css
+   ═══════════════════════════════════════════════════════════════ */
+
+@import "./runtime-visual-language.css";
+
+:root, .dark {
+  /* ── Surface System ── */
+  --surface-primary: rgb(var(--card));
+  --surface-elevated: rgb(var(--secondary));
+  --surface-glass: color-mix(in srgb, rgb(var(--card)) 72%, transparent);
+  --surface-hover: rgb(var(--muted));
+  --surface-pressed: rgb(var(--border));
+  --surface-overlay: color-mix(in srgb, rgb(var(--background)) 92%, transparent);
+
+  /* ── Text System ── */
+  --text-primary: rgb(var(--foreground));
+  --text-secondary: rgb(var(--muted-foreground));
+  --text-tertiary: rgb(var(--inactive));
+  --text-inverse: rgb(var(--primary-foreground));
+
+  /* ── Accent / Energy ── */
+  --accent-energy: rgb(var(--accent));
+  --accent-energy-dim: color-mix(in srgb, rgb(var(--accent)) 12%, transparent);
+  --accent-energy-glow: color-mix(in srgb, rgb(var(--accent)) 20%, transparent);
+
+  /* ── Rest ── */
+  --accent-rest: rgb(var(--recovery));
+  --accent-rest-dim: color-mix(in srgb, rgb(var(--recovery)) 12%, transparent);
+  --accent-rest-glow: color-mix(in srgb, rgb(var(--recovery)) 20%, transparent);
+
+  /* ── Warning / Urgent ── */
+  --accent-warning: rgb(var(--warning));
+  --accent-warning-dim: color-mix(in srgb, rgb(var(--warning)) 12%, transparent);
+  --accent-warning-glow: color-mix(in srgb, rgb(var(--warning)) 20%, transparent);
+
+  /* ── Danger / Fatigue ── */
+  --accent-danger: rgb(var(--danger));
+  --accent-danger-dim: color-mix(in srgb, rgb(var(--danger)) 12%, transparent);
+  --accent-danger-glow: color-mix(in srgb, rgb(var(--danger)) 20%, transparent);
+
+  /* ── Success / PR ── */
+  --accent-success: rgb(var(--success));
+  --accent-success-dim: color-mix(in srgb, rgb(var(--success)) 12%, transparent);
+  --accent-success-glow: color-mix(in srgb, rgb(var(--success)) 20%, transparent);
+
+  /* ── Borders ── */
+  --border-subtle: rgb(var(--border));
+  --border-hover: color-mix(in srgb, rgb(var(--border)) 80%, rgb(var(--foreground)));
+  --border-focus: rgb(var(--ring));
+
+  /* ── Shadow ── */
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  --shadow-glow-energy: 0 0 20px var(--accent-energy-glow), 0 0 60px var(--accent-energy-dim);
+  --shadow-glow-rest: 0 0 20px var(--accent-rest-glow), 0 0 60px var(--accent-rest-dim);
+
+  /* ── Runtime State Palette (semantic mapping to rvl) ── */
+  --state-idle-surface: var(--rvl-surface-1);
+  --state-idle-ambient: transparent;
+  --state-idle-border: var(--rvl-border-subtle);
+
+  --state-active-surface: var(--rvl-surface-2);
+  --state-active-ambient: var(--rvl-active-dim);
+  --state-active-border: var(--rvl-active);
+  --state-active-motion: rvl-pulse-active;
+  --state-active-shadow: var(--rvl-active-glow);
+
+  --state-focused-surface: var(--rvl-surface-3);
+  --state-focused-ambient: var(--rvl-active-dim);
+  --state-focused-border: var(--rvl-active);
+
+  --state-completed-surface: var(--rvl-complete-dim);
+  --state-completed-ambient: var(--rvl-complete-glow);
+  --state-completed-border: var(--rvl-complete);
+  --state-completed-motion: rt-set-complete;
+
+  --state-resting-surface: var(--rvl-rest-dim);
+  --state-resting-ambient: var(--rvl-rest-glow);
+  --state-resting-border: var(--rvl-rest);
+  --state-resting-motion: rvl-pulse-rest;
+  --state-resting-shadow: var(--rvl-rest-glow);
+
+  --state-fatigued-surface: var(--rvl-fatigue-dim);
+  --state-fatigued-ambient: var(--rvl-fatigue-glow);
+  --state-fatigued-border: var(--rvl-fatigue);
+
+  --state-pr-surface: var(--rvl-complete-dim);
+  --state-pr-ambient: var(--rvl-complete-glow);
+  --state-pr-border: var(--rvl-complete);
+  --state-pr-motion: rvl-pulse-active;
+  --state-pr-shadow: var(--rvl-complete-glow);
+
+  --state-offline-surface: var(--rvl-surface-2);
+  --state-offline-ambient: transparent;
+  --state-offline-border: var(--rvl-text-faint);
+
+  --state-syncing-surface: var(--rvl-surface-2);
+  --state-syncing-ambient: var(--rvl-transition-glow);
+  --state-syncing-border: var(--rvl-transition);
+  --state-syncing-motion: rvl-breathe;
+}
+
+.light {
+  --surface-primary: rgb(var(--card));
+  --surface-elevated: rgb(var(--secondary));
+  --surface-glass: color-mix(in srgb, rgb(var(--card)) 80%, transparent);
+  --surface-hover: rgb(var(--muted));
+  --surface-pressed: rgb(var(--border));
+  --surface-overlay: color-mix(in srgb, rgb(var(--background)) 94%, transparent);
+
+  --text-primary: rgb(var(--foreground));
+  --text-secondary: rgb(var(--muted-foreground));
+  --text-tertiary: rgb(var(--inactive));
+  --text-inverse: rgb(var(--primary-foreground));
+
+  --accent-energy-dim: color-mix(in srgb, rgb(var(--accent)) 10%, transparent);
+  --accent-energy-glow: color-mix(in srgb, rgb(var(--accent)) 16%, transparent);
+  --accent-rest-dim: color-mix(in srgb, rgb(var(--recovery)) 10%, transparent);
+  --accent-rest-glow: color-mix(in srgb, rgb(var(--recovery)) 16%, transparent);
+}
+
+/* ── Runtime Component Utilities ── */
+
+.runtime-surface {
+  background: var(--surface-primary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+}
+
+.runtime-surface-elevated {
+  background: var(--surface-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+}
+
+.runtime-surface-glass {
+  background: var(--surface-glass);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  backdrop-filter: blur(16px) saturate(1.2);
+  -webkit-backdrop-filter: blur(16px) saturate(1.2);
+}
+
+.runtime-text-primary {
+  color: var(--text-primary);
+}
+
+.runtime-text-secondary {
+  color: var(--text-secondary);
+}
+
+.runtime-text-tertiary {
+  color: var(--text-tertiary);
+}
+
+.runtime-border-subtle {
+  border-color: var(--border-subtle);
+}
+
+/* ── Micro-interactions ── */
+.runtime-tap {
+  transition: transform 0.08s ease, background-color 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+.runtime-tap:active {
+  transform: scale(0.96);
+}
+
+/* ── Set Completion Flash ── */
+@keyframes rt-energy-flash {
+  0%   { box-shadow: 0 0 0 0 var(--accent-energy-glow); }
+  50%  { box-shadow: 0 0 24px 6px var(--accent-energy-glow); }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}
+
+@keyframes rt-volume-pop {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(1.12); }
+  100% { transform: scale(1); }
+}
+
+@keyframes rt-pulse-scale {
+  0%   { transform: scale(1); }
+  50%  { transform: scale(1.03); }
+  100% { transform: scale(1); }
+}
+
+@keyframes rt-kinetic-burst {
+  0%   { transform: scale(0.95); opacity: 0.6; }
+  50%  { transform: scale(1.08); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.rt-animate-completion {
+  animation: rt-set-complete 0.4s var(--rvl-motion-snap) both;
+}
+
+.rt-animate-energy-flash {
+  animation: rt-energy-flash 0.6s ease-out both;
+}
+
+.rt-animate-volume-pop {
+  animation: rt-volume-pop 0.5s var(--rvl-motion-snap) both;
+}
+
+.rt-animate-kinetic-burst {
+  animation: rt-kinetic-burst 0.5s var(--rvl-motion-snap) both;
+}
+
+/* ── Floating dock safe-area ── */
+.runtime-dock {
+  padding-bottom: max(env(safe-area-inset-bottom), 16px);
+}
+
+/* ── Keyboard-stable input wrappers ── */
+.runtime-input-stable {
+  min-height: 48px;
+  contain: layout style;
+}
+
+/* ── Reduced motion support ── */
+@media (prefers-reduced-motion: reduce) {
+  .rt-animate-completion,
+  .rt-animate-energy-flash,
+  .rt-animate-volume-pop,
+  .rt-animate-kinetic-burst {
+    animation: none;
+  }
+
+  .runtime-tap:active {
+    transform: none;
+  }
+}

@@ -42,16 +42,16 @@ const TimelineSurface = memo(function TimelineSurface({
     <div className="px-5 space-y-4">
       {/* Narrative header */}
       <MotionLayer state="active">
-        <div className="rounded-3xl p-5" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
+        <div className="rounded-3xl p-5 rvl-surface-elevated">
           <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: 'var(--accent-dim)', color: 'var(--accent)' }}>
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: 'var(--rvl-active-dim)', color: 'var(--rvl-active)' }}>
               <Zap className="w-5 h-5" />
             </div>
             <div>
-              <p className="text-sm font-black" style={{ color: 'var(--text-high)' }}>
+              <p className="text-sm font-black" style={{ color: 'var(--rvl-text-high)' }}>
                 {currentStreak > 0 ? '连续 ' + currentStreak + ' 天训练' : '准备好开始'}
               </p>
-              <p className="text-xs" style={{ color: 'var(--text-low)' }}>
+              <p className="text-xs" style={{ color: 'var(--rvl-text-faint)' }}>
                 {thisMonthCount} 次训练 · 最长连续 {maxStreak} 天
               </p>
             </div>
@@ -66,8 +66,8 @@ const TimelineSurface = memo(function TimelineSurface({
               return (
                 <div key={i} className="flex-1 flex flex-col items-center gap-1">
                   <div className="w-full aspect-square rounded-md"
-                    style={{ background: has ? 'var(--accent)' : 'var(--surface-3)', opacity: has ? 1 : 0.4 }} />
-                  <span className="text-[9px] font-bold" style={{ color: 'var(--text-faint)' }}>{d.getDate()}</span>
+                    style={{ background: has ? 'var(--rvl-active)' : 'var(--rvl-surface-3)', opacity: has ? 1 : 0.4, boxShadow: has ? '0 0 8px var(--rvl-active-glow)' : 'none' }} />
+                  <span className="text-[9px] font-bold" style={{ color: 'var(--rvl-text-faint)' }}>{d.getDate()}</span>
                 </div>
               );
             })}
@@ -88,46 +88,46 @@ const TimelineSurface = memo(function TimelineSurface({
               onClick={() => router.push('/workout/history/' + w.id)}
               className="w-full text-left rounded-3xl p-5 transition-all active:scale-[0.98]"
               style={{
-                background: isLatest ? 'var(--surface)' : 'var(--surface-2)',
-                border: '1px solid var(--border)',
-                boxShadow: isLatest ? '0 0 20px var(--accent-dim)' : 'none',
+                background: isLatest ? 'var(--rvl-surface-1)' : 'var(--rvl-surface-2)',
+                border: '1px solid var(--rvl-border-subtle)',
+                boxShadow: isLatest ? '0 0 20px var(--rvl-active-glow)' : 'none',
               }}
             >
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-black px-2 py-0.5 rounded-lg" style={{ background: 'var(--accent-dim)', color: 'var(--accent)' }}>
+                  <span className="text-xs font-black px-2 py-0.5 rounded-lg" style={{ background: 'var(--rvl-active-dim)', color: 'var(--rvl-active)' }}>
                     {fmtDate(w.date)}
                   </span>
                   {isLatest && (
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: 'rgba(52,211,153,0.1)', color: '#34D399' }}>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: 'var(--rvl-active-dim)', color: 'var(--rvl-active)' }}>
                       最新
                     </span>
                   )}
                 </div>
-                <div className="flex items-center gap-1" style={{ color: 'var(--text-faint)' }}>
+                <div className="flex items-center gap-1" style={{ color: 'var(--rvl-text-faint)' }}>
                   <Clock className="w-3 h-3" />
                   <span className="text-[10px] font-bold">{fmtDuration(w.duration)}</span>
                 </div>
               </div>
 
               <div className="flex items-baseline gap-2 mb-2">
-                <span className="text-2xl font-black tabular-nums" style={{ color: 'var(--text-high)' }}>
+                <span className="text-2xl font-black tabular-nums" style={{ color: 'var(--rvl-text-hero)' }}>
                   {vol >= 1000 ? (vol / 1000).toFixed(1) + 't' : vol}
                 </span>
-                <span className="text-xs font-bold" style={{ color: 'var(--text-low)' }}>容量</span>
-                <span className="text-sm font-black tabular-nums ml-3" style={{ color: 'var(--text-high)' }}>{sets}</span>
-                <span className="text-xs font-bold" style={{ color: 'var(--text-low)' }}>组</span>
+                <span className="text-xs font-bold" style={{ color: 'var(--rvl-text-faint)' }}>容量</span>
+                <span className="text-sm font-black tabular-nums ml-3" style={{ color: 'var(--rvl-text-high)' }}>{sets}</span>
+                <span className="text-xs font-bold" style={{ color: 'var(--rvl-text-faint)' }}>组</span>
               </div>
 
               <div className="flex flex-wrap gap-1.5">
                 {muscleGroups.map(mg => (
                   <span key={mg} className="text-[10px] font-bold px-2 py-1 rounded-full"
-                    style={{ background: 'var(--surface-3)', color: 'var(--text-low)' }}>
+                    style={{ background: 'var(--rvl-surface-3)', color: 'var(--rvl-text-faint)' }}>
                     {mg}
                   </span>
                 ))}
                 {w.exercises.length > muscleGroups.length && (
-                  <span className="text-[10px] font-bold px-2 py-1 rounded-full" style={{ color: 'var(--text-faint)' }}>
+                  <span className="text-[10px] font-bold px-2 py-1 rounded-full" style={{ color: 'var(--rvl-text-faint)' }}>
                     +{w.exercises.length - muscleGroups.length}
                   </span>
                 )}
