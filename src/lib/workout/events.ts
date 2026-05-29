@@ -11,21 +11,42 @@
  */
 
 export type WorkoutEventType =
-  // ── User-driven events ──────────────────────────────────────────────────────
-  | 'TRAINING_STARTED'
+  // ── Session lifecycle ────────────────────────────────────────────────────────
+  | 'TRAINING_STARTED'       // legacy alias — use SESSION_STARTED for new code
   | 'TRAINING_PAUSED'
   | 'TRAINING_RESUMED'
   | 'TRAINING_COMPLETED'
+  | 'SESSION_STARTED'        // full session start with metadata
+  | 'SESSION_PAUSED'         // alias for TRAINING_PAUSED (new events use this)
+  | 'SESSION_RESUMED'
+  | 'SESSION_COMPLETED'      // alias for TRAINING_COMPLETED
+  | 'SESSION_RECOVERED'      // crash / lock-screen recovery restart
+  // ── Exercise queue events ───────────────────────────────────────────────────
+  | 'EXERCISE_ADDED'         // single exercise enters the queue
+  | 'EXERCISE_QUEUE_SET'     // bulk queue assignment (plan day load)
+  | 'EXERCISE_CHANGED'       // active exercise focus changed
+  | 'EXERCISE_COMPLETED'     // all target sets for exercise are done
+  | 'EXERCISE_SKIPPED'       // exercise removed from queue
+  // ── Set events (the core training truth) ───────────────────────────────────
+  | 'SET_STARTED'            // user begins a set (optional, best-effort)
+  | 'SET_LOGGED'             // complete set logged — full payload is truth source
+  | 'SET_COMPLETED'          // legacy alias for SET_LOGGED (thin payload)
+  | 'SET_CORRECTED'          // append-only correction (never overwrites SET_LOGGED)
+  // ── Rest events ─────────────────────────────────────────────────────────────
   | 'REST_STARTED'
   | 'REST_COMPLETED'
   | 'REST_SKIPPED'
-  | 'SET_COMPLETED'
-  | 'EXERCISE_CHANGED'
-  // ── AI-injectable events (AI is just another event source) ──────────────────
-  | 'WORKOUT_ADJUSTED'    // AI modifies overall workout structure
-  | 'REST_MODIFIED'       // AI adjusts rest duration mid-session
-  | 'SET_TARGET_UPDATED'  // AI updates target reps/weight for a set
-  | 'INTENSITY_TUNED';    // AI tunes session intensity
+  // ── Prediction events ───────────────────────────────────────────────────────
+  | 'PREDICTION_ACCEPTED'    // user confirmed predicted set values
+  | 'PREDICTION_REJECTED'    // user adjusted predicted values
+  // ── Session metadata events ─────────────────────────────────────────────────
+  | 'CARDIO_PARAMS_UPDATED'  // speed / incline / level changed
+  | 'SESSION_NOTES_UPDATED'  // training notes updated
+  // ── AI-injectable events ─────────────────────────────────────────────────────
+  | 'WORKOUT_ADJUSTED'
+  | 'REST_MODIFIED'
+  | 'SET_TARGET_UPDATED'
+  | 'INTENSITY_TUNED';
 
 /** Who originated the event — preserved in LoggedEvent.origin. */
 export type EventOrigin = 'user' | 'ai' | 'system';

@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { logAndEmit, getCurrentSessionId } from '@/lib/workout/eventLog';
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
@@ -168,7 +169,13 @@ export const useWorkoutSession = create<WorkoutSessionState>()(
 
       setStoredUserId: (userId) => set({ storedUserId: userId }),
 
-      setActiveExercise: (name) => set({ activeExerciseName: name }),
+      setActiveExercise: (name) => {
+        set({ activeExerciseName: name });
+        const sessionId = getCurrentSessionId();
+        if (sessionId && name) {
+          logAndEmit({ type: 'EXERCISE_CHANGED', ts: Date.now(), payload: { name } }, sessionId);
+        }
+      },
 
       addSavedExercise: (name) =>
         set((state) => {
@@ -261,6 +268,27 @@ export const useWorkoutSession = create<WorkoutSessionState>()(
           prResult: pr,
           setFeedback: feedback,
         });
+
+        // Emit SET_LOGGED event — runtime-core reducer uses this as truth source
+        const sessionId = getCurrentSessionId();
+        if (sessionId) {
+          logAndEmit({
+            type: 'SET_LOGGED',
+            ts: newSet.createdAt,
+            payload: {
+              exerciseName:      activeExerciseName,
+              setIndex:          prevCount,
+              weight:            w,
+              reps:              r,
+              rir:               rirValue,
+              isBodyweight,
+              isWarmup:          false,
+              isFailure:         rirValue === 0,
+              estimated1RM:      newSet.estimated1RM,
+              predictionSource:  'session',
+            },
+          }, sessionId);
+        }
 
         return { ok: true, feedback, pr };
       },
